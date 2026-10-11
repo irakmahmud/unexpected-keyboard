@@ -19,9 +19,10 @@ A private, gesture-driven Android keyboard (IME) built with Flutter and Kotlin, 
 3. **100% Offline & Zero Network Permissions**:
    - `android.permission.INTERNET` is completely absent from the Android Manifest.
    - Zero telemetry, zero analytics, zero network calls. Total privacy guaranteed.
-4. **Cloud-Native CI/CD (No Local Build Required)**:
-   - Automated GitHub Actions workflow (`.github/workflows/build_apk.yml`) compiles debug and release APKs on GitHub runners with Java 17 and Flutter SDK.
-   - APK artifacts are immediately available for download from the Actions tab.
+4. **Cloud-Native CI/CD (Zero Local Flutter Build Architecture)**:
+   - **Oracle VM as Authoring Node**: The Oracle VM acts strictly as a lightweight source code editing and git orchestration node without running any Flutter or Android Gradle builds locally.
+   - **CircleCI Remote Cloud Fleet**: Automated CircleCI workflow (`.circleci/config.yml`) runs tests and builds debug and release APKs on high-speed cloud Docker runners (`ghcr.io/cirruslabs/flutter:stable`).
+   - **GitHub Actions Cloud Runner**: Dual CI/CD pipeline (`.github/workflows/build_apk.yml`) building APKs on GitHub Ubuntu runners.
 5. **Multiple High-Contrast Themes**:
    - AMOLED Pure Dark (OLED battery saving)
    - Terminal Hacker Green (Matrix style)
@@ -30,23 +31,31 @@ A private, gesture-driven Android keyboard (IME) built with Flutter and Kotlin, 
 
 ---
 
-## 🚀 GitHub Actions Cloud Build Instructions
+## 🚀 Zero Local Flutter Build: Oracle VM + CircleCI Remote Build Architecture
 
-This project is configured to **build exclusively on GitHub Actions cloud runners**. You do not need to install Android SDK, NDK, or Flutter locally.
+This project strictly adheres to **Zero Local Flutter Build**. Local builds on the Oracle VM are disallowed to preserve system memory and CPU for live agent services. All APK compilations occur remotely in the cloud.
 
-### Steps to Build and Download APK:
-1. Push this repository to GitHub:
+### Remote Build Engines:
+1. **CircleCI (`.circleci/config.yml`)**:
+   - Runs on Docker container `ghcr.io/cirruslabs/flutter:stable`
+   - Automatic dependency caching (`pub-cache` & `gradle-cache`)
+   - Two-stage workflow: `validate-and-test` -> `build-remote-apks`
+   - Artifacts uploaded directly to CircleCI Artifacts (`unexpected-keyboard-debug.apk`, `unexpected-keyboard-release.apk`)
+2. **GitHub Actions (`.github/workflows/build_apk.yml`)**:
+   - Dual fallback pipeline on GitHub runners
+
+### Steps to Trigger Remote Cloud Build:
+1. Ensure changes are committed:
    ```bash
-   git remote add origin https://github.com/<your-username>/unexpected-flutter-keyboard.git
-   git branch -M main
-   git push -u origin main
+   git add .
+   git commit -m "feat: your changes"
    ```
-2. Navigate to your GitHub repository in your browser.
-3. Click on the **Actions** tab.
-4. The workflow **Build Unexpected Flutter Keyboard APK** will automatically trigger.
-5. Once complete, click on the workflow run. Under **Artifacts**, download:
-   - `unexpected-keyboard-release-apk` (Optimized release build)
-   - `unexpected-keyboard-debug-apk` (Debug build for testing)
+2. Push to GitHub:
+   ```bash
+   git push origin main
+   ```
+3. CircleCI and GitHub Actions will automatically detect the push and compile the APKs remotely.
+4. Download generated APKs directly from CircleCI Artifacts or GitHub Actions Artifacts tab.
 
 ---
 
@@ -54,8 +63,13 @@ This project is configured to **build exclusively on GitHub Actions cloud runner
 
 ```
 keyboard/
+├── .circleci/
+│   └── config.yml                 # CircleCI remote APK build pipeline
 ├── .github/workflows/
 │   └── build_apk.yml              # GitHub Actions CI/CD APK build pipeline
+├── scripts/
+│   ├── guard_zero_local_build.sh  # Enforces zero local build policy on VM
+│   └── trigger_remote_build.sh    # Remote cloud build trigger helper
 ├── android/
 │   ├── app/
 │   │   ├── src/main/
@@ -88,3 +102,4 @@ keyboard/
 ├── pubspec.yaml                   # Flutter dependency specifications
 └── README.md
 ```
+<!-- auto-sync live verified -->
