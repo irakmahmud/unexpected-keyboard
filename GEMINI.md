@@ -1,0 +1,1 @@
+/home/opc/keyboard/AGENTS.md
