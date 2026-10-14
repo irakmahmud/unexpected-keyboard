@@ -69,7 +69,6 @@ class KeyboardThemeData {
           borderRadius: 8.0,
         );
       case KeyboardThemeMode.materialDark:
-      default:
         return const KeyboardThemeData(
           backgroundColor: Color(0xFF1E1E24),
           keyBackgroundColor: Color(0xFF2B2B36),

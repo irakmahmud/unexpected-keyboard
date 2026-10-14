@@ -1,4 +1,4 @@
-name: Build Unexpected Flutter Keyboard APK
+name: Build Unexpected Flutter Keyboard APK and AAB
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build APK on GitHub Runner
+    name: Remote Cloud Build on GitHub Runner
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -42,6 +42,9 @@ jobs:
       - name: 🚀 Build Release APK
         run: flutter build apk --release --no-shrink
 
+      - name: 📦 Build Release App Bundle (AAB)
+        run: flutter build appbundle --release
+
       - name: 📤 Upload Release APK
         uses: actions/upload-artifact@v4
         with:
@@ -55,3 +58,10 @@ jobs:
           name: unexpected-keyboard-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
+
+      - name: 📤 Upload Release App Bundle (AAB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: unexpected-keyboard-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30

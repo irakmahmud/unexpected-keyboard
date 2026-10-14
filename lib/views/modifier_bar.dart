@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/gesture_direction.dart';
-import '../models/key_model.dart';
 import '../models/keyboard_layout.dart';
 import '../themes/keyboard_theme.dart';
 import 'key_widget.dart';

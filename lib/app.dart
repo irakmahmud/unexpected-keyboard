@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'models/gesture_direction.dart';
-import 'models/key_model.dart';
 import 'services/ime_channel_service.dart';
 import 'themes/keyboard_theme.dart';
 import 'views/keyboard_view.dart';
@@ -23,6 +21,51 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
   @override
   void initState() {
     super.initState();
+    _imeService.onLocalTextInput = (text) {
+      final val = _testTextController.text;
+      final sel = _testTextController.selection;
+      final start = sel.start < 0 ? val.length : sel.start;
+      final end = sel.end < 0 ? val.length : sel.end;
+      final newText = val.replaceRange(start, end, text);
+      _testTextController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + text.length),
+      );
+    };
+
+    _imeService.onLocalBackspace = () {
+      final val = _testTextController.text;
+      final sel = _testTextController.selection;
+      if (val.isEmpty) return;
+      if (sel.start != sel.end && sel.start >= 0) {
+        final newText = val.replaceRange(sel.start, sel.end, '');
+        _testTextController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: sel.start),
+        );
+      } else {
+        final start = sel.start <= 0 ? val.length : sel.start;
+        if (start > 0) {
+          final newText = val.replaceRange(start - 1, start, '');
+          _testTextController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: start - 1),
+          );
+        }
+      }
+    };
+
+    _imeService.onLocalEnter = () {
+      final val = _testTextController.text;
+      final sel = _testTextController.selection;
+      final start = sel.start < 0 ? val.length : sel.start;
+      final end = sel.end < 0 ? val.length : sel.end;
+      final newText = val.replaceRange(start, end, '\n');
+      _testTextController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + 1),
+      );
+    };
   }
 
   @override
@@ -88,7 +131,7 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                         child: TextField(
                           controller: _testTextController,
                           maxLines: null,
-                          autofocus: true,
+                          autofocus: false,
                           readOnly: false,
                           showCursor: true,
                           style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),

@@ -25,7 +25,7 @@ class KeyboardView extends StatefulWidget {
 
 class _KeyboardViewState extends State<KeyboardView> {
   LayoutType _currentLayout = LayoutType.qwerty;
-  bool _showTerminalBar = true;
+  final bool _showTerminalBar = true;
 
   void _handleKeyPress(KeyModel key, GestureDirection direction) {
     widget.imeService.triggerHaptic();

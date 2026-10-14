@@ -21,8 +21,8 @@ A private, gesture-driven Android keyboard (IME) built with Flutter and Kotlin, 
    - Zero telemetry, zero analytics, zero network calls. Total privacy guaranteed.
 4. **Cloud-Native CI/CD (Zero Local Flutter Build Architecture)**:
    - **Oracle VM as Authoring Node**: The Oracle VM acts strictly as a lightweight source code editing and git orchestration node without running any Flutter or Android Gradle builds locally.
-   - **CircleCI Remote Cloud Fleet**: Automated CircleCI workflow (`.circleci/config.yml`) runs tests and builds debug and release APKs on high-speed cloud Docker runners (`ghcr.io/cirruslabs/flutter:stable`).
-   - **GitHub Actions Cloud Runner**: Dual CI/CD pipeline (`.github/workflows/build_apk.yml`) building APKs on GitHub Ubuntu runners.
+   - **CircleCI Remote Cloud Fleet**: Automated CircleCI workflow (`.circleci/config.yml`) runs tests and builds debug and release APKs as well as Google Play App Bundles (AAB) on high-speed cloud Docker runners (`ghcr.io/cirruslabs/flutter:stable`).
+   - **GitHub Actions Cloud Runner**: Dual CI/CD pipeline (`.github/workflows/build_apk.yml`) building APKs and AAB bundles on GitHub Ubuntu runners.
 5. **Multiple High-Contrast Themes**:
    - AMOLED Pure Dark (OLED battery saving)
    - Terminal Hacker Green (Matrix style)
@@ -33,16 +33,19 @@ A private, gesture-driven Android keyboard (IME) built with Flutter and Kotlin, 
 
 ## 🚀 Zero Local Flutter Build: Oracle VM + CircleCI Remote Build Architecture
 
-This project strictly adheres to **Zero Local Flutter Build**. Local builds on the Oracle VM are disallowed to preserve system memory and CPU for live agent services. All APK compilations occur remotely in the cloud.
+This project strictly adheres to **Zero Local Flutter Build**. Local builds on the Oracle VM are disallowed to preserve system memory and CPU for live agent services. All APK and AAB compilations occur remotely in the cloud.
 
 ### Remote Build Engines:
 1. **CircleCI (`.circleci/config.yml`)**:
    - Runs on Docker container `ghcr.io/cirruslabs/flutter:stable`
    - Automatic dependency caching (`pub-cache` & `gradle-cache`)
-   - Two-stage workflow: `validate-and-test` -> `build-remote-apks`
-   - Artifacts uploaded directly to CircleCI Artifacts (`unexpected-keyboard-debug.apk`, `unexpected-keyboard-release.apk`)
+   - Two-stage workflow: `validate-and-test` -> `build-remote-artifacts`
+   - Artifacts uploaded directly to CircleCI Artifacts:
+     - `unexpected-keyboard-debug.apk` (Debug APK for testing)
+     - `unexpected-keyboard-release.apk` (Optimized release APK)
+     - `unexpected-keyboard-release.aab` (Google Play App Bundle)
 2. **GitHub Actions (`.github/workflows/build_apk.yml`)**:
-   - Dual fallback pipeline on GitHub runners
+   - Dual fallback pipeline on GitHub runners building both APK and AAB artifacts
 
 ### Steps to Trigger Remote Cloud Build:
 1. Ensure changes are committed:
@@ -54,8 +57,8 @@ This project strictly adheres to **Zero Local Flutter Build**. Local builds on t
    ```bash
    git push origin main
    ```
-3. CircleCI and GitHub Actions will automatically detect the push and compile the APKs remotely.
-4. Download generated APKs directly from CircleCI Artifacts or GitHub Actions Artifacts tab.
+3. CircleCI and GitHub Actions will automatically detect the push and compile the APKs and AAB remotely.
+4. Download generated APKs and AAB directly from CircleCI Artifacts or GitHub Actions Artifacts tab.
 
 ---
 

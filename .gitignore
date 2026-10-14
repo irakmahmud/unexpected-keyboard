@@ -41,3 +41,7 @@ migrate_working_dir/
 
 # Symbols and logs
 *.lock
+
+# Downloaded remote APK artifacts
+/dist/
+

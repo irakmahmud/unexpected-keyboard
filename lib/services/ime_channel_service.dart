@@ -9,6 +9,11 @@ class ImeChannelService {
   bool isAltActive = false;
   bool isMetaActive = false;
 
+  /// Callbacks for in-app preview typing
+  void Function(String text)? onLocalTextInput;
+  void Function()? onLocalBackspace;
+  void Function()? onLocalEnter;
+
   int calculateMetaState() {
     int state = 0;
     if (isShiftActive || isCapsLock) state |= 1; // KeyEvent.META_SHIFT_ON
@@ -19,6 +24,9 @@ class ImeChannelService {
   }
 
   Future<void> sendText(String text) async {
+    // Notify local listener if registered (for in-app typing preview)
+    onLocalTextInput?.call(text);
+
     try {
       if (isCtrlActive || isAltActive) {
         // If modifier is held, send as key event with meta state
@@ -44,6 +52,12 @@ class ImeChannelService {
   }
 
   Future<void> sendKeyCode(int keyCode) async {
+    if (keyCode == 67) {
+      onLocalBackspace?.call();
+    } else if (keyCode == 66) {
+      onLocalEnter?.call();
+    }
+
     try {
       await _channel.invokeMethod('sendKeyEvent', {
         'keyCode': keyCode,
@@ -59,6 +73,8 @@ class ImeChannelService {
   }
 
   Future<void> sendBackspace() async {
+    onLocalBackspace?.call();
+
     try {
       await _channel.invokeMethod('deleteSurroundingText', {
         'beforeLength': 1,
@@ -70,6 +86,8 @@ class ImeChannelService {
   }
 
   Future<void> sendEnter() async {
+    onLocalEnter?.call();
+
     try {
       await _channel.invokeMethod('sendEnterAction');
     } on PlatformException catch (e) {

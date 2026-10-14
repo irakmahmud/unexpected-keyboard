@@ -29,12 +29,13 @@ echo -e "${BLUE}────────────────── REMOTE BU
 echo -e "1. ${GREEN}CircleCI Remote Build Pipeline:${NC}"
 echo -e "   - Config: .circleci/config.yml"
 echo -e "   - Cloud Runner: ghcr.io/cirruslabs/flutter:stable (Docker Executor)"
-echo -e "   - Automated Workflows: validate-and-test -> build-remote-apks"
-echo -e "   - Artifacts: unexpected-keyboard-debug.apk, unexpected-keyboard-release.apk"
+echo -e "   - Automated Workflows: validate-and-test -> build-remote-artifacts"
+echo -e "   - Artifacts: unexpected-keyboard-debug.apk, unexpected-keyboard-release.apk, unexpected-keyboard-release.aab"
 echo
 echo -e "2. ${GREEN}GitHub Actions Remote Pipeline:${NC}"
 echo -e "   - Config: .github/workflows/build_apk.yml"
 echo -e "   - Cloud Runner: ubuntu-latest (Temurin Java 17 + Flutter SDK)"
+echo -e "   - Artifacts: unexpected-keyboard-release-apk, unexpected-keyboard-debug-apk, unexpected-keyboard-release-aab"
 echo
 echo -e "${BLUE}────────────────── HOW TO INITIATE A REMOTE BUILD ──────────────────${NC}"
 echo -e "Simply push your commits to git:"
@@ -42,6 +43,6 @@ echo -e "   ${GREEN}git add .${NC}"
 echo -e "   ${GREEN}git commit -m \"feat: update keyboard logic\"${NC}"
 echo -e "   ${GREEN}git push origin main${NC}"
 echo
-echo -e "CircleCI and GitHub Actions will automatically compile the APKs in the cloud."
+echo -e "CircleCI and GitHub Actions will automatically compile the APK and AAB in the cloud."
 echo -e "────────────────────────────────────────────────────────────────────────"
 exit 1

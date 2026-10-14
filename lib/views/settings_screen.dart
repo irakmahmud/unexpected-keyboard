@@ -152,7 +152,6 @@ class SettingsScreen extends StatelessWidget {
     required KeyboardThemeMode mode,
     required KeyboardThemeData themeData,
   }) {
-    final isSelected = currentThemeMode == mode;
     return RadioListTile<KeyboardThemeMode>(
       title: Text(title, style: TextStyle(color: themeData.primaryTextColor)),
       value: mode,

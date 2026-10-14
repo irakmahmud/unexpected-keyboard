@@ -1,0 +1,101 @@
+version: 2.1
+
+executors:
+  flutter-android-executor:
+    docker:
+      - image: ghcr.io/cirruslabs/flutter:stable
+    working_directory: ~/keyboard
+    resource_class: medium+
+    environment:
+      JAVA_OPTS: "-Xmx2048m"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
+jobs:
+  validate-and-test:
+    executor: flutter-android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          name: 📦 Restore Pub Dependencies Cache
+          keys:
+            - v1-pub-cache-{{ checksum "pubspec.yaml" }}
+            - v1-pub-cache-
+      - run:
+          name: 🔍 Verify Flutter Environment
+          command: |
+            flutter --version
+            flutter doctor -v
+      - run:
+          name: 📥 Install Dependencies
+          command: flutter pub get
+      - save_cache:
+          name: 💾 Save Pub Dependencies Cache
+          key: v1-pub-cache-{{ checksum "pubspec.yaml" }}
+          paths:
+            - /root/.pub-cache
+      - run:
+          name: 🧪 Run Automated Unit & Logic Tests
+          command: flutter test --no-pub
+
+  build-remote-artifacts:
+    executor: flutter-android-executor
+    steps:
+      - checkout
+      - restore_cache:
+          name: 📦 Restore Pub Dependencies Cache
+          keys:
+            - v1-pub-cache-{{ checksum "pubspec.yaml" }}
+            - v1-pub-cache-
+      - restore_cache:
+          name: ⚡ Restore Gradle Cache
+          keys:
+            - v1-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
+            - v1-gradle-cache-
+      - run:
+          name: 📥 Fetch Flutter Dependencies
+          command: flutter pub get
+      - run:
+          name: 🔨 Compile Remote Debug APK
+          command: flutter build apk --debug
+      - run:
+          name: 🚀 Compile Remote Release APK
+          command: flutter build apk --release --no-shrink
+      - run:
+          name: 📦 Compile Remote Release App Bundle (AAB)
+          command: flutter build appbundle --release
+      - save_cache:
+          name: 💾 Save Gradle Cache
+          key: v1-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
+          paths:
+            - /root/.gradle/caches
+            - /root/.gradle/wrapper
+      - save_cache:
+          name: 💾 Save Pub Dependencies Cache
+          key: v1-pub-cache-{{ checksum "pubspec.yaml" }}
+          paths:
+            - /root/.pub-cache
+      - run:
+          name: 🔒 Package Artifacts & Generate SHA-256 Checksums
+          command: |
+            mkdir -p /tmp/keyboard-apks /tmp/keyboard-bundle
+            cp build/app/outputs/flutter-apk/app-debug.apk /tmp/keyboard-apks/unexpected-keyboard-debug.apk
+            cp build/app/outputs/flutter-apk/app-release.apk /tmp/keyboard-apks/unexpected-keyboard-release.apk
+            cp build/app/outputs/bundle/release/app-release.aab /tmp/keyboard-bundle/unexpected-keyboard-release.aab
+            cd /tmp/keyboard-apks && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
+            cd /tmp/keyboard-bundle && sha256sum *.aab > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - store_artifacts:
+          path: /tmp/keyboard-apks
+          destination: keyboard-apks
+      - store_artifacts:
+          path: /tmp/keyboard-bundle
+          destination: keyboard-bundle
+
+workflows:
+  version: 2
+  remote-flutter-compilation:
+    jobs:
+      - validate-and-test
+      - build-remote-artifacts:
+          requires:
+            - validate-and-test
+

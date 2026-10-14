@@ -4,6 +4,7 @@ import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import io.flutter.FlutterInjector
@@ -30,10 +31,16 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     private fun initFlutterEngine() {
         if (flutterEngine == null) {
+            val loader = FlutterInjector.instance().flutterLoader()
+            if (!loader.initialized()) {
+                loader.startInitialization(applicationContext)
+                loader.ensureInitializationComplete(applicationContext, null)
+            }
             flutterEngine = FlutterEngine(this)
-            flutterEngine?.dartExecutor?.executeDartEntrypoint(
-                DartExecutor.DartEntrypoint.createDefault()
-            )
+            val bundlePath = loader.findAppBundlePath()
+            val entrypoint = DartExecutor.DartEntrypoint(bundlePath, "keyboardMain")
+            flutterEngine?.dartExecutor?.executeDartEntrypoint(entrypoint)
+
             methodChannel = MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL_NAME)
             methodChannel?.setMethodCallHandler(this)
         }
@@ -44,13 +51,31 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         if (flutterView == null) {
             flutterView = FlutterView(this)
             flutterView?.attachToFlutterEngine(flutterEngine!!)
+        } else {
+            (flutterView?.parent as? ViewGroup)?.removeView(flutterView)
         }
+
+        val density = resources.displayMetrics.density
+        val keyboardHeight = (density * 270).toInt()
+        flutterView?.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            keyboardHeight
+        )
         return flutterView!!
+    }
+
+    override fun onComputeInsets(outInsets: Insets) {
+        super.onComputeInsets(outInsets)
+        val view = flutterView ?: return
+        val loc = IntArray(2)
+        view.getLocationInWindow(loc)
+        outInsets.contentTopInsets = loc[1]
+        outInsets.visibleTopInsets = loc[1]
+        outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_CONTENT
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        // Notify Flutter side of editor options if needed
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -74,13 +99,25 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
             "deleteSurroundingText" -> {
                 val before = call.argument<Int>("beforeLength") ?: 1
                 val after = call.argument<Int>("afterLength") ?: 0
-                ic?.deleteSurroundingText(before, after)
+                if (ic != null) {
+                    val selected = ic.getSelectedText(0)
+                    if (!selected.isNullOrEmpty()) {
+                        ic.commitText("", 1)
+                    } else if (!ic.deleteSurroundingText(before, after)) {
+                        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                    }
+                } else {
+                    sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                }
                 result.success(true)
             }
             "sendEnterAction" -> {
-                val handled = ic?.performEditorAction(EditorInfo.IME_ACTION_DONE) ?: false
-                if (!handled) {
-                    sendDefaultEnter(ic)
+                val info = currentInputEditorInfo
+                val action = info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_UNSPECIFIED
+                if (ic != null && action != EditorInfo.IME_ACTION_UNSPECIFIED && action != EditorInfo.IME_ACTION_NONE) {
+                    ic.performEditorAction(action)
+                } else {
+                    sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
                 }
                 result.success(true)
             }
@@ -111,10 +148,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
     }
 
     private fun sendDefaultEnter(ic: InputConnection?) {
-        val down = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER)
-        val up = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)
-        ic?.sendKeyEvent(down)
-        ic?.sendKeyEvent(up)
+        sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
     }
 
     private fun charToKeyCode(c: Char): Int {
