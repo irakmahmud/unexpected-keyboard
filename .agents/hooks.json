@@ -1,0 +1,17 @@
+{
+  "intent-fidelity-truth-guard": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/opc/.agents/scripts/intent_guard.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

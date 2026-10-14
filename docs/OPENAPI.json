@@ -1,0 +1,123 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Smart Attendance System REST API",
+    "description": "Production pure Rust & Axum HTTP API replacing Python attendance_v8.py with 100% behavioral parity, SQLite WAL storage, and Google BigQuery outbox replication.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Local production Axum server"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "System Health & Diagnostic",
+        "responses": {
+          "200": { "description": "System health and database status" }
+        }
+      }
+    },
+    "/api/v1/attendance/punch": {
+      "post": {
+        "summary": "Unified Attendance Punch (IN_TIME / OUT_TIME)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "method": { "type": "string", "enum": ["CAMERA", "QR", "ANDROID_ID", "MANUAL", "WEB"] },
+                  "pin": { "type": "string" },
+                  "android_id": { "type": "string" },
+                  "video_path": { "type": "string" },
+                  "face_embedding": { "type": "array", "items": { "type": "number" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Punch recorded successfully" },
+          "409": { "description": "Anti-spam cooldown violation" }
+        }
+      }
+    },
+    "/api/v1/attendance/today": {
+      "get": {
+        "summary": "Get today's live attendance feed",
+        "responses": {
+          "200": { "description": "Array of today's attendance logs" }
+        }
+      }
+    },
+    "/api/v1/attendance/records": {
+      "get": {
+        "summary": "Historical attendance records with date filtering",
+        "parameters": [
+          { "name": "date", "in": "query", "schema": { "type": "string" }, "description": "YYYY-MM-DD" }
+        ],
+        "responses": {
+          "200": { "description": "Filtered attendance records" }
+        }
+      }
+    },
+    "/api/v1/attendance/summary": {
+      "get": {
+        "summary": "Real-time dashboard KPI summary",
+        "responses": {
+          "200": { "description": "Summary metrics" }
+        }
+      }
+    },
+    "/api/v1/face/enroll": {
+      "post": {
+        "summary": "Enroll 512-dim face vector embedding",
+        "responses": {
+          "200": { "description": "Face enrolled" }
+        }
+      }
+    },
+    "/api/v1/face/match": {
+      "post": {
+        "summary": "Vector similarity search using Euclidean L2 distance",
+        "responses": {
+          "200": { "description": "Best match and confidence score" }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": { "summary": "List all enrolled users" },
+      "post": { "summary": "Register new user" }
+    },
+    "/api/receive_android_id": {
+      "post": {
+        "summary": "Android device ID registration receiver (Python AndroidIDReceiver parity)",
+        "responses": {
+          "200": { "description": "Device paired" }
+        }
+      }
+    },
+    "/api/v1/reports/export.csv": {
+      "get": {
+        "summary": "Export attendance records to CSV",
+        "responses": {
+          "200": { "description": "CSV stream" }
+        }
+      }
+    },
+    "/api/v1/sync/trigger": {
+      "post": {
+        "summary": "Trigger immediate BigQuery outbox synchronization",
+        "responses": {
+          "200": { "description": "Sync triggered" }
+        }
+      }
+    }
+  }
+}

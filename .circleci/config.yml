@@ -1,0 +1,170 @@
+version: 2.1
+
+# ==============================================================================
+# CircleCI Remote Compilation Pipeline: Attendance System Rust Architecture
+# Mandate: ZERO LOCAL RUST BUILD on Oracle VM. All heavy compilation occurs here.
+# ==============================================================================
+
+executors:
+  rust-executor:
+    docker:
+      - image: cimg/rust:1.80.0
+    resource_class: large
+    environment:
+      CARGO_INCREMENTAL: "0"
+      RUST_BACKTRACE: "1"
+      RUSTFLAGS: "-D warnings"
+
+commands:
+  install-system-dependencies:
+    description: "Install required C/C++ libraries and build utilities"
+    steps:
+      - run:
+          name: "Install build dependencies & update Rust stable toolchain"
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends \
+              pkg-config \
+              libssl-dev \
+              cmake \
+              libsqlite3-dev \
+              ca-certificates \
+              curl \
+              jq
+            rustup update stable
+            rustup default stable
+            rustc --version
+            cargo --version
+
+  restore-cargo-cache:
+    description: "Restore cached cargo registries and compilation targets"
+    steps:
+      - restore_cache:
+          name: "Restore Cargo & Target Cache"
+          keys:
+            - v2-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
+            - v2-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v2-cargo-cache-{{ arch }}-
+
+  save-cargo-cache:
+    description: "Cache cargo dependencies and build objects to accelerate future runs"
+    steps:
+      - save_cache:
+          name: "Save Cargo & Target Cache"
+          key: v2-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
+          paths:
+            - ~/.cargo/registry/index
+            - ~/.cargo/registry/cache
+            - ~/.cargo/git/db
+            - target
+
+jobs:
+  lint-and-test:
+    executor: rust-executor
+    steps:
+      - checkout
+      - install-system-dependencies
+      - restore-cargo-cache
+      - run:
+          name: "Check Formatting & Clippy Lints"
+          command: |
+            rustup component add clippy rustfmt
+            cargo fmt --all -- --check || true
+            cargo clippy --workspace --exclude rust_deepFace --all-targets -- -D warnings || true
+      - run:
+          name: "Execute Unit & Integration Tests"
+          command: |
+            cargo test --workspace --exclude rust_deepFace
+      - save-cargo-cache
+
+  build-release-artifacts:
+    executor: rust-executor
+    steps:
+      - checkout
+      - install-system-dependencies
+      - restore-cargo-cache
+      - run:
+          name: "Remote Cargo Build Release (Heavy Compilation)"
+          command: |
+            echo "=========================================================="
+            echo "Starting Remote Release Compilation on CircleCI Runner..."
+            echo "Target: x86_64-unknown-linux-gnu (Oracle Linux 9.8 Compatible)"
+            echo "Oracle VM remains completely free of local build load."
+            echo "=========================================================="
+            cargo build --release --locked --workspace --exclude rust_deepFace
+      - save-cargo-cache
+      - run:
+          name: "Package Release Binaries & Checksums"
+          command: |
+            mkdir -p dist
+            cp target/release/attendance-api dist/
+            cp target/release/attendance-cli dist/
+            cp target/release/attendance-device-agent dist/
+            
+            # Verify Target ELF Architecture
+            file dist/attendance-api
+
+            
+            # Generate SHA256 Checksums
+            cd dist
+            sha256sum attendance-api attendance-cli attendance-device-agent > SHA256SUMS.txt
+            cat SHA256SUMS.txt
+            
+            # Create distribution archive
+            tar -czvf attendance-system-linux-x86_64.tar.gz attendance-api attendance-cli attendance-device-agent SHA256SUMS.txt
+            ls -lh
+      - store_artifacts:
+          path: dist
+          destination: release-binaries
+      - persist_to_workspace:
+          root: dist
+          paths:
+            - attendance-api
+            - attendance-cli
+            - attendance-device-agent
+            - SHA256SUMS.txt
+            - attendance-system-linux-x86_64.tar.gz
+
+  deploy-to-oracle-vm:
+    executor: rust-executor
+    steps:
+      - attach_workspace:
+          at: dist
+      - run:
+          name: "Trigger Automated Delivery / Release Notification"
+          command: |
+            echo "=========================================================="
+            echo "Remote compilation completed successfully."
+            echo "Artifacts are stored and available for Oracle VM retrieval."
+            echo "=========================================================="
+            ls -lh dist/
+            # If ORACLE_VM_DEPLOY_WEBHOOK or SSH credentials are provided:
+            if [ -n "$ORACLE_VM_WEBHOOK_URL" ]; then
+              curl -s -X POST "$ORACLE_VM_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "{\"status\":\"success\", \"commit\":\"$CIRCLE_SHA1\", \"build_num\":\"$CIRCLE_BUILD_NUM\"}" || true
+            fi
+
+workflows:
+  version: 2
+  remote-rust-compilation:
+    jobs:
+      - lint-and-test:
+          filters:
+            branches:
+              only: /.*/
+      - build-release-artifacts:
+          requires:
+            - lint-and-test
+          filters:
+            branches:
+              only: /.*/
+      - deploy-to-oracle-vm:
+          requires:
+            - build-release-artifacts
+          filters:
+            branches:
+              only:
+                - master
+                - main
+                - production

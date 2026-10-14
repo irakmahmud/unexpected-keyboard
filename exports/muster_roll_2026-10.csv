@@ -1,0 +1,11 @@
+EmployeeCode,FullName,Department,PresentDays,LateDays,AbsentDays,LeaveDays
+EMP001,"Tanvir Ahmed","ENG",0,0,21,0
+EMP002,"Nusrat Jahan","ENG",0,0,21,0
+EMP003,"Kazi Mamun","ENG",0,0,21,0
+EMP004,"Farhana Akter","ENG",0,0,21,0
+EMP005,"Mahmudul Hasan","ENG",0,0,21,0
+EMP006,"Sultana Razia","ENG",0,0,21,0
+EMP007,"Ashraful Islam","ENG",0,0,21,0
+EMP008,"Rashed Karim","ENG",0,0,21,0
+EMP009,"Mehedi Hasan","ENG",0,0,21,0
+EMP010,"Sabina Yasmin","ENG",0,0,21,0

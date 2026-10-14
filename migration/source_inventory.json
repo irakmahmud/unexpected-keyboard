@@ -1,0 +1,3880 @@
+{
+  "file": "/home/opc/attendance_system/attendance_v8.py",
+  "total_lines": 14723,
+  "classes_count": 9,
+  "classes": {
+    "SingleInstanceManager": {
+      "name": "SingleInstanceManager",
+      "start_line": 41,
+      "end_line": 232,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 42,
+          "end_line": 50,
+          "args": [
+            "self",
+            "port"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "setup_logging",
+          "start_line": 52,
+          "end_line": 58,
+          "args": [
+            "self"
+          ],
+          "docstring": "Setup detailed logging"
+        },
+        {
+          "name": "check_instance",
+          "start_line": 60,
+          "end_line": 89,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check if another instance is running and manage attendance cooldown"
+        },
+        {
+          "name": "check_attendance_cooldown",
+          "start_line": 91,
+          "end_line": 106,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check if attendance was recorded within last 1 minute"
+        },
+        {
+          "name": "show_debug_message",
+          "start_line": 108,
+          "end_line": 129,
+          "args": [
+            "self",
+            "message"
+          ],
+          "docstring": "Show debug message to user"
+        },
+        {
+          "name": "create_lock_file",
+          "start_line": 131,
+          "end_line": 142,
+          "args": [
+            "self"
+          ],
+          "docstring": "Create a lock file with current process info"
+        },
+        {
+          "name": "record_attendance",
+          "start_line": 144,
+          "end_line": 163,
+          "args": [
+            "self"
+          ],
+          "docstring": "Record timestamp of successful attendance"
+        },
+        {
+          "name": "dump_system_state",
+          "start_line": 165,
+          "end_line": 186,
+          "args": [
+            "self"
+          ],
+          "docstring": "Dump complete system state for debugging"
+        },
+        {
+          "name": "check_running_processes",
+          "start_line": 188,
+          "end_line": 210,
+          "args": [
+            "self"
+          ],
+          "docstring": "Debug function to list all running instances"
+        },
+        {
+          "name": "cleanup",
+          "start_line": 212,
+          "end_line": 232,
+          "args": [
+            "self"
+          ],
+          "docstring": "Enhanced cleanup with error handling"
+        }
+      ]
+    },
+    "StartupAndAdminManager": {
+      "name": "StartupAndAdminManager",
+      "start_line": 234,
+      "end_line": 352,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 235,
+          "end_line": 239,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "initialize",
+          "start_line": 241,
+          "end_line": 249,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize if settings aren't configured"
+        },
+        {
+          "name": "check_settings_configured",
+          "start_line": 251,
+          "end_line": 263,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check if startup settings are already configured"
+        },
+        {
+          "name": "add_to_registry",
+          "start_line": 265,
+          "end_line": 286,
+          "args": [
+            "self"
+          ],
+          "docstring": "Add to user's registry RUN key (no admin needed)"
+        },
+        {
+          "name": "check_registry_entry",
+          "start_line": 288,
+          "end_line": 306,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify current registry entry"
+        },
+        {
+          "name": "verify_startup_shortcut",
+          "start_line": 308,
+          "end_line": 322,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify startup shortcut exists and is correct"
+        },
+        {
+          "name": "save_settings_status",
+          "start_line": 324,
+          "end_line": 330,
+          "args": [
+            "self",
+            "status"
+          ],
+          "docstring": "Save startup settings status"
+        },
+        {
+          "name": "setup_startup",
+          "start_line": 332,
+          "end_line": 352,
+          "args": [
+            "self"
+          ],
+          "docstring": "Configure startup methods"
+        }
+      ]
+    },
+    "FaceRecognitionSystem": {
+      "name": "FaceRecognitionSystem",
+      "start_line": 457,
+      "end_line": 2792,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 458,
+          "end_line": 484,
+          "args": [
+            "self",
+            "main_window",
+            "db_pool",
+            "app"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_is_username_exists",
+          "start_line": 488,
+          "end_line": 517,
+          "args": [
+            "self",
+            "username"
+          ],
+          "docstring": "Check if username exists in either local or AWS database"
+        },
+        {
+          "name": "register_new_user",
+          "start_line": 521,
+          "end_line": 846,
+          "args": [
+            "self",
+            "capture_with_camera"
+          ],
+          "docstring": "Handle face capture and user registration"
+        },
+        {
+          "name": "_complete_new_user_registration",
+          "start_line": 851,
+          "end_line": 1009,
+          "args": [
+            "self",
+            "capture_with_camera"
+          ],
+          "docstring": "Complete the registration process for a new user"
+        },
+        {
+          "name": "setup_ui",
+          "start_line": 1014,
+          "end_line": 1017,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "center_window",
+          "start_line": 1020,
+          "end_line": 1034,
+          "args": [
+            "self",
+            "window",
+            "width",
+            "height"
+          ],
+          "docstring": "Center a window on the screen - delegates to robust version"
+        },
+        {
+          "name": "_center_window_fallback",
+          "start_line": 1036,
+          "end_line": 1070,
+          "args": [
+            "self",
+            "window",
+            "width",
+            "height"
+          ],
+          "docstring": "Fallback window centering method"
+        },
+        {
+          "name": "capture_faces_continuous",
+          "start_line": 1073,
+          "end_line": 1287,
+          "args": [
+            "self",
+            "username",
+            "password"
+          ],
+          "docstring": "Capture multiple face embeddings with troubleshooting for camera issues."
+        },
+        {
+          "name": "update_simple_status_display",
+          "start_line": 1290,
+          "end_line": 1327,
+          "args": [
+            "self",
+            "status_image",
+            "frame",
+            "last_captured_frame",
+            "current_count",
+            "total_count"
+          ],
+          "docstring": "Simplified status display that focuses just on showing the camera feed and progress\nsince instructions are now shown in the dedicated Tkinter window."
+        },
+        {
+          "name": "get_action_instructions",
+          "start_line": 1330,
+          "end_line": 1395,
+          "args": [
+            "self"
+          ],
+          "docstring": "Return the action instructions list - separated for optimization."
+        },
+        {
+          "name": "verify_face_detection",
+          "start_line": 1397,
+          "end_line": 1415,
+          "args": [
+            "self",
+            "frame"
+          ],
+          "docstring": "Verify if a face can be detected in the frame - optimized version."
+        },
+        {
+          "name": "create_instruction_window",
+          "start_line": 1420,
+          "end_line": 1464,
+          "args": [
+            "self"
+          ],
+          "docstring": "Create a Tkinter window for displaying multilingual instructions at the bottom of the screen."
+        },
+        {
+          "name": "update_instruction_window",
+          "start_line": 1466,
+          "end_line": 1485,
+          "args": [
+            "self",
+            "window",
+            "text_widget",
+            "instruction"
+          ],
+          "docstring": "Update the instruction window with the current instruction."
+        },
+        {
+          "name": "update_status_display",
+          "start_line": 1490,
+          "end_line": 1573,
+          "args": [
+            "self",
+            "status_image",
+            "frame",
+            "last_captured_frame",
+            "action",
+            "current_count",
+            "total_count"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "open_hr_window",
+          "start_line": 1577,
+          "end_line": 1587,
+          "args": [
+            "self"
+          ],
+          "docstring": "Open the HR window by delegating to the App class."
+        },
+        {
+          "name": "analyze_distances",
+          "start_line": 1592,
+          "end_line": 1613,
+          "args": [
+            "self",
+            "distances",
+            "indices"
+          ],
+          "docstring": "Analyze the distances returned by FAISS search"
+        },
+        {
+          "name": "verify_identity",
+          "start_line": 1617,
+          "end_line": 2505,
+          "args": [
+            "self",
+            "frame"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "monitor_sync_status",
+          "start_line": 2509,
+          "end_line": 2543,
+          "args": [
+            "self",
+            "cloud_status_label",
+            "cloud_update_label"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "handle_sync_completion",
+          "start_line": 2545,
+          "end_line": 2567,
+          "args": [
+            "self",
+            "cloud_status_label",
+            "cloud_update_label"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_save_frame",
+          "start_line": 2571,
+          "end_line": 2599,
+          "args": [
+            "self",
+            "frame",
+            "username",
+            "login_type",
+            "timestamp"
+          ],
+          "docstring": "Save a single frame as an image file"
+        },
+        {
+          "name": "generate_embeddings_report",
+          "start_line": 2604,
+          "end_line": 2680,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "update_status",
+          "start_line": 2686,
+          "end_line": 2688,
+          "args": [
+            "self",
+            "message"
+          ],
+          "docstring": "Update the status label in the UI."
+        },
+        {
+          "name": "create_status_window",
+          "start_line": 2692,
+          "end_line": 2694,
+          "args": [
+            "self",
+            "width",
+            "height"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "update_status_display",
+          "start_line": 2696,
+          "end_line": 2717,
+          "args": [
+            "self",
+            "status_image",
+            "frame",
+            "captured_frame",
+            "action",
+            "current_count",
+            "total_count"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "get_embedding",
+          "start_line": 2722,
+          "end_line": 2741,
+          "args": [
+            "self",
+            "frame"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "load_faiss_index",
+          "start_line": 2743,
+          "end_line": 2759,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "load_user_mappings",
+          "start_line": 2761,
+          "end_line": 2770,
+          "args": [
+            "self",
+            "user_mappings_path"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "save_user_mappings",
+          "start_line": 2772,
+          "end_line": 2776,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "reset_database",
+          "start_line": 2780,
+          "end_line": 2792,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        }
+      ]
+    },
+    "NetworkSyncManager": {
+      "name": "NetworkSyncManager",
+      "start_line": 2796,
+      "end_line": 3658,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 2797,
+          "end_line": 2805,
+          "args": [
+            "self",
+            "db_pool"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_check_connectivity",
+          "start_line": 2809,
+          "end_line": 2846,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check internet connectivity with proper separation of internet vs AWS failures"
+        },
+        {
+          "name": "_verify_aws_services",
+          "start_line": 2850,
+          "end_line": 2867,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify AWS services are accessible - separate from internet connectivity"
+        },
+        {
+          "name": "start_monitoring",
+          "start_line": 2870,
+          "end_line": 2873,
+          "args": [
+            "self"
+          ],
+          "docstring": "Start network monitoring in a separate thread"
+        },
+        {
+          "name": "_has_pending_syncs",
+          "start_line": 2877,
+          "end_line": 2890,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check if there are any pending syncs"
+        },
+        {
+          "name": "_sync_all_pending_data",
+          "start_line": 2894,
+          "end_line": 3158,
+          "args": [
+            "self",
+            "days_filter"
+          ],
+          "docstring": "Sync data between local SQLite and AWS RDS databases."
+        },
+        {
+          "name": "sync_recent_data",
+          "start_line": 3162,
+          "end_line": 3357,
+          "args": [
+            "self"
+          ],
+          "docstring": "Sync both AWS RDS and S3 with proper validation"
+        },
+        {
+          "name": "verify_sync_status",
+          "start_line": 3362,
+          "end_line": 3404,
+          "args": [
+            "self",
+            "record_id"
+          ],
+          "docstring": "Verify if a record is properly synced between local and AWS"
+        },
+        {
+          "name": "_verify_aws_connection",
+          "start_line": 3408,
+          "end_line": 3425,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify AWS services are accessible"
+        },
+        {
+          "name": "_sync_databases",
+          "start_line": 3428,
+          "end_line": 3460,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "verify_database_times",
+          "start_line": 3464,
+          "end_line": 3467,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verifies that SQLite and AWS RDS times are synchronized."
+        },
+        {
+          "name": "_get_aws_time_with_retry",
+          "start_line": 3472,
+          "end_line": 3495,
+          "args": [
+            "self"
+          ],
+          "docstring": "Get AWS time with exponential backoff retry."
+        },
+        {
+          "name": "_attempt_time_sync",
+          "start_line": 3497,
+          "end_line": 3512,
+          "args": [
+            "self"
+          ],
+          "docstring": "Attempt to synchronize system time with NTP."
+        },
+        {
+          "name": "check_internet_connection",
+          "start_line": 3514,
+          "end_line": 3539,
+          "args": [
+            "self"
+          ],
+          "docstring": "Checks internet connectivity with retry mechanism."
+        },
+        {
+          "name": "verify_aws_skip",
+          "start_line": 3545,
+          "end_line": 3556,
+          "args": [
+            "self",
+            "service"
+          ],
+          "docstring": "Verifies that AWS services are properly skipped when offline.\nReturns True if skip was successful."
+        },
+        {
+          "name": "start_network_monitoring",
+          "start_line": 3558,
+          "end_line": 3561,
+          "args": [
+            "self"
+          ],
+          "docstring": "Starts the network monitoring thread."
+        },
+        {
+          "name": "_sync_table",
+          "start_line": 3568,
+          "end_line": 3587,
+          "args": [
+            "self",
+            "local_conn",
+            "aws_conn",
+            "table_name"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_monitor_network",
+          "start_line": 3589,
+          "end_line": 3611,
+          "args": [
+            "self"
+          ],
+          "docstring": "Continuously monitor network connectivity with proper thread termination"
+        },
+        {
+          "name": "force_stop_monitoring",
+          "start_line": 3614,
+          "end_line": 3631,
+          "args": [
+            "self"
+          ],
+          "docstring": "Force stop network monitoring thread"
+        },
+        {
+          "name": "cleanup",
+          "start_line": 3635,
+          "end_line": 3658,
+          "args": [
+            "self"
+          ],
+          "docstring": "FIXED: Safe cleanup with proper thread termination"
+        }
+      ]
+    },
+    "TimeManager": {
+      "name": "TimeManager",
+      "start_line": 3662,
+      "end_line": 3817,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 3663,
+          "end_line": 3672,
+          "args": [
+            "self",
+            "db_pool"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "get_accurate_time",
+          "start_line": 3674,
+          "end_line": 3683,
+          "args": [
+            "self"
+          ],
+          "docstring": "Get accurate time with proper timezone handling"
+        },
+        {
+          "name": "_convert_to_utc",
+          "start_line": 3687,
+          "end_line": 3691,
+          "args": [
+            "self",
+            "dt"
+          ],
+          "docstring": "Ensure consistent UTC time handling"
+        },
+        {
+          "name": "_should_sync_ntp",
+          "start_line": 3695,
+          "end_line": 3699,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_sync_with_ntp",
+          "start_line": 3701,
+          "end_line": 3715,
+          "args": [
+            "self"
+          ],
+          "docstring": "Sync with NTP servers with fallback"
+        },
+        {
+          "name": "_adjust_system_time",
+          "start_line": 3719,
+          "end_line": 3728,
+          "args": [
+            "self",
+            "ntp_time"
+          ],
+          "docstring": "Adjust system time with proper privileges handling"
+        },
+        {
+          "name": "validate_attendance_time",
+          "start_line": 3734,
+          "end_line": 3761,
+          "args": [
+            "self",
+            "username",
+            "timestamp",
+            "is_in_time"
+          ],
+          "docstring": "Validates and corrects attendance time based on existing records.\nFor in_time: Uses earlier time between local and AWS\nFor out_time: Uses later time between local and AWS"
+        },
+        {
+          "name": "_get_local_time",
+          "start_line": 3765,
+          "end_line": 3787,
+          "args": [
+            "self",
+            "username",
+            "is_in_time"
+          ],
+          "docstring": "Get attendance time from local SQLite database."
+        },
+        {
+          "name": "_get_aws_time",
+          "start_line": 3789,
+          "end_line": 3817,
+          "args": [
+            "self",
+            "username",
+            "is_in_time"
+          ],
+          "docstring": "Get attendance time from AWS RDS database."
+        }
+      ]
+    },
+    "AWSConfig": {
+      "name": "AWSConfig",
+      "start_line": 3821,
+      "end_line": 3845,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 3822,
+          "end_line": 3837,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "get_s3_client",
+          "start_line": 3839,
+          "end_line": 3845,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        }
+      ]
+    },
+    "DatabasePool": {
+      "name": "DatabasePool",
+      "start_line": 3864,
+      "end_line": 5561,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 3869,
+          "end_line": 3972,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "get_instance",
+          "start_line": 3975,
+          "end_line": 3978,
+          "args": [],
+          "docstring": null
+        },
+        {
+          "name": "get_aws_connection",
+          "start_line": 3982,
+          "end_line": 4031,
+          "args": [
+            "self"
+          ],
+          "docstring": "Get AWS connection with improved error handling - separate AWS failures from internet failures"
+        },
+        {
+          "name": "_check_basic_internet",
+          "start_line": 4034,
+          "end_line": 4051,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check basic internet connectivity using DNS servers"
+        },
+        {
+          "name": "return_aws_connection",
+          "start_line": 4056,
+          "end_line": 4118,
+          "args": [
+            "self",
+            "conn"
+          ],
+          "docstring": "Return AWS connection with proper error handling - NO key parameter for ThreadedConnectionPool"
+        },
+        {
+          "name": "close_pool",
+          "start_line": 4124,
+          "end_line": 4131,
+          "args": [
+            "self"
+          ],
+          "docstring": "Properly close the connection pool"
+        },
+        {
+          "name": "get_connection_context",
+          "start_line": 4133,
+          "end_line": 4152,
+          "args": [
+            "self"
+          ],
+          "docstring": "Context manager for database connections to ensure proper cleanup"
+        },
+        {
+          "name": "get_aws_connection_context",
+          "start_line": 4154,
+          "end_line": 4178,
+          "args": [
+            "self"
+          ],
+          "docstring": "Context manager for AWS connections to ensure proper cleanup"
+        },
+        {
+          "name": "initialize_database",
+          "start_line": 4183,
+          "end_line": 4200,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize both local SQLite and AWS RDS databases."
+        },
+        {
+          "name": "_initialize_local_tables",
+          "start_line": 4208,
+          "end_line": 4298,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize local SQLite database tables."
+        },
+        {
+          "name": "_initialize_aws_tables",
+          "start_line": 4300,
+          "end_line": 4387,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize AWS PostgreSQL database tables."
+        },
+        {
+          "name": "determine_login_type",
+          "start_line": 4397,
+          "end_line": 4452,
+          "args": [
+            "self",
+            "username"
+          ],
+          "docstring": "FIXED: Determine login type by checking BOTH local and AWS databases\n- If no in-time exists in EITHER database for today -> IN_TIME  \n- If in-time exists in EITHER database -> OUT_TIME"
+        },
+        {
+          "name": "_convert_to_local",
+          "start_line": 4458,
+          "end_line": 4462,
+          "args": [
+            "self",
+            "dt"
+          ],
+          "docstring": "Convert datetime to local timezone (Asia/Dhaka)."
+        },
+        {
+          "name": "_convert_to_text",
+          "start_line": 4464,
+          "end_line": 4466,
+          "args": [
+            "self",
+            "dt"
+          ],
+          "docstring": "Convert datetime to TEXT format YYYY-MM-DD HH:MM:SS."
+        },
+        {
+          "name": "save_timestamps",
+          "start_line": 4469,
+          "end_line": 4513,
+          "args": [
+            "self"
+          ],
+          "docstring": "Save timestamps to both SQLite and AWS PostgreSQL."
+        },
+        {
+          "name": "sync_database_times",
+          "start_line": 4517,
+          "end_line": 4549,
+          "args": [
+            "self"
+          ],
+          "docstring": "Synchronize local and AWS database times."
+        },
+        {
+          "name": "sync_database_times",
+          "start_line": 4554,
+          "end_line": 4588,
+          "args": [
+            "self"
+          ],
+          "docstring": "Synchronize local and AWS database times."
+        },
+        {
+          "name": "_get_local_records",
+          "start_line": 4590,
+          "end_line": 4604,
+          "args": [
+            "self"
+          ],
+          "docstring": "Retrieve local database records."
+        },
+        {
+          "name": "_get_aws_records",
+          "start_line": 4606,
+          "end_line": 4622,
+          "args": [
+            "self"
+          ],
+          "docstring": "Retrieve AWS database records."
+        },
+        {
+          "name": "_sync_databases",
+          "start_line": 4625,
+          "end_line": 4644,
+          "args": [
+            "self"
+          ],
+          "docstring": "Sync data between local SQLite and AWS RDS databases."
+        },
+        {
+          "name": "get_local_connection",
+          "start_line": 4653,
+          "end_line": 4700,
+          "args": [
+            "self"
+          ],
+          "docstring": "Get local SQLite connection with dictionary row factory."
+        },
+        {
+          "name": "close_local_connection",
+          "start_line": 4705,
+          "end_line": 4711,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "upload_video_to_s3",
+          "start_line": 4717,
+          "end_line": 4733,
+          "args": [
+            "self",
+            "video_path",
+            "username",
+            "video_type"
+          ],
+          "docstring": "Upload video with offline handling."
+        },
+        {
+          "name": "save_user_to_db",
+          "start_line": 4738,
+          "end_line": 4765,
+          "args": [
+            "self",
+            "username",
+            "video_path"
+          ],
+          "docstring": "Save or update user with face encoding from video."
+        },
+        {
+          "name": "_is_duplicate_user",
+          "start_line": 4770,
+          "end_line": 4790,
+          "args": [
+            "self",
+            "new_encoding"
+          ],
+          "docstring": "Check if the face encoding already exists in the local database."
+        },
+        {
+          "name": "_compare_face_embeddings",
+          "start_line": 4793,
+          "end_line": 4821,
+          "args": [
+            "self",
+            "embedding1",
+            "embedding2"
+          ],
+          "docstring": "Compare two face embeddings using DeepFace.\nReturns True if the faces match, False otherwise."
+        },
+        {
+          "name": "get_latest_video_path",
+          "start_line": 4824,
+          "end_line": 4850,
+          "args": [
+            "self",
+            "username",
+            "login_type"
+          ],
+          "docstring": "Get the most recent video path for a user"
+        },
+        {
+          "name": "_save_login_to_local_db",
+          "start_line": 4853,
+          "end_line": 4884,
+          "args": [
+            "self",
+            "company_user_uuid",
+            "username",
+            "login_type",
+            "validated_time"
+          ],
+          "docstring": "Convert to UTC before storage"
+        },
+        {
+          "name": "_save_login_to_aws_db",
+          "start_line": 4887,
+          "end_line": 4943,
+          "args": [
+            "self",
+            "company_user_uuid",
+            "username",
+            "login_type",
+            "validated_time"
+          ],
+          "docstring": "Save login to AWS RDS with validated time"
+        },
+        {
+          "name": "save_or_update_user",
+          "start_line": 4951,
+          "end_line": 5008,
+          "args": [
+            "self",
+            "username",
+            "face_embedding",
+            "company_user_uuid"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "verify_database_times",
+          "start_line": 5012,
+          "end_line": 5037,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check UTC times between databases"
+        },
+        {
+          "name": "generate_record_id",
+          "start_line": 5040,
+          "end_line": 5042,
+          "args": [
+            "self",
+            "company_user_uuid",
+            "date"
+          ],
+          "docstring": "Generate record ID using company_user_uuid instead of company_user_uuid"
+        },
+        {
+          "name": "_is_username_exists",
+          "start_line": 5046,
+          "end_line": 5072,
+          "args": [
+            "self",
+            "username"
+          ],
+          "docstring": "Check if username exists in either local or AWS database"
+        },
+        {
+          "name": "_convert_to_utc",
+          "start_line": 5076,
+          "end_line": 5084,
+          "args": [
+            "self",
+            "dt"
+          ],
+          "docstring": "Convert datetime to UTC with proper timezone handling.\nEnsures that all timestamps are stored in UTC in the database."
+        },
+        {
+          "name": "save_login_to_db",
+          "start_line": 5091,
+          "end_line": 5190,
+          "args": [
+            "self",
+            "username",
+            "login_type",
+            "timestamp",
+            "filepath",
+            "with_camera"
+          ],
+          "docstring": "Save login with improved error handling"
+        },
+        {
+          "name": "_sync_records",
+          "start_line": 5202,
+          "end_line": 5254,
+          "args": [
+            "self",
+            "local_conn",
+            "aws_conn",
+            "table_name",
+            "local_records",
+            "aws_records"
+          ],
+          "docstring": "Syncs records between local SQLite and AWS PostgreSQL databases with improved error handling."
+        },
+        {
+          "name": "_sync_user_record",
+          "start_line": 5256,
+          "end_line": 5290,
+          "args": [
+            "self",
+            "local_cur",
+            "aws_record",
+            "aws_id"
+          ],
+          "docstring": "Handle user record synchronization with validation"
+        },
+        {
+          "name": "_sync_attendance_record",
+          "start_line": 5292,
+          "end_line": 5349,
+          "args": [
+            "self",
+            "local_cur",
+            "aws_record"
+          ],
+          "docstring": "Handle attendance record synchronization with validation"
+        },
+        {
+          "name": "retry_failed_syncs",
+          "start_line": 5353,
+          "end_line": 5409,
+          "args": [
+            "self"
+          ],
+          "docstring": "Retry failed synchronizations with exponential backoff"
+        },
+        {
+          "name": "validate_and_sync_times",
+          "start_line": 5411,
+          "end_line": 5439,
+          "args": [
+            "self",
+            "local_time",
+            "aws_time",
+            "record_id"
+          ],
+          "docstring": "Validate and synchronize timestamps between local and AWS"
+        },
+        {
+          "name": "_sync_table",
+          "start_line": 5443,
+          "end_line": 5471,
+          "args": [
+            "self",
+            "local_conn",
+            "aws_conn",
+            "table_name"
+          ],
+          "docstring": "Syncs a specific table between SQLite and AWS RDS.\nHandles data type conversions, UUID casting, and transaction rollbacks."
+        },
+        {
+          "name": "cleanup",
+          "start_line": 5477,
+          "end_line": 5523,
+          "args": [
+            "self"
+          ],
+          "docstring": "FIXED: Safe database cleanup with proper connection handling"
+        },
+        {
+          "name": "verify_database_connection",
+          "start_line": 5528,
+          "end_line": 5561,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify database connectivity and schema"
+        }
+      ]
+    },
+    "AndroidIDReceiver": {
+      "name": "AndroidIDReceiver",
+      "start_line": 5738,
+      "end_line": 5907,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 5739,
+          "end_line": 5746,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "setup_ui",
+          "start_line": 5748,
+          "end_line": 5776,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "start_server",
+          "start_line": 5778,
+          "end_line": 5784,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "setup_ngrok",
+          "start_line": 5786,
+          "end_line": 5815,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "make_handler",
+          "start_line": 5817,
+          "end_line": 5876,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "generate_qr",
+          "start_line": 5878,
+          "end_line": 5893,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "display_android_id",
+          "start_line": 5895,
+          "end_line": 5898,
+          "args": [
+            "self",
+            "android_id"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "cleanup",
+          "start_line": 5900,
+          "end_line": 5907,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        }
+      ]
+    },
+    "App": {
+      "name": "App",
+      "start_line": 5911,
+      "end_line": 14679,
+      "docstring": null,
+      "methods": [
+        {
+          "name": "__init__",
+          "start_line": 5914,
+          "end_line": 5974,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "start_background_init",
+          "start_line": 5978,
+          "end_line": 5987,
+          "args": [
+            "self"
+          ],
+          "docstring": "Start background initialization in separate threads"
+        },
+        {
+          "name": "init_database",
+          "start_line": 5989,
+          "end_line": 5999,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize database in background"
+        },
+        {
+          "name": "init_network",
+          "start_line": 6001,
+          "end_line": 6011,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize network in background"
+        },
+        {
+          "name": "start",
+          "start_line": 6013,
+          "end_line": 6021,
+          "args": [
+            "self"
+          ],
+          "docstring": "Start the application"
+        },
+        {
+          "name": "setup_ui",
+          "start_line": 6025,
+          "end_line": 6090,
+          "args": [
+            "self"
+          ],
+          "docstring": "Creates an extraordinary, modern-designed UI for the attendance system"
+        },
+        {
+          "name": "_create_glass_status_dashboard",
+          "start_line": 6092,
+          "end_line": 6180,
+          "args": [
+            "self",
+            "parent"
+          ],
+          "docstring": "Create a glass morphism status dashboard with modern metrics display"
+        },
+        {
+          "name": "_create_modern_action_panel",
+          "start_line": 6182,
+          "end_line": 6237,
+          "args": [
+            "self",
+            "parent"
+          ],
+          "docstring": "Create a panel with modern, animated action buttons"
+        },
+        {
+          "name": "_create_gradient_button",
+          "start_line": 6239,
+          "end_line": 6309,
+          "args": [
+            "self",
+            "parent",
+            "text",
+            "icon",
+            "command",
+            "gradient_colors"
+          ],
+          "docstring": "Creates a button with gradient background and hover animation - taller for important buttons"
+        },
+        {
+          "name": "create_simple_hr_button",
+          "start_line": 6315,
+          "end_line": 6394,
+          "args": [
+            "self"
+          ],
+          "docstring": "Create a simple, always-visible HR button at bottom-left - ONLY ONCE"
+        },
+        {
+          "name": "recreate_hr_button_if_missing",
+          "start_line": 6397,
+          "end_line": 6415,
+          "args": [
+            "self"
+          ],
+          "docstring": "Simple check and recreate if needed - PREVENT MULTIPLE CREATION"
+        },
+        {
+          "name": "_create_floating_hr_button",
+          "start_line": 6418,
+          "end_line": 6424,
+          "args": [
+            "self",
+            "parent"
+          ],
+          "docstring": "Simplified - just ensure simple HR button exists"
+        },
+        {
+          "name": "force_create_hr_button",
+          "start_line": 6428,
+          "end_line": 6453,
+          "args": [
+            "self"
+          ],
+          "docstring": "Force create HR button - ONLY IF IT DOESN'T EXIST"
+        },
+        {
+          "name": "start_hr_button_monitor",
+          "start_line": 6456,
+          "end_line": 6469,
+          "args": [
+            "self"
+          ],
+          "docstring": "Simple monitoring for HR button - REDUCED FREQUENCY"
+        },
+        {
+          "name": "initialize_hr_button_protection",
+          "start_line": 6471,
+          "end_line": 6492,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize HR button protection system - SINGLE CREATION"
+        },
+        {
+          "name": "on_tensorflow_loaded",
+          "start_line": 6495,
+          "end_line": 6506,
+          "args": [
+            "self"
+          ],
+          "docstring": "Call this when TensorFlow loading is complete"
+        },
+        {
+          "name": "initialize_hr_button_protection",
+          "start_line": 6512,
+          "end_line": 6533,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize HR button protection system - CREATE IMMEDIATELY"
+        },
+        {
+          "name": "_create_modern_header",
+          "start_line": 6538,
+          "end_line": 6587,
+          "args": [
+            "self"
+          ],
+          "docstring": "Create a floating header with modern design elements"
+        },
+        {
+          "name": "_create_modern_console",
+          "start_line": 6591,
+          "end_line": 6702,
+          "args": [
+            "self",
+            "parent"
+          ],
+          "docstring": "Create a modern terminal-inspired console panel with attendance info"
+        },
+        {
+          "name": "_create_attendance_section",
+          "start_line": 6705,
+          "end_line": 6820,
+          "args": [
+            "self",
+            "lower_section"
+          ],
+          "docstring": "Create a modern card-based attendance info section"
+        },
+        {
+          "name": "_create_attendance_card",
+          "start_line": 6822,
+          "end_line": 6904,
+          "args": [
+            "self",
+            "parent",
+            "key",
+            "text",
+            "accent_color"
+          ],
+          "docstring": "Create a modern card for attendance data with reduced height"
+        },
+        {
+          "name": "_update_attendance_data",
+          "start_line": 6909,
+          "end_line": 7265,
+          "args": [
+            "self",
+            "show_history"
+          ],
+          "docstring": "Update attendance data with 7-day history option"
+        },
+        {
+          "name": "_style_modern_scrollbar",
+          "start_line": 7268,
+          "end_line": 7271,
+          "args": [
+            "self",
+            "scrollbar"
+          ],
+          "docstring": "Apply simple styling to scrollbars"
+        },
+        {
+          "name": "_make_round",
+          "start_line": 7275,
+          "end_line": 7289,
+          "args": [
+            "self",
+            "widget"
+          ],
+          "docstring": "Make a widget round by creating an oval in a canvas"
+        },
+        {
+          "name": "update_attendance_display_after_login",
+          "start_line": 7293,
+          "end_line": 7342,
+          "args": [
+            "self",
+            "username",
+            "login_type",
+            "timestamp",
+            "with_camera"
+          ],
+          "docstring": "Update attendance display after new login"
+        },
+        {
+          "name": "load_initial_attendance_status",
+          "start_line": 7344,
+          "end_line": 7457,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "update_attendance_info",
+          "start_line": 7467,
+          "end_line": 7531,
+          "args": [
+            "self",
+            "username"
+          ],
+          "docstring": "Update attendance info display"
+        },
+        {
+          "name": "update_attendance_display",
+          "start_line": 7534,
+          "end_line": 7579,
+          "args": [
+            "self",
+            "username",
+            "login_type",
+            "timestamp",
+            "with_camera"
+          ],
+          "docstring": "Update the attendance display in the system console"
+        },
+        {
+          "name": "_create_icon_button",
+          "start_line": 7581,
+          "end_line": 7627,
+          "args": [
+            "self",
+            "parent",
+            "icon_text",
+            "command",
+            "color"
+          ],
+          "docstring": "Create a modern icon button with hover effect"
+        },
+        {
+          "name": "_create_modern_footer",
+          "start_line": 7629,
+          "end_line": 7647,
+          "args": [
+            "self"
+          ],
+          "docstring": "Create a modern footer with version and copyright info"
+        },
+        {
+          "name": "_update_particle_bounds",
+          "start_line": 7650,
+          "end_line": 7652,
+          "args": [
+            "self",
+            "width",
+            "height"
+          ],
+          "docstring": "Update the boundaries for particle animation"
+        },
+        {
+          "name": "_animate_particles",
+          "start_line": 7654,
+          "end_line": 7679,
+          "args": [
+            "self"
+          ],
+          "docstring": "Animate background particles"
+        },
+        {
+          "name": "_draw_glowing_logo",
+          "start_line": 7683,
+          "end_line": 7706,
+          "args": [
+            "self",
+            "canvas"
+          ],
+          "docstring": "Draw a modern glowing logo with animation"
+        },
+        {
+          "name": "_animate_logo",
+          "start_line": 7708,
+          "end_line": 7731,
+          "args": [
+            "self",
+            "canvas",
+            "pulse_size",
+            "direction"
+          ],
+          "docstring": "Create subtle pulsing animation for logo"
+        },
+        {
+          "name": "_update_animated_time",
+          "start_line": 7733,
+          "end_line": 7751,
+          "args": [
+            "self"
+          ],
+          "docstring": "Update the time with smooth digit animation"
+        },
+        {
+          "name": "_hex_to_rgb",
+          "start_line": 7756,
+          "end_line": 7759,
+          "args": [
+            "self",
+            "hex_color"
+          ],
+          "docstring": "Convert hex color to RGB values"
+        },
+        {
+          "name": "_add_glass_effect",
+          "start_line": 7763,
+          "end_line": 7791,
+          "args": [
+            "self",
+            "frame",
+            "alpha",
+            "highlight_top"
+          ],
+          "docstring": "Add a glass morphism effect to a frame"
+        },
+        {
+          "name": "_draw_advanced_background",
+          "start_line": 7796,
+          "end_line": 7848,
+          "args": [
+            "self",
+            "event"
+          ],
+          "docstring": "Draw a professional gradient background with animated particles"
+        },
+        {
+          "name": "_create_background_particles",
+          "start_line": 7850,
+          "end_line": 7881,
+          "args": [
+            "self",
+            "width",
+            "height"
+          ],
+          "docstring": "Create subtle animated particles in background"
+        },
+        {
+          "name": "_style_modern_scrollbar",
+          "start_line": 7885,
+          "end_line": 7894,
+          "args": [
+            "self",
+            "scrollbar"
+          ],
+          "docstring": "Apply modern styling to scrollbar"
+        },
+        {
+          "name": "_make_round",
+          "start_line": 7896,
+          "end_line": 7917,
+          "args": [
+            "self",
+            "widget"
+          ],
+          "docstring": "Make a widget round by configuring canvas or adding corner radius"
+        },
+        {
+          "name": "_type_welcome_message",
+          "start_line": 7919,
+          "end_line": 7955,
+          "args": [
+            "self"
+          ],
+          "docstring": "Type welcome message with animation effect"
+        },
+        {
+          "name": "_setup_animations",
+          "start_line": 7958,
+          "end_line": 7961,
+          "args": [
+            "self"
+          ],
+          "docstring": "Setup global animations for the application"
+        },
+        {
+          "name": "_animate_status_updates",
+          "start_line": 7963,
+          "end_line": 8013,
+          "args": [
+            "self"
+          ],
+          "docstring": "Animate the status updates with progress bars"
+        },
+        {
+          "name": "_show_all_systems_ready",
+          "start_line": 8015,
+          "end_line": 8047,
+          "args": [
+            "self"
+          ],
+          "docstring": "Show a notification that all systems are ready"
+        },
+        {
+          "name": "collect_all_logs",
+          "start_line": 8050,
+          "end_line": 8132,
+          "args": [
+            "self"
+          ],
+          "docstring": "Export all terminal events with timestamps ensuring complete log capture"
+        },
+        {
+          "name": "update_status",
+          "start_line": 8134,
+          "end_line": 8191,
+          "args": [
+            "self",
+            "status_key",
+            "message",
+            "success"
+          ],
+          "docstring": "Update status indicators in the modern UI\n\nArgs:\n    status_key (str): Key of the status item to update ('tensorflow', 'database', or 'network')\n    message (str): Status message to display\n    success (bool): Whether the operation was successful"
+        },
+        {
+          "name": "force_sync",
+          "start_line": 8195,
+          "end_line": 8291,
+          "args": [
+            "self"
+          ],
+          "docstring": "Force sync all pending data and photos to cloud"
+        },
+        {
+          "name": "handle_no_camera_login",
+          "start_line": 8295,
+          "end_line": 8652,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle login without camera with modern UI design and improved error handling - FIXED VERSION"
+        },
+        {
+          "name": "_generate_blank_image",
+          "start_line": 8657,
+          "end_line": 8721,
+          "args": [
+            "self",
+            "username",
+            "login_type",
+            "timestamp"
+          ],
+          "docstring": "Generate a blank image with text annotations for camera-less logins.\nArgs:\n    username (str): The username of the person logging in.\n    login_type (str): \"IN_TIME\" or \"OUT_TIME\".\n    timestamp (datetime): The timestamp of the login.\nReturns:\n    str: Filepath where the blank image is saved."
+        },
+        {
+          "name": "_show_error_message",
+          "start_line": 8724,
+          "end_line": 8766,
+          "args": [
+            "self",
+            "parent_window",
+            "message"
+          ],
+          "docstring": "Show a modern error message dialog"
+        },
+        {
+          "name": "_shake_widget",
+          "start_line": 8768,
+          "end_line": 8788,
+          "args": [
+            "self",
+            "widget",
+            "amplitude",
+            "duration"
+          ],
+          "docstring": "Create a shake animation effect for wrong password"
+        },
+        {
+          "name": "_show_forgot_password_popup",
+          "start_line": 8790,
+          "end_line": 8833,
+          "args": [
+            "self",
+            "parent_window"
+          ],
+          "docstring": "Show forgot password information"
+        },
+        {
+          "name": "_draw_simple_logo",
+          "start_line": 8835,
+          "end_line": 8847,
+          "args": [
+            "self",
+            "canvas"
+          ],
+          "docstring": "Draw a modern logo without animation to prevent Tkinter errors"
+        },
+        {
+          "name": "handle_qr_login",
+          "start_line": 8853,
+          "end_line": 8948,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle QR code based login"
+        },
+        {
+          "name": "register_new_user_with_qr",
+          "start_line": 8951,
+          "end_line": 9520,
+          "args": [
+            "self"
+          ],
+          "docstring": "Register a new user with QR code following the same pattern as camera registration"
+        },
+        {
+          "name": "_gradient_color",
+          "start_line": 9524,
+          "end_line": 9536,
+          "args": [
+            "self",
+            "color1",
+            "color2",
+            "ratio"
+          ],
+          "docstring": "Calculate a color between two colors at given ratio (0-1)"
+        },
+        {
+          "name": "_show_success_notification",
+          "start_line": 9539,
+          "end_line": 9813,
+          "args": [
+            "self",
+            "parent",
+            "username",
+            "login_type",
+            "current_time"
+          ],
+          "docstring": "Show a more professional success notification with large clock and better checkmark"
+        },
+        {
+          "name": "handle_hr_window",
+          "start_line": 9819,
+          "end_line": 10187,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle HR window opening with password protection FIRST, then company check"
+        },
+        {
+          "name": "close_auth_window_safely",
+          "start_line": 10192,
+          "end_line": 10206,
+          "args": [
+            "self"
+          ],
+          "docstring": "Safely close the HR authentication window"
+        },
+        {
+          "name": "center_window_robust",
+          "start_line": 10208,
+          "end_line": 10272,
+          "args": [
+            "self",
+            "window",
+            "width",
+            "height"
+          ],
+          "docstring": "Robust window centering with comprehensive error handling"
+        },
+        {
+          "name": "center_window",
+          "start_line": 10276,
+          "end_line": 10278,
+          "args": [
+            "self",
+            "window",
+            "width",
+            "height"
+          ],
+          "docstring": "Center a window on the screen - delegates to safe version"
+        },
+        {
+          "name": "show_hr_window",
+          "start_line": 10281,
+          "end_line": 10361,
+          "args": [
+            "self"
+          ],
+          "docstring": "Show HR window after successful authentication"
+        },
+        {
+          "name": "manage_company_info",
+          "start_line": 10366,
+          "end_line": 10451,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle company information management"
+        },
+        {
+          "name": "select_existing_company",
+          "start_line": 10453,
+          "end_line": 10863,
+          "args": [
+            "self",
+            "company_window"
+          ],
+          "docstring": "Select an existing company from AWS with password verification"
+        },
+        {
+          "name": "create_new_company",
+          "start_line": 10867,
+          "end_line": 11100,
+          "args": [
+            "self",
+            "company_window"
+          ],
+          "docstring": "Create a new company"
+        },
+        {
+          "name": "edit_existing_company",
+          "start_line": 11104,
+          "end_line": 11330,
+          "args": [
+            "self",
+            "company_window"
+          ],
+          "docstring": "Edit an existing company - AWS ONLY"
+        },
+        {
+          "name": "open_aws_edit_form",
+          "start_line": 11333,
+          "end_line": 11524,
+          "args": [
+            "self",
+            "company_id",
+            "company_name"
+          ],
+          "docstring": "Open form to edit company in AWS"
+        },
+        {
+          "name": "sync_updated_company_to_local",
+          "start_line": 11527,
+          "end_line": 11608,
+          "args": [
+            "self",
+            "company_id",
+            "company_name"
+          ],
+          "docstring": "Sync the updated company from AWS to local database"
+        },
+        {
+          "name": "sync_users_to_cloud",
+          "start_line": 11612,
+          "end_line": 11687,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "sync_hr_password_to_local",
+          "start_line": 11689,
+          "end_line": 11765,
+          "args": [
+            "self"
+          ],
+          "docstring": "Sync HR password for current company from AWS to local"
+        },
+        {
+          "name": "handle_camera_login",
+          "start_line": 11773,
+          "end_line": 11845,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle camera login with immediate camera access"
+        },
+        {
+          "name": "process_captured_frame",
+          "start_line": 11846,
+          "end_line": 11929,
+          "args": [
+            "self"
+          ],
+          "docstring": "Process captured frame when TensorFlow is ready"
+        },
+        {
+          "name": "initialize_database",
+          "start_line": 11933,
+          "end_line": 11939,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "safe_verify_identity",
+          "start_line": 11944,
+          "end_line": 11949,
+          "args": [
+            "self"
+          ],
+          "docstring": "Safe wrapper for verify_identity"
+        },
+        {
+          "name": "safe_handle_forced_login",
+          "start_line": 11952,
+          "end_line": 11957,
+          "args": [
+            "self"
+          ],
+          "docstring": "Safe wrapper for handle_forced_login"
+        },
+        {
+          "name": "safe_open_hr_window",
+          "start_line": 11959,
+          "end_line": 11964,
+          "args": [
+            "self"
+          ],
+          "docstring": "Safe wrapper for open_hr_window"
+        },
+        {
+          "name": "is_system_ready",
+          "start_line": 11968,
+          "end_line": 11974,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check if all components are initialized"
+        },
+        {
+          "name": "on_closing",
+          "start_line": 11980,
+          "end_line": 12683,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle application cleanup on closing - syncs only last 7 days with a futuristic UI"
+        },
+        {
+          "name": "cleanup",
+          "start_line": 12687,
+          "end_line": 12725,
+          "args": [
+            "self"
+          ],
+          "docstring": "FIXED: Enhanced cleanup that doesn't cause destroy errors"
+        },
+        {
+          "name": "upload_ai_model",
+          "start_line": 12730,
+          "end_line": 12768,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "open_customized_report_window",
+          "start_line": 12772,
+          "end_line": 12935,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "generate_customized_report",
+          "start_line": 12938,
+          "end_line": 13162,
+          "args": [
+            "self",
+            "username",
+            "year",
+            "month",
+            "from_date",
+            "to_date",
+            "progress_window",
+            "in_time",
+            "out_time"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "sync_record_to_local",
+          "start_line": 13164,
+          "end_line": 13176,
+          "args": [
+            "self",
+            "local_cursor",
+            "record"
+          ],
+          "docstring": "Sync a single record to local database"
+        },
+        {
+          "name": "open_verify_image_window",
+          "start_line": 13179,
+          "end_line": 13264,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "get_all_usernames",
+          "start_line": 13266,
+          "end_line": 13276,
+          "args": [
+            "self"
+          ],
+          "docstring": "Get all usernames from database"
+        },
+        {
+          "name": "download_s3_images",
+          "start_line": 13278,
+          "end_line": 13353,
+          "args": [
+            "self",
+            "username",
+            "year",
+            "month",
+            "from_date",
+            "to_date",
+            "progress_window"
+          ],
+          "docstring": "Download images from S3 based on criteria"
+        },
+        {
+          "name": "update_progress_label",
+          "start_line": 13355,
+          "end_line": 13360,
+          "args": [
+            "self",
+            "window",
+            "text"
+          ],
+          "docstring": "Update progress window label"
+        },
+        {
+          "name": "add_close_button",
+          "start_line": 13362,
+          "end_line": 13368,
+          "args": [
+            "self",
+            "window"
+          ],
+          "docstring": "Add close button to window"
+        },
+        {
+          "name": "parse_filename_date",
+          "start_line": 13370,
+          "end_line": 13380,
+          "args": [
+            "self",
+            "filename"
+          ],
+          "docstring": "Parse date from filename"
+        },
+        {
+          "name": "sync_users_to_local",
+          "start_line": 13383,
+          "end_line": 13477,
+          "args": [
+            "self"
+          ],
+          "docstring": "Sync users from AWS to local database, skipping existing users"
+        },
+        {
+          "name": "create_unique_window",
+          "start_line": 13481,
+          "end_line": 13510,
+          "args": [
+            "self",
+            "parent",
+            "title",
+            "width",
+            "height"
+          ],
+          "docstring": "Create a window ensuring only one instance with the given title exists"
+        },
+        {
+          "name": "center_window",
+          "start_line": 13513,
+          "end_line": 13547,
+          "args": [
+            "self",
+            "window",
+            "width",
+            "height"
+          ],
+          "docstring": "Center a window on the screen and ensure it's visible"
+        },
+        {
+          "name": "register_new_user_with_camera",
+          "start_line": 13550,
+          "end_line": 13662,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initial registration window for collecting user information"
+        },
+        {
+          "name": "register_new_user_without_camera",
+          "start_line": 13669,
+          "end_line": 13808,
+          "args": [
+            "self"
+          ],
+          "docstring": "Register new user without camera"
+        },
+        {
+          "name": "_check_internet_connection",
+          "start_line": 13813,
+          "end_line": 13836,
+          "args": [
+            "self"
+          ],
+          "docstring": "Check actual internet connectivity, not just AWS/S3 status"
+        },
+        {
+          "name": "_is_username_exists",
+          "start_line": 13840,
+          "end_line": 13878,
+          "args": [
+            "self",
+            "username"
+          ],
+          "docstring": "Check if username exists in either local or AWS database"
+        },
+        {
+          "name": "serialize_face_embedding",
+          "start_line": 13883,
+          "end_line": 13885,
+          "args": [
+            "embedding"
+          ],
+          "docstring": "Convert numpy array to JSON string"
+        },
+        {
+          "name": "generate_embeddings_report",
+          "start_line": 13889,
+          "end_line": 13891,
+          "args": [
+            "self"
+          ],
+          "docstring": "Wrapper method to call generate_embeddings_report from FaceRecognitionSystem."
+        },
+        {
+          "name": "handle_forced_login",
+          "start_line": 13895,
+          "end_line": 13941,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle forced login without face verification"
+        },
+        {
+          "name": "create_gradient",
+          "start_line": 13951,
+          "end_line": 13962,
+          "args": [
+            "self",
+            "canvas",
+            "width",
+            "height"
+          ],
+          "docstring": "Draws a vertical gradient on the given canvas."
+        },
+        {
+          "name": "hex_to_rgb",
+          "start_line": 13964,
+          "end_line": 13967,
+          "args": [
+            "self",
+            "hex_color"
+          ],
+          "docstring": "Converts a hex color string to RGB tuple."
+        },
+        {
+          "name": "create_gradient_button",
+          "start_line": 13969,
+          "end_line": 13996,
+          "args": [
+            "self",
+            "parent",
+            "text",
+            "command"
+          ],
+          "docstring": "Creates a button with a gradient background."
+        },
+        {
+          "name": "handle_forced_login",
+          "start_line": 14002,
+          "end_line": 14048,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle forced login without face verification"
+        },
+        {
+          "name": "handle_login",
+          "start_line": 14058,
+          "end_line": 14066,
+          "args": [
+            "self"
+          ],
+          "docstring": "Handle login button click"
+        },
+        {
+          "name": "verify_identity",
+          "start_line": 14068,
+          "end_line": 14072,
+          "args": [
+            "self"
+          ],
+          "docstring": "Verify user identity"
+        },
+        {
+          "name": "create_unique_window",
+          "start_line": 14075,
+          "end_line": 14104,
+          "args": [
+            "self",
+            "parent",
+            "title",
+            "width",
+            "height"
+          ],
+          "docstring": "Create a window ensuring only one instance with the given title exists"
+        },
+        {
+          "name": "force_sync_attendance_records",
+          "start_line": 14107,
+          "end_line": 14118,
+          "args": [
+            "self"
+          ],
+          "docstring": "Forcefully sync attendance records at application startup."
+        },
+        {
+          "name": "check_sync_status",
+          "start_line": 14123,
+          "end_line": 14128,
+          "args": [
+            "self",
+            "record_id"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "_verify_timezone_config",
+          "start_line": 14131,
+          "end_line": 14145,
+          "args": [
+            "self"
+          ],
+          "docstring": "Ensure proper timezone configuration"
+        },
+        {
+          "name": "stop_capture",
+          "start_line": 14147,
+          "end_line": 14148,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "verify_time",
+          "start_line": 14150,
+          "end_line": 14162,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "login",
+          "start_line": 14164,
+          "end_line": 14168,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "process_login",
+          "start_line": 14172,
+          "end_line": 14226,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "save_login_video",
+          "start_line": 14234,
+          "end_line": 14298,
+          "args": [
+            "self",
+            "name",
+            "login_type",
+            "frame"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "show_popup",
+          "start_line": 14302,
+          "end_line": 14306,
+          "args": [
+            "self",
+            "message",
+            "title"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "try_again_register_new_user",
+          "start_line": 14308,
+          "end_line": 14310,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "complete_registration",
+          "start_line": 14314,
+          "end_line": 14348,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "start_network",
+          "start_line": 14351,
+          "end_line": 14358,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "initialize_components",
+          "start_line": 14363,
+          "end_line": 14382,
+          "args": [
+            "self"
+          ],
+          "docstring": "Initialize all components asynchronously in parallel"
+        },
+        {
+          "name": "login",
+          "start_line": 14385,
+          "end_line": 14391,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        },
+        {
+          "name": "setup_global_hotkeys",
+          "start_line": 14396,
+          "end_line": 14454,
+          "args": [
+            "self"
+          ],
+          "docstring": "Setup global hotkeys for special functions - FIXED CTRL+H"
+        },
+        {
+          "name": "load_tensorflow",
+          "start_line": 14458,
+          "end_line": 14679,
+          "args": [
+            "self"
+          ],
+          "docstring": null
+        }
+      ]
+    }
+  },
+  "top_level_functions_count": 6,
+  "top_level_functions": [
+    {
+      "name": "resource_path",
+      "start_line": 20,
+      "end_line": 37,
+      "args": [
+        "relative_path"
+      ],
+      "docstring": "Get absolute path to resource, works for dev and for PyInstaller"
+    },
+    {
+      "name": "validate_filepath",
+      "start_line": 424,
+      "end_line": 451,
+      "args": [
+        "filepath"
+      ],
+      "docstring": "Validate the file path for Windows."
+    },
+    {
+      "name": "serialize_face_embedding",
+      "start_line": 3852,
+      "end_line": 3854,
+      "args": [
+        "embedding"
+      ],
+      "docstring": "Serialize face embedding to JSON string"
+    },
+    {
+      "name": "deserialize_face_embedding",
+      "start_line": 3856,
+      "end_line": 3858,
+      "args": [
+        "embedding_json"
+      ],
+      "docstring": "Deserialize face embedding from JSON string"
+    },
+    {
+      "name": "setup_logging",
+      "start_line": 5565,
+      "end_line": 5643,
+      "args": [],
+      "docstring": "Setup logging with proper error handling and PyInstaller compatibility"
+    },
+    {
+      "name": "handle_exception",
+      "start_line": 5723,
+      "end_line": 5730,
+      "args": [
+        "exc_type",
+        "exc_value",
+        "exc_traceback"
+      ],
+      "docstring": "Global exception handler"
+    }
+  ],
+  "global_vars_count": 0,
+  "global_vars": [],
+  "imports_count": 82,
+  "imports": [
+    {
+      "module": "winreg",
+      "asname": null,
+      "line": 2
+    },
+    {
+      "module": "win32com.client",
+      "asname": null,
+      "line": 3
+    },
+    {
+      "module": "pickle",
+      "asname": null,
+      "line": 4
+    },
+    {
+      "module": "logging",
+      "asname": null,
+      "line": 5
+    },
+    {
+      "module": "psutil",
+      "asname": null,
+      "line": 6
+    },
+    {
+      "module": "os",
+      "asname": null,
+      "line": 7
+    },
+    {
+      "module": "sys",
+      "asname": null,
+      "line": 8
+    },
+    {
+      "module": "time",
+      "asname": null,
+      "line": 9
+    },
+    {
+      "module": "socket",
+      "asname": null,
+      "line": 10
+    },
+    {
+      "module": "json",
+      "asname": null,
+      "line": 11
+    },
+    {
+      "module": "threading",
+      "asname": null,
+      "line": 12
+    },
+    {
+      "module": "datetime.datetime",
+      "asname": null,
+      "line": 13
+    },
+    {
+      "module": "datetime.timedelta",
+      "asname": null,
+      "line": 13
+    },
+    {
+      "module": "pathlib.Path",
+      "asname": null,
+      "line": 14
+    },
+    {
+      "module": "faiss",
+      "asname": null,
+      "line": 15
+    },
+    {
+      "module": "tkinter.ttk",
+      "asname": null,
+      "line": 356
+    },
+    {
+      "module": "shutil",
+      "asname": null,
+      "line": 357
+    },
+    {
+      "module": "tkinter.filedialog",
+      "asname": null,
+      "line": 358
+    },
+    {
+      "module": "tkinter",
+      "asname": "tk",
+      "line": 360
+    },
+    {
+      "module": "tkinter.font",
+      "asname": "tkfont",
+      "line": 361
+    },
+    {
+      "module": "tkinter.messagebox",
+      "asname": "messagebox",
+      "line": 363
+    },
+    {
+      "module": "tkinter.simpledialog",
+      "asname": "simpledialog",
+      "line": 364
+    },
+    {
+      "module": "tkinter.ttk",
+      "asname": "ttk",
+      "line": 365
+    },
+    {
+      "module": "cv2",
+      "asname": null,
+      "line": 367
+    },
+    {
+      "module": "numpy",
+      "asname": "np",
+      "line": 368
+    },
+    {
+      "module": "sklearn.preprocessing.normalize",
+      "asname": null,
+      "line": 369
+    },
+    {
+      "module": "os",
+      "asname": null,
+      "line": 370
+    },
+    {
+      "module": "time",
+      "asname": null,
+      "line": 371
+    },
+    {
+      "module": "faiss",
+      "asname": null,
+      "line": 372
+    },
+    {
+      "module": "tkinter",
+      "asname": "tk",
+      "line": 373
+    },
+    {
+      "module": "tkinter.messagebox",
+      "asname": null,
+      "line": 374
+    },
+    {
+      "module": "tkinter.simpledialog",
+      "asname": null,
+      "line": 374
+    },
+    {
+      "module": "pandas",
+      "asname": "pd",
+      "line": 375
+    },
+    {
+      "module": "collections.defaultdict",
+      "asname": null,
+      "line": 376
+    },
+    {
+      "module": "csv",
+      "asname": null,
+      "line": 377
+    },
+    {
+      "module": "datetime.datetime",
+      "asname": null,
+      "line": 378
+    },
+    {
+      "module": "datetime.timedelta",
+      "asname": null,
+      "line": 378
+    },
+    {
+      "module": "datetime.time",
+      "asname": "datetime_time",
+      "line": 378
+    },
+    {
+      "module": "threading",
+      "asname": null,
+      "line": 379
+    },
+    {
+      "module": "sqlite3",
+      "asname": null,
+      "line": 380
+    },
+    {
+      "module": "pytz",
+      "asname": null,
+      "line": 381
+    },
+    {
+      "module": "boto3",
+      "asname": null,
+      "line": 382
+    },
+    {
+      "module": "logging",
+      "asname": null,
+      "line": 383
+    },
+    {
+      "module": "json",
+      "asname": null,
+      "line": 384
+    },
+    {
+      "module": "queue.Queue",
+      "asname": null,
+      "line": 385
+    },
+    {
+      "module": "PIL.Image",
+      "asname": null,
+      "line": 386
+    },
+    {
+      "module": "PIL.ImageTk",
+      "asname": null,
+      "line": 386
+    },
+    {
+      "module": "typing.Optional",
+      "asname": null,
+      "line": 387
+    },
+    {
+      "module": "typing.Tuple",
+      "asname": null,
+      "line": 387
+    },
+    {
+      "module": "typing.Dict",
+      "asname": null,
+      "line": 387
+    },
+    {
+      "module": "config.aws_access_key",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.aws_secret_key",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.rds_host",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.rds_password",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.rds_database",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.rds_user",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "config.rds_port",
+      "asname": null,
+      "line": 388
+    },
+    {
+      "module": "ntplib",
+      "asname": null,
+      "line": 389
+    },
+    {
+      "module": "psycopg2",
+      "asname": null,
+      "line": 390
+    },
+    {
+      "module": "psycopg2.pool",
+      "asname": null,
+      "line": 391
+    },
+    {
+      "module": "socket",
+      "asname": null,
+      "line": 392
+    },
+    {
+      "module": "uuid",
+      "asname": null,
+      "line": 393
+    },
+    {
+      "module": "pathlib.Path",
+      "asname": null,
+      "line": 394
+    },
+    {
+      "module": "filecmp",
+      "asname": null,
+      "line": 396
+    },
+    {
+      "module": "threading.Lock",
+      "asname": null,
+      "line": 397
+    },
+    {
+      "module": "traceback",
+      "asname": null,
+      "line": 398
+    },
+    {
+      "module": "calendar",
+      "asname": null,
+      "line": 399
+    },
+    {
+      "module": "openpyxl.Workbook",
+      "asname": null,
+      "line": 400
+    },
+    {
+      "module": "openpyxl.styles.Font",
+      "asname": null,
+      "line": 401
+    },
+    {
+      "module": "openpyxl.styles.PatternFill",
+      "asname": null,
+      "line": 401
+    },
+    {
+      "module": "openpyxl.utils.get_column_letter",
+      "asname": null,
+      "line": 402
+    },
+    {
+      "module": "dateutil.parser",
+      "asname": null,
+      "line": 403
+    },
+    {
+      "module": "sys",
+      "asname": null,
+      "line": 404
+    },
+    {
+      "module": "asyncio",
+      "asname": null,
+      "line": 405
+    },
+    {
+      "module": "random",
+      "asname": null,
+      "line": 407
+    },
+    {
+      "module": "math",
+      "asname": null,
+      "line": 408
+    },
+    {
+      "module": "threading",
+      "asname": null,
+      "line": 410
+    },
+    {
+      "module": "subprocess",
+      "asname": null,
+      "line": 411
+    },
+    {
+      "module": "http.server.HTTPServer",
+      "asname": null,
+      "line": 412
+    },
+    {
+      "module": "http.server.BaseHTTPRequestHandler",
+      "asname": null,
+      "line": 412
+    },
+    {
+      "module": "qrcode",
+      "asname": null,
+      "line": 413
+    },
+    {
+      "module": "requests",
+      "asname": null,
+      "line": 414
+    }
+  ],
+  "tables_count": 0,
+  "tables": {},
+  "sql_queries_count": 330,
+  "sql_queries": [
+    {
+      "line": 497,
+      "query": "SELECT 1 FROM users WHERE username = ?"
+    },
+    {
+      "line": 507,
+      "query": "SELECT 1 FROM users WHERE username = %s"
+    },
+    {
+      "line": 530,
+      "query": "CREATE TABLE IF NOT EXISTS company_info ( company_id TEXT PRIMARY KEY, company_name TEXT NOT NULL, password TEXT NOT NULL, address_road TEXT, address_city TEXT, contact_person_name TEXT, contact_person_designation TEXT, contact_person_number TEXT, created_at TEXT, last_updated TEXT )"
+    },
+    {
+      "line": 545,
+      "query": "SELECT company_name, company_id FROM company_info LIMIT 1"
+    },
+    {
+      "line": 549,
+      "query": "select a company first then continue..."
+    },
+    {
+      "line": 667,
+      "query": "SELECT company_user_uuid FROM users WHERE username = ?"
+    },
+    {
+      "line": 699,
+      "query": "Update index and mappings self.index = new_index del self.user_embeddings[existing_company_user_uuid] # Start capture process self.update_status("
+    },
+    {
+      "line": 734,
+      "query": "Update user in local database conn = self.db_pool.get_local_connection() cur = conn.cursor() try: cur.execute("
+    },
+    {
+      "line": 739,
+      "query": "UPDATE users SET face_encoding = ?, password = ?, user_uuid = ?, company_name = ?, company_uuid = ?, user_designation = ?, last_updated = strftime("
+    },
+    {
+      "line": 761,
+      "query": "Update AWS if online if self.db_pool.is_online: aws_conn = self.db_pool.get_aws_connection() if aws_conn: try: aws_cur = aws_conn.cursor() aws_cur.execute("
+    },
+    {
+      "line": 768,
+      "query": "UPDATE users SET face_encoding = %s, password = %s, user_uuid = %s, company_name = %s, company_uuid = %s, user_designation = %s, last_updated = TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 797,
+      "query": "Update failed. Please try again."
+    },
+    {
+      "line": 895,
+      "query": "INSERT INTO users (company_user_uuid, username, password, face_encoding, user_uuid, company_name, company_uuid, user_designation, created_at, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime("
+    },
+    {
+      "line": 915,
+      "query": "INSERT INTO users (company_user_uuid, username, password, face_encoding, user_uuid, company_name, company_uuid, user_designation, created_at, last_updated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 921,
+      "query": "UPDATE SET password = EXCLUDED.password, face_encoding = EXCLUDED.face_encoding, user_uuid = EXCLUDED.user_uuid, company_name = EXCLUDED.company_name, company_uuid = EXCLUDED.company_uuid, user_designation = EXCLUDED.user_designation, last_updated = TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 963,
+      "query": "INSERT INTO users (company_user_uuid, username, password, face_encoding, user_uuid, company_name, company_uuid, user_designation, created_at, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime("
+    },
+    {
+      "line": 982,
+      "query": "INSERT INTO users (company_user_uuid, username, password, face_encoding, user_uuid, company_name, company_uuid, user_designation, created_at, last_updated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 1231,
+      "query": "Update instruction window if available if instruction_window and instruction_window.winfo_exists(): self.update_instruction_window(instruction_window, instruction_text, current_action) # Process frame if enough time has passed if time_since_last_capture >= preview_time: face_detected, current_embedding = self.verify_face_detection(frame) if face_detected: # Capture frame last_captured_frame = frame.copy() embeddings.append(current_embedding) captured_frames.append(frame) current_count += 1 last_capture_time = current_time else: failed_attempts += 1 if failed_attempts > 100: if messagebox.askyesno("
+    },
+    {
+      "line": 1255,
+      "query": "Update OpenCV display status_copy = self.update_simple_status_display( status_window.copy(), frame, last_captured_frame, current_count, 20 ) cv2.imshow("
+    },
+    {
+      "line": 1467,
+      "query": "Update the instruction window with the current instruction."
+    },
+    {
+      "line": 1960,
+      "query": "SELECT username FROM users WHERE company_user_uuid = ?"
+    },
+    {
+      "line": 2516,
+      "query": "SELECT COUNT(*) FROM sync_status WHERE synced = 0"
+    },
+    {
+      "line": 2539,
+      "query": "update if cloud_status_label.winfo_exists(): cloud_status_label.after(5000, check_and_update) # Update every 5 seconds check_and_update() def handle_sync_completion(self, cloud_status_label, cloud_update_label): try: if self.db_pool.is_online: conn = self.db_pool.get_aws_connection() if conn: cur = conn.cursor() cur.execute("
+    },
+    {
+      "line": 2552,
+      "query": "UPDATE sync_status SET synced = 1, last_sync_attempt = CURRENT_TIMESTAMP WHERE synced = 0"
+    },
+    {
+      "line": 2687,
+      "query": "Update the status label in the UI."
+    },
+    {
+      "line": 2821,
+      "query": "Update online status based on INTERNET, not AWS self.is_online = True if not aws_working: logging.warning("
+    },
+    {
+      "line": 2882,
+      "query": "SELECT COUNT(*) FROM sync_status WHERE synced = 0"
+    },
+    {
+      "line": 2919,
+      "query": "SELECT company_user_uuid, username, face_encoding FROM users"
+    },
+    {
+      "line": 2930,
+      "query": "SELECT 1 FROM users WHERE company_user_uuid = %s"
+    },
+    {
+      "line": 2935,
+      "query": "INSERT INTO users (company_user_uuid, username, face_encoding, created_at, last_updated) VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+    },
+    {
+      "line": 2977,
+      "query": "SELECT ar.*, u.company_user_uuid as verified_company_user_uuid FROM attendance_records ar LEFT JOIN users u ON ar.company_user_uuid = u.company_user_uuid {date_filter}"
+    },
+    {
+      "line": 2984,
+      "query": "SELECT ar.*, u.company_user_uuid as verified_company_user_uuid FROM attendance_records ar LEFT JOIN users u ON ar.company_user_uuid = u.company_user_uuid"
+    },
+    {
+      "line": 3014,
+      "query": "SELECT * FROM attendance_records WHERE record_id = %s"
+    },
+    {
+      "line": 3046,
+      "query": "SELECT 1 FROM users WHERE company_user_uuid = %s"
+    },
+    {
+      "line": 3094,
+      "query": "Update existing record update_fields = [f for f in final_values.keys() if f !="
+    },
+    {
+      "line": 3096,
+      "query": "update continue query ="
+    },
+    {
+      "line": 3100,
+      "query": "UPDATE attendance_records SET"
+    },
+    {
+      "line": 3107,
+      "query": "Insert new record fields = [f for f in final_values.keys() if final_values[f] is not None] if not fields: # Skip if no fields to insert continue query = f"
+    },
+    {
+      "line": 3113,
+      "query": "INSERT INTO attendance_records ({"
+    },
+    {
+      "line": 3122,
+      "query": "Update sync status local_cur.execute("
+    },
+    {
+      "line": 3124,
+      "query": "INSERT OR REPLACE INTO sync_status (record_id, synced, last_sync_attempt) VALUES (?, 1, datetime("
+    },
+    {
+      "line": 3200,
+      "query": "SELECT ar.record_id, ar.company_user_uuid, ar.username, ar.date, ar.in_time, ar.out_time, ar.video_path_in, ar.video_path_out, ar.in_time_with_camera, ar.out_time_with_camera FROM attendance_records ar WHERE date(ar.date) >= ?"
+    },
+    {
+      "line": 3223,
+      "query": "SELECT record_id, in_time, out_time, video_path_in, video_path_out FROM attendance_records WHERE record_id = %s"
+    },
+    {
+      "line": 3251,
+      "query": "Update status rds_label.config(text=f"
+    },
+    {
+      "line": 3272,
+      "query": "Insert or update AWS RDS record aws_cur.execute("
+    },
+    {
+      "line": 3274,
+      "query": "INSERT INTO attendance_records (record_id, company_user_uuid, username, date, in_time, out_time, in_time_with_camera, out_time_with_camera) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (record_id) DO UPDATE SET in_time = EXCLUDED.in_time, out_time = EXCLUDED.out_time, in_time_with_camera = EXCLUDED.in_time_with_camera, out_time_with_camera = EXCLUDED.out_time_with_camera"
+    },
+    {
+      "line": 3287,
+      "query": "Update sync status local_cur.execute("
+    },
+    {
+      "line": 3289,
+      "query": "INSERT OR REPLACE INTO sync_status (record_id, synced, last_sync_attempt) VALUES (?, 1, datetime("
+    },
+    {
+      "line": 3307,
+      "query": "SELECT username FROM attendance_records WHERE record_id = ?"
+    },
+    {
+      "line": 3314,
+      "query": "Update both local and AWS records with S3 URL if login_type =="
+    },
+    {
+      "line": 3317,
+      "query": "UPDATE attendance_records SET video_path_in = ? WHERE record_id = ?"
+    },
+    {
+      "line": 3322,
+      "query": "UPDATE attendance_records SET video_path_in = %s WHERE record_id = %s"
+    },
+    {
+      "line": 3328,
+      "query": "UPDATE attendance_records SET video_path_out = ? WHERE record_id = ?"
+    },
+    {
+      "line": 3333,
+      "query": "UPDATE attendance_records SET video_path_out = %s WHERE record_id = %s"
+    },
+    {
+      "line": 3376,
+      "query": "SELECT out_time FROM attendance_records WHERE record_id = ?"
+    },
+    {
+      "line": 3384,
+      "query": "SELECT out_time FROM attendance_records WHERE record_id = %s"
+    },
+    {
+      "line": 3482,
+      "query": "SELECT CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 3574,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 3575,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 3775,
+      "query": "SELECT {time_field} FROM attendance_records WHERE username = ? AND date = ?"
+    },
+    {
+      "line": 3804,
+      "query": "SELECT {time_field} FROM attendance_records WHERE username = %s AND date = %s"
+    },
+    {
+      "line": 4216,
+      "query": "CREATE TABLE IF NOT EXISTS users ( company_user_uuid TEXT PRIMARY KEY, company_name TEXT, company_uuid TEXT, username TEXT UNIQUE, user_uuid TEXT UNIQUE, user_designation TEXT, user_android_id TEXT, face_encoding TEXT, password TEXT, created_at TEXT DEFAULT (strftime("
+    },
+    {
+      "line": 4233,
+      "query": "CREATE TABLE IF NOT EXISTS attendance_records ( record_id TEXT PRIMARY KEY, company_user_uuid TEXT REFERENCES users(company_user_uuid), username TEXT NOT NULL, date TEXT NOT NULL, in_time TEXT, out_time TEXT, video_path_in TEXT, video_path_out TEXT, in_time_with_camera TEXT CHECK(in_time_with_camera IN ("
+    },
+    {
+      "line": 4253,
+      "query": "CREATE TABLE IF NOT EXISTS company_info ( company_id TEXT PRIMARY KEY, company_name TEXT NOT NULL UNIQUE, password TEXT NOT NULL, address_road TEXT, address_city TEXT, contact_person_name TEXT, contact_person_designation TEXT, contact_person_number TEXT, created_at TEXT, last_updated TEXT )"
+    },
+    {
+      "line": 4270,
+      "query": "CREATE TABLE IF NOT EXISTS sync_status ( record_id TEXT PRIMARY KEY, synced INTEGER DEFAULT 0, last_sync_attempt TEXT DEFAULT (strftime("
+    },
+    {
+      "line": 4280,
+      "query": "CREATE TABLE IF NOT EXISTS hr_passwords ( id INTEGER PRIMARY KEY AUTOINCREMENT, company_uuid TEXT NOT NULL, company_name TEXT NOT NULL, password TEXT NOT NULL, created_at TEXT DEFAULT (strftime("
+    },
+    {
+      "line": 4311,
+      "query": "CREATE TABLE IF NOT EXISTS users ( company_user_uuid TEXT PRIMARY KEY, company_name TEXT, company_uuid TEXT, username TEXT UNIQUE, user_uuid TEXT UNIQUE, user_designation TEXT, user_android_id TEXT, face_encoding TEXT, password TEXT, created_at TEXT DEFAULT TO_CHAR(CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 4328,
+      "query": "CREATE TABLE IF NOT EXISTS attendance_records ( record_id TEXT PRIMARY KEY, company_user_uuid TEXT REFERENCES users(company_user_uuid), username TEXT NOT NULL, date TEXT NOT NULL, in_time TEXT, out_time TEXT, video_path_in TEXT, video_path_out TEXT, in_time_with_camera TEXT CHECK(in_time_with_camera IN ("
+    },
+    {
+      "line": 4350,
+      "query": "CREATE TABLE IF NOT EXISTS company_info ( company_id TEXT PRIMARY KEY, company_name VARCHAR(255) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL, address_road VARCHAR(255), address_city VARCHAR(255), contact_person_name VARCHAR(255), contact_person_designation VARCHAR(255), contact_person_number VARCHAR(50), created_at TEXT, last_updated TEXT )"
+    },
+    {
+      "line": 4367,
+      "query": "CREATE TABLE IF NOT EXISTS hr_passwords ( id SERIAL PRIMARY KEY, company_uuid TEXT NOT NULL, company_name TEXT NOT NULL, password TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(company_uuid) -- One HR password per company )"
+    },
+    {
+      "line": 4413,
+      "query": "SELECT in_time FROM attendance_records WHERE username = ? AND date = ?"
+    },
+    {
+      "line": 4429,
+      "query": "SELECT in_time FROM attendance_records WHERE username = %s AND date::date = %s::date"
+    },
+    {
+      "line": 4489,
+      "query": "INSERT INTO some_table (timestamp_column) VALUES (?)"
+    },
+    {
+      "line": 4505,
+      "query": "INSERT INTO some_table (timestamp_column) VALUES (%s)"
+    },
+    {
+      "line": 4523,
+      "query": "SELECT MAX(in_time), MAX(out_time) FROM attendance_records"
+    },
+    {
+      "line": 4533,
+      "query": "SELECT MAX(in_time), MAX(out_time) FROM attendance_records"
+    },
+    {
+      "line": 4560,
+      "query": "SELECT MAX(in_time), MAX(out_time) FROM attendance_records"
+    },
+    {
+      "line": 4567,
+      "query": "SELECT MAX(in_time), MAX(out_time) FROM attendance_records"
+    },
+    {
+      "line": 4580,
+      "query": "Update local and AWS database times self._update_local_database_time(in_time_offset, out_time_offset) self._update_aws_database_time(in_time_offset, out_time_offset) logging.info(f"
+    },
+    {
+      "line": 4596,
+      "query": "SELECT company_user_uuid, date, in_time, out_time FROM attendance_records"
+    },
+    {
+      "line": 4612,
+      "query": "SELECT company_user_uuid, date, in_time, out_time FROM attendance_records"
+    },
+    {
+      "line": 4740,
+      "query": "update user with face encoding from video."
+    },
+    {
+      "line": 4756,
+      "query": "SELECT company_user_uuid FROM users WHERE username = ?"
+    },
+    {
+      "line": 4761,
+      "query": "update user return self.save_or_update_user(username, new_encoding, company_user_uuid) except Exception as e: logging.error(f"
+    },
+    {
+      "line": 4777,
+      "query": "SELECT face_encoding FROM users"
+    },
+    {
+      "line": 4868,
+      "query": "INSERT OR REPLACE INTO attendance_records (company_user_uuid, username, date, in_time, video_path_in) VALUES (?, ?, ?, ?, ?)"
+    },
+    {
+      "line": 4874,
+      "query": "UPDATE attendance_records SET out_time = ?, video_path_out = ? WHERE company_user_uuid = ? AND date = ?"
+    },
+    {
+      "line": 4906,
+      "query": "INSERT INTO attendance_records (company_user_uuid, username, date, in_time, video_path_in, in_time_with_camera) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (company_user_uuid, date) DO UPDATE SET in_time = EXCLUDED.in_time, video_path_in = EXCLUDED.video_path_in, in_time_with_camera = EXCLUDED.in_time_with_camera"
+    },
+    {
+      "line": 4918,
+      "query": "UPDATE attendance_records SET out_time = %s, video_path_out = %s, out_time_with_camera = %s WHERE company_user_uuid = %s AND date = %s"
+    },
+    {
+      "line": 4964,
+      "query": "Update FAISS index if self.index is None: self.index = faiss.IndexFlatL2(512) self.index.add(normalized_embedding.reshape(1, -1)) # Save FAISS index to the db_dir location try: faiss.write_index(self.index, self.faiss_index_path) logging.info("
+    },
+    {
+      "line": 4980,
+      "query": "INSERT OR REPLACE INTO users (company_user_uuid, username, face_encoding, created_at, last_updated) VALUES (?, ?, ?, ?, ?)"
+    },
+    {
+      "line": 4993,
+      "query": "INSERT INTO users (company_user_uuid, username, face_encoding, created_at, last_updated) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (username) DO UPDATE SET face_encoding = EXCLUDED.face_encoding, last_updated = EXCLUDED.last_updated"
+    },
+    {
+      "line": 5018,
+      "query": "SELECT strftime("
+    },
+    {
+      "line": 5026,
+      "query": "SELECT CURRENT_TIMESTAMP AT TIME ZONE"
+    },
+    {
+      "line": 5052,
+      "query": "SELECT 1 FROM users WHERE username = ?"
+    },
+    {
+      "line": 5062,
+      "query": "SELECT 1 FROM users WHERE username = %s"
+    },
+    {
+      "line": 5105,
+      "query": "SELECT company_user_uuid FROM users WHERE username = ?"
+    },
+    {
+      "line": 5123,
+      "query": "INSERT OR REPLACE INTO attendance_records (record_id, company_user_uuid, username, date, in_time, video_path_in, in_time_with_camera) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    },
+    {
+      "line": 5129,
+      "query": "UPDATE attendance_records SET out_time = ?, video_path_out = ?, out_time_with_camera = ? WHERE record_id = ?"
+    },
+    {
+      "line": 5156,
+      "query": "INSERT INTO attendance_records (record_id, company_user_uuid, username, date, in_time, video_path_in, in_time_with_camera) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (record_id) DO UPDATE SET in_time = EXCLUDED.in_time, video_path_in = EXCLUDED.video_path_in, in_time_with_camera = EXCLUDED.in_time_with_camera"
+    },
+    {
+      "line": 5166,
+      "query": "UPDATE attendance_records SET out_time = %s, video_path_out = %s, out_time_with_camera = %s WHERE record_id = %s"
+    },
+    {
+      "line": 5211,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 5212,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 5261,
+      "query": "SELECT 1 FROM users WHERE company_user_uuid = ?"
+    },
+    {
+      "line": 5266,
+      "query": "UPDATE users SET username = ?, face_encoding = ?, created_at = ?, last_updated = ? WHERE company_user_uuid = ?"
+    },
+    {
+      "line": 5281,
+      "query": "INSERT INTO users (company_user_uuid, username, face_encoding, created_at, last_updated) VALUES (?, ?, ?, ?, ?)"
+    },
+    {
+      "line": 5297,
+      "query": "SELECT 1 FROM attendance_records WHERE record_id = ?"
+    },
+    {
+      "line": 5303,
+      "query": "UPDATE attendance_records SET company_user_uuid = ?, username = ?, date = ?, in_time = ?, out_time = ?, video_path_in = ?, video_path_out = ?, in_time_with_camera = ?, out_time_with_camera = ?, created_at = ? WHERE record_id = ?"
+    },
+    {
+      "line": 5330,
+      "query": "INSERT INTO attendance_records ( record_id, company_user_uuid, username, date, in_time, out_time, video_path_in, video_path_out, in_time_with_camera, out_time_with_camera, created_at ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    },
+    {
+      "line": 5364,
+      "query": "SELECT record_id, retry_count FROM sync_status WHERE synced = 0 AND retry_count < ?"
+    },
+    {
+      "line": 5381,
+      "query": "Update sync status cur.execute("
+    },
+    {
+      "line": 5383,
+      "query": "UPDATE sync_status SET synced = 1, last_sync_attempt = datetime("
+    },
+    {
+      "line": 5390,
+      "query": "Update retry count cur.execute("
+    },
+    {
+      "line": 5392,
+      "query": "UPDATE sync_status SET retry_count = retry_count + 1, last_sync_attempt = datetime("
+    },
+    {
+      "line": 5453,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 5454,
+      "query": "SELECT * FROM {table_name}"
+    },
+    {
+      "line": 5537,
+      "query": "SELECT COUNT(*) FROM sqlite_master WHERE type="
+    },
+    {
+      "line": 5545,
+      "query": "SELECT COUNT(*) FROM users"
+    },
+    {
+      "line": 5553,
+      "query": "SELECT COUNT(*) FROM users"
+    },
+    {
+      "line": 5577,
+      "query": "Delete existing log files if they exist for log_file in [debug_log, complete_log, terminal_log]: if os.path.exists(log_file): os.remove(log_file) # Configure root logger with"
+    },
+    {
+      "line": 6086,
+      "query": "update left_panel.update_idletasks() self.main_window.after(500, self.create_simple_hr_button) def _create_glass_status_dashboard(self, parent):"
+    },
+    {
+      "line": 6265,
+      "query": "Update gradient on resize gradient_canvas.bind("
+    },
+    {
+      "line": 6426,
+      "query": "Update the force_create_hr_button method: def force_create_hr_button(self):"
+    },
+    {
+      "line": 6586,
+      "query": "Update time with animation self._update_animated_time() def _create_modern_console(self, parent):"
+    },
+    {
+      "line": 6791,
+      "query": "Update the width and the scroll region canvas.itemconfig(cards_inner_id, width=canvas.winfo_width()) canvas.configure(scrollregion=canvas.bbox("
+    },
+    {
+      "line": 6910,
+      "query": "Update attendance data with 7-day history option"
+    },
+    {
+      "line": 6919,
+      "query": "SELECT username, date, in_time, out_time FROM attendance_records WHERE (in_time IS NOT NULL OR out_time IS NOT NULL) ORDER BY CASE WHEN out_time IS NOT NULL THEN out_time ELSE in_time END DESC LIMIT 1"
+    },
+    {
+      "line": 7046,
+      "query": "SELECT date::date as attendance_date, in_time::timestamp as in_time, out_time::timestamp as out_time FROM attendance_records WHERE username = %s AND date::date BETWEEN %s AND %s ORDER BY date::date DESC"
+    },
+    {
+      "line": 7260,
+      "query": "update logic pass except Exception as e: logging.error(f"
+    },
+    {
+      "line": 7294,
+      "query": "Update attendance display after new login"
+    },
+    {
+      "line": 7312,
+      "query": "Update display labels self.attendance_labels["
+    },
+    {
+      "line": 7320,
+      "query": "Update statistics conn = self.db_pool.get_local_connection() cur = conn.cursor() cur.execute("
+    },
+    {
+      "line": 7324,
+      "query": "SELECT COUNT(CASE WHEN strftime("
+    },
+    {
+      "line": 7351,
+      "query": "SELECT ar.username, ar.date, ar.in_time, ar.out_time, ar.in_time_with_camera, ar.out_time_with_camera FROM attendance_records ar WHERE (ar.in_time IS NOT NULL OR ar.out_time IS NOT NULL) ORDER BY ar.date DESC, CASE WHEN ar.out_time IS NOT NULL THEN ar.out_time ELSE ar.in_time END DESC LIMIT 1"
+    },
+    {
+      "line": 7415,
+      "query": "Update all labels with the fetched data self.attendance_labels["
+    },
+    {
+      "line": 7425,
+      "query": "SELECT COUNT(CASE WHEN strftime("
+    },
+    {
+      "line": 7468,
+      "query": "Update attendance info display"
+    },
+    {
+      "line": 7478,
+      "query": "SELECT username, in_time, out_time, in_time_with_camera FROM attendance_records WHERE date = ? ORDER BY created_at DESC LIMIT 1"
+    },
+    {
+      "line": 7504,
+      "query": "SELECT COUNT(CASE WHEN strftime("
+    },
+    {
+      "line": 7515,
+      "query": "Update labels self.attendance_labels["
+    },
+    {
+      "line": 7535,
+      "query": "Update the attendance display in the system console"
+    },
+    {
+      "line": 7549,
+      "query": "Update all labels with new information self.attendance_labels["
+    },
+    {
+      "line": 7561,
+      "query": "SELECT COUNT(CASE WHEN strftime("
+    },
+    {
+      "line": 7572,
+      "query": "Update statistics labels if stats: self.attendance_labels["
+    },
+    {
+      "line": 7651,
+      "query": "Update the boundaries for particle animation"
+    },
+    {
+      "line": 7720,
+      "query": "Update outer ring canvas.coords(self._logo_elements["
+    },
+    {
+      "line": 7725,
+      "query": "Update middle ring with opposite phase canvas.coords(self._logo_elements["
+    },
+    {
+      "line": 7734,
+      "query": "Update the time with smooth digit animation"
+    },
+    {
+      "line": 7750,
+      "query": "update self.main_window.after(1000, self._update_animated_time) def _hex_to_rgb(self, hex_color):"
+    },
+    {
+      "line": 7840,
+      "query": "Update content frame size self.bg_canvas.itemconfig(self.content_frame_id, width=width, height=height) # Initialize particles if not already created if not hasattr(self,"
+    }
+  ],
+  "duplicates_count": 9,
+  "duplicates": {
+    "FaceRecognitionSystem.update_status_display": [
+      {
+        "name": "update_status_display",
+        "start_line": 1490,
+        "end_line": 1573,
+        "args": [
+          "self",
+          "status_image",
+          "frame",
+          "last_captured_frame",
+          "action",
+          "current_count",
+          "total_count"
+        ],
+        "docstring": null
+      },
+      {
+        "name": "update_status_display",
+        "start_line": 2696,
+        "end_line": 2717,
+        "args": [
+          "self",
+          "status_image",
+          "frame",
+          "captured_frame",
+          "action",
+          "current_count",
+          "total_count"
+        ],
+        "docstring": null
+      }
+    ],
+    "DatabasePool.sync_database_times": [
+      {
+        "name": "sync_database_times",
+        "start_line": 4517,
+        "end_line": 4549,
+        "args": [
+          "self"
+        ],
+        "docstring": "Synchronize local and AWS database times."
+      },
+      {
+        "name": "sync_database_times",
+        "start_line": 4554,
+        "end_line": 4588,
+        "args": [
+          "self"
+        ],
+        "docstring": "Synchronize local and AWS database times."
+      }
+    ],
+    "App.initialize_hr_button_protection": [
+      {
+        "name": "initialize_hr_button_protection",
+        "start_line": 6471,
+        "end_line": 6492,
+        "args": [
+          "self"
+        ],
+        "docstring": "Initialize HR button protection system - SINGLE CREATION"
+      },
+      {
+        "name": "initialize_hr_button_protection",
+        "start_line": 6512,
+        "end_line": 6533,
+        "args": [
+          "self"
+        ],
+        "docstring": "Initialize HR button protection system - CREATE IMMEDIATELY"
+      }
+    ],
+    "App._style_modern_scrollbar": [
+      {
+        "name": "_style_modern_scrollbar",
+        "start_line": 7268,
+        "end_line": 7271,
+        "args": [
+          "self",
+          "scrollbar"
+        ],
+        "docstring": "Apply simple styling to scrollbars"
+      },
+      {
+        "name": "_style_modern_scrollbar",
+        "start_line": 7885,
+        "end_line": 7894,
+        "args": [
+          "self",
+          "scrollbar"
+        ],
+        "docstring": "Apply modern styling to scrollbar"
+      }
+    ],
+    "App._make_round": [
+      {
+        "name": "_make_round",
+        "start_line": 7275,
+        "end_line": 7289,
+        "args": [
+          "self",
+          "widget"
+        ],
+        "docstring": "Make a widget round by creating an oval in a canvas"
+      },
+      {
+        "name": "_make_round",
+        "start_line": 7896,
+        "end_line": 7917,
+        "args": [
+          "self",
+          "widget"
+        ],
+        "docstring": "Make a widget round by configuring canvas or adding corner radius"
+      }
+    ],
+    "App.center_window": [
+      {
+        "name": "center_window",
+        "start_line": 10276,
+        "end_line": 10278,
+        "args": [
+          "self",
+          "window",
+          "width",
+          "height"
+        ],
+        "docstring": "Center a window on the screen - delegates to safe version"
+      },
+      {
+        "name": "center_window",
+        "start_line": 13513,
+        "end_line": 13547,
+        "args": [
+          "self",
+          "window",
+          "width",
+          "height"
+        ],
+        "docstring": "Center a window on the screen and ensure it's visible"
+      }
+    ],
+    "App.create_unique_window": [
+      {
+        "name": "create_unique_window",
+        "start_line": 13481,
+        "end_line": 13510,
+        "args": [
+          "self",
+          "parent",
+          "title",
+          "width",
+          "height"
+        ],
+        "docstring": "Create a window ensuring only one instance with the given title exists"
+      },
+      {
+        "name": "create_unique_window",
+        "start_line": 14075,
+        "end_line": 14104,
+        "args": [
+          "self",
+          "parent",
+          "title",
+          "width",
+          "height"
+        ],
+        "docstring": "Create a window ensuring only one instance with the given title exists"
+      }
+    ],
+    "App.handle_forced_login": [
+      {
+        "name": "handle_forced_login",
+        "start_line": 13895,
+        "end_line": 13941,
+        "args": [
+          "self"
+        ],
+        "docstring": "Handle forced login without face verification"
+      },
+      {
+        "name": "handle_forced_login",
+        "start_line": 14002,
+        "end_line": 14048,
+        "args": [
+          "self"
+        ],
+        "docstring": "Handle forced login without face verification"
+      }
+    ],
+    "App.login": [
+      {
+        "name": "login",
+        "start_line": 14164,
+        "end_line": 14168,
+        "args": [
+          "self"
+        ],
+        "docstring": null
+      },
+      {
+        "name": "login",
+        "start_line": 14385,
+        "end_line": 14391,
+        "args": [
+          "self"
+        ],
+        "docstring": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+[package]
+name = "attendance-face"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+attendance-common = { path = "../attendance-common" }
+attendance-domain = { path = "../attendance-domain" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+
+# Strict copy from rust_deepFace Cargo.toml
+tract-onnx = "0.21"
+tract-core = "0.21"
+ndarray = { version = "0.16", features = ["rayon"] }
+ndarray-stats = "0.6"
+image = { version = "0.25", features = ["jpeg", "png", "webp"] }
+rayon = "1"
+num_cpus = "1"
+once_cell = "1"
+base64 = "0.22"
+thiserror = "1"
+anyhow = "1"
+kstring = "=2.0.2"
+axum = { version = "0.7", features = ["multipart"] }

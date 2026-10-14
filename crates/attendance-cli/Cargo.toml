@@ -1,0 +1,29 @@
+[package]
+name = "attendance-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "attendance-admin"
+path = "src/main.rs"
+
+[dependencies]
+attendance-common = { path = "../attendance-common" }
+attendance-domain = { path = "../attendance-domain" }
+attendance-database = { path = "../attendance-database" }
+attendance-auth = { path = "../attendance-auth" }
+attendance-face = { path = "../attendance-face" }
+attendance-device = { path = "../attendance-device" }
+attendance-sync = { path = "../attendance-sync" }
+attendance-bigquery = { path = "../attendance-bigquery" }
+attendance-core = { path = "../attendance-core" }
+attendance-reporting = { path = "../attendance-reporting" }
+
+tokio = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

@@ -1,0 +1,16 @@
+[package]
+name = "attendance-sync"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+attendance-common = { path = "../attendance-common" }
+attendance-domain = { path = "../attendance-domain" }
+attendance-database = { path = "../attendance-database" }
+attendance-bigquery = { path = "../attendance-bigquery" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rusqlite = { workspace = true }
+chrono = { workspace = true }

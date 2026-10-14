@@ -1,0 +1,15 @@
+[package]
+name = "attendance-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+attendance-common = { path = "../attendance-common" }
+attendance-domain = { path = "../attendance-domain" }
+attendance-database = { path = "../attendance-database" }
+parking_lot = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

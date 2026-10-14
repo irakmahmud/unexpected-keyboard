@@ -1,0 +1,1 @@
+/home/opc/attendance_system/AGENTS.md

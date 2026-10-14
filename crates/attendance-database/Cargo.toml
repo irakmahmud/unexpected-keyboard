@@ -1,0 +1,16 @@
+[package]
+name = "attendance-database"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+attendance-common = { path = "../attendance-common" }
+attendance-domain = { path = "../attendance-domain" }
+rusqlite = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }

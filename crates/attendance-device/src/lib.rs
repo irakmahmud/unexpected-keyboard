@@ -1,0 +1,20 @@
+pub mod audio_announcer;
+pub mod camera_acquisition;
+pub mod display_renderer;
+pub mod heartbeat;
+pub mod qr_generator;
+pub mod relay_controller;
+pub mod session_manager;
+pub mod thermal_scanner;
+
+pub use audio_announcer::{AudioAnnouncer, AudioCueType};
+pub use camera_acquisition::{CameraFrame, CameraPipeline};
+pub use camera_acquisition::CameraPipeline as CameraAcquisitionService;
+pub use display_renderer::{DisplayRenderer, LcdScreenState};
+pub use heartbeat::{DeviceHeartbeatTracker, DeviceRegistry, HeartbeatMonitor};
+pub use qr_generator::QrCodeGenerator;
+pub use qr_generator::QrCodeGenerator as AttendanceQrGenerator;
+pub use relay_controller::{RelayStatus, RelayTriggerType, TurnstileRelayController};
+pub use session_manager::SessionManager;
+pub use session_manager::SessionManager as DeviceSessionManager;
+pub use thermal_scanner::{ThermalReading, ThermalScanner};
