@@ -233,6 +233,44 @@ impl FaceVectorIndex {
         self.state.read().embeddings.clone()
     }
 
+    /// Check if a face embedding already belongs to another user (matching Python _is_duplicate_user / _compare_face_embeddings lines 4770-4821)
+    /// Uses cosine distance < 0.40 (1.0 - cosine_similarity < 0.40)
+    pub fn find_duplicate_user(&self, query_vector: &[f32], exclude_username: Option<&str>) -> Option<(String, f32)> {
+        if query_vector.is_empty() || query_vector.iter().all(|&x| x == 0.0) {
+            return None;
+        }
+        let excl = exclude_username.map(|u| u.to_uppercase());
+        let st = self.state.read();
+        let q_norm: f32 = query_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if q_norm == 0.0 {
+            return None;
+        }
+
+        for (user, vectors) in st.embeddings.iter() {
+            if let Some(ref ex) = excl {
+                if user.eq_ignore_ascii_case(ex) {
+                    continue;
+                }
+            }
+            for v in vectors {
+                if v.len() != query_vector.len() || v.iter().all(|&x| x == 0.0) {
+                    continue;
+                }
+                let v_norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+                if v_norm == 0.0 {
+                    continue;
+                }
+                let dot: f32 = query_vector.iter().zip(v.iter()).map(|(a, b)| a * b).sum();
+                let cosine_similarity = dot / (q_norm * v_norm);
+                let distance = 1.0 - cosine_similarity;
+                if distance < 0.40 {
+                    return Some((user.clone(), distance));
+                }
+            }
+        }
+        None
+    }
+
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let st = self.state.read();
         let json = serde_json::to_string_pretty(&*st)?;

@@ -140,6 +140,15 @@ impl AttendanceEngine {
             default_shift
         };
 
+        let resolved_video_path = req.video_path.clone().or_else(|| {
+            Some(TimeHelper::generate_media_filepath(
+                &upper_username,
+                &login_type,
+                &current_date,
+                &current_time,
+            ))
+        });
+
         let (eval, resp_late, resp_ot) = if login_type == "IN_TIME" {
             let in_eval = ShiftCalculator::evaluate_attendance(Some(&current_time), None, &shift);
 
@@ -150,7 +159,7 @@ impl AttendanceEngine {
                 date: current_date.clone(),
                 in_time: Some(current_time.clone()),
                 out_time: None,
-                video_path_in: req.video_path.clone(),
+                video_path_in: resolved_video_path.clone(),
                 video_path_out: None,
                 in_time_with_camera: Some(if with_camera { "Y" } else { "N" }.to_string()),
                 out_time_with_camera: None,
@@ -179,7 +188,7 @@ impl AttendanceEngine {
                 &upper_username,
                 &current_date,
                 &current_time,
-                req.video_path.as_deref(),
+                resolved_video_path.as_deref(),
                 with_camera,
                 with_qr,
                 out_eval.work_hours,

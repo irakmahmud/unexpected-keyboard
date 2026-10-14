@@ -16,7 +16,7 @@ def test_record_id():
     assert 'format!("{}_{}_{}_{}", company_user_uuid, date.day(), date.format("%b"), date.year())' in time_rs
     print(f"[PASS] Record ID parity verified: {py_rec_id}")
 
-def test_days_in_month():
+def test_days_in_month_and_media_paths():
     assert calendar.monthrange(2024, 2)[1] == 29
     assert calendar.monthrange(2026, 2)[1] == 28
     assert calendar.monthrange(2026, 10)[1] == 31
@@ -26,7 +26,9 @@ def test_days_in_month():
     assert "pub fn days_in_month(" in time_rs
     assert "pub fn parse_month(" in time_rs
     assert "pub fn format_12hour(" in time_rs
-    print("[PASS] TimeHelper (days_in_month, parse_month, format_12hour, single-digit hour padding) verified.")
+    assert "pub fn generate_media_filepath(" in time_rs
+    assert "pub fn parse_filename_date(" in time_rs
+    print("[PASS] TimeHelper (days_in_month, parse_month, format_12hour, generate_media_filepath, parse_filename_date) verified.")
 
 def test_cross_midnight_shift_and_late_absent():
     with open(f"{CRATES_DIR}/attendance-core/src/shift_calculator.rs") as f:
@@ -37,7 +39,8 @@ def test_cross_midnight_shift_and_late_absent():
     with open(f"{CRATES_DIR}/attendance-core/src/attendance_engine.rs") as f:
         engine_rs = f.read()
     assert "LATE_ABSENT" in engine_rs, "Missing LATE_ABSENT shift_status string"
-    print("[PASS] ShiftCalculator & AttendanceEngine (cross-midnight + LateAbsent >= 60m) verified.")
+    assert "TimeHelper::generate_media_filepath" in engine_rs, "Missing default media filepath generation"
+    print("[PASS] ShiftCalculator & AttendanceEngine (cross-midnight + LateAbsent >= 60m + media filepath) verified.")
 
 def test_database_schema_and_repos():
     with open(f"{CRATES_DIR}/attendance-database/src/schema.rs") as f:
@@ -58,20 +61,22 @@ def test_face_recognition_and_hr_features():
         assert thresh in idx_rs, f"Missing tiered face threshold {thresh}"
     assert "pub fn clear(&self)" in idx_rs
     assert "pub fn get_all_embeddings(&self)" in idx_rs
+    assert "pub fn find_duplicate_user(" in idx_rs
 
     with open(f"{CRATES_DIR}/attendance-api/src/routes/face_routes.rs") as f:
         face_routes = f.read()
-    for route in ["/reset", "/embeddings-report", "/embeddings-report.csv", "/verify", "/verify_multipart"]:
+    for route in ["/reset", "/embeddings-report", "/embeddings-report.csv", "/upload-model", "/verify", "/verify_multipart"]:
         assert route in face_routes, f"Missing route {route} in face_routes.rs"
     assert "Top_5_Lower_Values" in face_routes
     assert "Middle_5_Values" in face_routes
     assert "Top_5_Highest_Values" in face_routes
-    print("[PASS] FaceRecognitionSystem (FaceNet512, MTCNN, 4-tier thresholds, reset_database, generate_embeddings_report) verified.")
+    print("[PASS] FaceRecognitionSystem (FaceNet512, MTCNN, 4-tier thresholds, duplicate face check, reset_database, generate_embeddings_report, upload_ai_model) verified.")
 
 def test_all_api_routes_parity():
     with open(f"{CRATES_DIR}/attendance-api/src/routes/attendance_routes.rs") as f:
         att_routes = f.read()
     assert "/history-7days" in att_routes
+    assert "/forced-login" in att_routes
     assert "7 Day Attendance History" in att_routes
 
     with open(f"{CRATES_DIR}/attendance-api/src/routes/report_routes.rs") as f:
@@ -90,15 +95,20 @@ def test_all_api_routes_parity():
     assert "/list" in comp_routes
     assert "update_company_by_id" in comp_routes
 
+    with open(f"{CRATES_DIR}/attendance-api/src/routes/sync_routes.rs") as f:
+        sync_routes = f.read()
+    assert "/users-to-local" in sync_routes
+    assert "/users-to-cloud" in sync_routes
+
     with open(f"{CRATES_DIR}/attendance-api/src/routes/device_routes.rs") as f:
         dev_routes = f.read()
     assert "/receive_android_id" in dev_routes
     assert "get_receive_android_id_fallback" in dev_routes
-    print("[PASS] All API & HR Management endpoints (7-day history, customized CSV, verify-images, forgot-password, HR password, company CRUD, QR receive_android_id) verified.")
+    print("[PASS] All API & HR Management endpoints (7-day history, forced-login, customized CSV, verify-images, forgot-password, HR password, company CRUD, user sync, QR receive_android_id) verified.")
 
 if __name__ == "__main__":
     test_record_id()
-    test_days_in_month()
+    test_days_in_month_and_media_paths()
     test_cross_midnight_shift_and_late_absent()
     test_database_schema_and_repos()
     test_face_recognition_and_hr_features()

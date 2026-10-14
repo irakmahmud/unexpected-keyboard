@@ -26,9 +26,15 @@ pub struct SevenDayHistoryQuery {
     pub username: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct ForcedLoginRequest {
+    pub username: String,
+}
+
 pub fn attendance_router() -> Router<AppState> {
     Router::new()
         .route("/punch", post(handle_punch))
+        .route("/forced-login", post(handle_forced_login))
         .route("/batch-punch", post(handle_batch_punch))
         .route("/today", get(get_today_attendance))
         .route("/records", get(get_attendance_records))
@@ -294,5 +300,37 @@ async fn handle_manual_adjustment(
     Ok(Json(serde_json::json!({
         "success": true,
         "message": "Attendance record manually adjusted successfully"
+    })))
+}
+
+async fn handle_forced_login(
+    State(state): State<AppState>,
+    Json(payload): Json<ForcedLoginRequest>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let trimmed = payload.username.trim();
+    if trimmed.is_empty() {
+        return Err(attendance_common::AppError::Validation("Username is required".to_string()).into());
+    }
+    let punch_req = PunchRequest {
+        username: trimmed.to_uppercase(),
+        pin: None,
+        android_id: None,
+        method: Some("MANUAL".to_string()),
+        device_id: Some("FORCED_LOGIN".to_string()),
+        latitude: None,
+        longitude: None,
+        video_path: None,
+        face_embedding: None,
+        remarks: Some("Forced login without camera".to_string()),
+    };
+    let resp = state.engine.process_punch(punch_req)?;
+    let time_12h = TimeHelper::format_12hour(&resp.timestamp);
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "username": resp.username,
+        "login_type": resp.login_type,
+        "record_id": resp.record_id,
+        "timestamp": resp.timestamp,
+        "message": format!("{}, YOUR {} IS RECORDED AT {}", resp.username, resp.login_type, time_12h)
     })))
 }

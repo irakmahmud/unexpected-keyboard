@@ -37,6 +37,7 @@ pub fn face_router() -> Router<AppState> {
         .route("/reset", post(handle_reset_index))
         .route("/embeddings-report", get(get_embeddings_report_json))
         .route("/embeddings-report.csv", get(get_embeddings_report_csv))
+        .route("/upload-model", post(handle_upload_ai_model))
         .route("/verify", post(handle_verify_json))
         .route("/verify_multipart", post(handle_verify_multipart))
 }
@@ -453,4 +454,37 @@ pub async fn handle_verify_multipart(
         .map_err(|e| attendance_common::AppError::Validation(e.to_string()))?;
 
     Ok(Json(resp))
+}
+
+#[derive(Deserialize)]
+pub struct UploadModelPayload {
+    pub model_name: Option<String>,
+    pub model_b64: Option<String>,
+}
+
+async fn handle_upload_ai_model(
+    Json(payload): Json<UploadModelPayload>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let model_name = payload
+        .model_name
+        .unwrap_or_else(|| "facenet512.onnx".to_string());
+    let safe_name = model_name.rsplit('/').next().unwrap_or("facenet512.onnx");
+    std::fs::create_dir_all("models")
+        .map_err(|e| attendance_common::AppError::Internal(format!("Failed to create models dir: {}", e)))?;
+
+    let target_path = format!("models/{}", safe_name);
+    if let Some(ref b64) = payload.model_b64 {
+        use base64::{engine::general_purpose, Engine as _};
+        let bytes = general_purpose::STANDARD
+            .decode(b64)
+            .map_err(|e| attendance_common::AppError::Validation(format!("Invalid base64 model payload: {}", e)))?;
+        std::fs::write(&target_path, &bytes)
+            .map_err(|e| attendance_common::AppError::Internal(format!("Failed to write model file: {}", e)))?;
+    }
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "target_path": target_path,
+        "message": "AI Model file copied successfully to required locations! Please restart the application."
+    })))
 }

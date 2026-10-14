@@ -271,6 +271,35 @@ impl TimeHelper {
             warning: None,
         }
     }
+
+    /// Generate media filepath matching Python _save_frame (line 2575) and _generate_blank_image (line 8669):
+    /// "{username}/{year}/{MonthName}/{USERNAME}_{DD}_{Mon}_{YYYY}_{LOGIN_TYPE}_{HH}_{MM}_{AM/PM}.jpg"
+    pub fn generate_media_filepath(username: &str, login_type: &str, date_str: &str, time_str: &str) -> String {
+        let upper_user = username.to_uppercase();
+        let date = Self::parse_date(date_str).unwrap_or_else(|_| NaiveDate::from_ymd_opt(2026, 10, 14).unwrap());
+        let time = Self::parse_time(time_str).unwrap_or_else(|_| NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+        let year = date.year();
+        let month_full = date.format("%B").to_string();
+        let date_part = date.format("%d_%b_%Y").to_string();
+        let time_part = time.format("%I_%M_%p").to_string();
+        format!(
+            "data/{}/{}/{}/{}_{}_{}_{}.jpg",
+            upper_user, year, month_full, upper_user, date_part, login_type, time_part
+        )
+    }
+
+    /// Parse date from filename matching Python parse_filename_date (line 13370):
+    /// Example format: "USERNAME_DD_MMM_YYYY_TYPE_HH_MM_AM/PM.jpg"
+    pub fn parse_filename_date(filename: &str) -> Option<NaiveDate> {
+        let base = filename.rsplit('/').next().unwrap_or(filename);
+        let parts: Vec<&str> = base.split('_').collect();
+        if parts.len() >= 4 {
+            let date_str = format!("{} {} {}", parts[1], parts[2], parts[3]);
+            NaiveDate::parse_from_str(&date_str, "%d %b %Y").ok()
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]

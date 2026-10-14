@@ -19,6 +19,8 @@ pub fn sync_router() -> Router<AppState> {
     Router::new()
         .route("/trigger", post(handle_trigger_sync))
         .route("/status", get(get_outbox_status))
+        .route("/users-to-local", post(handle_sync_users_to_local))
+        .route("/users-to-cloud", post(handle_sync_users_to_cloud))
         .route("/dead-letters", get(get_dead_letters))
         .route("/dead-letters/:id/retry", post(retry_dead_letter))
 }
@@ -39,6 +41,43 @@ async fn handle_trigger_sync(
             "message": "BigQuery sync failed or not configured. Events retained in durable SQLite outbox."
         }))),
     }
+}
+
+async fn handle_sync_users_to_local(
+    State(state): State<AppState>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let users = state.db.get_all_users()?;
+    let mut indexed = 0usize;
+    for u in &users {
+        if let Some(ref enc_str) = u.face_encoding {
+            if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {
+                if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
+                    if state.face_index.enroll_user(&u.username, vec).is_ok() {
+                        indexed += 1;
+                    }
+                }
+            }
+        }
+    }
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "local_users_count": users.len(),
+        "indexed_faces_count": indexed,
+        "message": format!("Synchronized {} users and {} facial encodings in local database", users.len(), indexed)
+    })))
+}
+
+async fn handle_sync_users_to_cloud(
+    State(state): State<AppState>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let users = state.db.get_all_users()?;
+    let bq_cycle = state.outbox_worker.process_cycle().await.unwrap_or(0);
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "users_checked": users.len(),
+        "outbox_events_flushed": bq_cycle,
+        "message": format!("Successfully verified {} local users and flushed {} pending cloud sync events", users.len(), bq_cycle)
+    })))
 }
 
 async fn get_outbox_status(

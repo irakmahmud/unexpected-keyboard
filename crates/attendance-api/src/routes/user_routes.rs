@@ -51,6 +51,13 @@ async fn create_user(
 
     let (face_encoding_str, emb_opt) = match payload.face_embedding {
         Some(emb) => {
+            if let Some((dup_user, dist)) = state.face_index.find_duplicate_user(&emb, Some(&payload.username)) {
+                return Err(attendance_common::AppError::Validation(format!(
+                    "Duplicate face detected: face already registered to user {} (cosine distance {:.4} < 0.40)",
+                    dup_user, dist
+                ))
+                .into());
+            }
             let json_str = serde_json::to_string(&emb).unwrap_or_else(|_| "[]".to_string());
             (Some(json_str), Some(emb))
         }
@@ -62,8 +69,16 @@ async fn create_user(
         }
     };
 
+    let existing_cu_uuid = state
+        .db
+        .get_user_by_username(&payload.username)
+        .ok()
+        .flatten()
+        .map(|u| u.company_user_uuid);
+
     let user = User {
-        company_user_uuid: format!("CU_{}", &CryptoHelper::new_uuid().replace('-', "")[..12]),
+        company_user_uuid: existing_cu_uuid
+            .unwrap_or_else(|| format!("CU_{}", &CryptoHelper::new_uuid().replace('-', "")[..12])),
         company_name: payload.company_name,
         company_uuid: payload.company_uuid,
         username: payload.username.to_uppercase(),
