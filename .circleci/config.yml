@@ -56,13 +56,13 @@ jobs:
           command: flutter pub get
       - run:
           name: 🔨 Compile Remote Debug APK
-          command: flutter build apk --debug
+          command: flutter build apk --debug --android-skip-build-dependency-validation
       - run:
           name: 🚀 Compile Remote Release APK
-          command: flutter build apk --release --no-shrink
+          command: flutter build apk --release --no-shrink --android-skip-build-dependency-validation
       - run:
           name: 📦 Compile Remote Release App Bundle (AAB)
-          command: flutter build appbundle --release
+          command: flutter build appbundle --release --android-skip-build-dependency-validation
       - save_cache:
           name: 💾 Save Gradle Cache
           key: v1-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}

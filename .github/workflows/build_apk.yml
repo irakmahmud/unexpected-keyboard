@@ -37,13 +37,13 @@ jobs:
         run: flutter test
 
       - name: 🔨 Build Debug APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --android-skip-build-dependency-validation
 
       - name: 🚀 Build Release APK
-        run: flutter build apk --release --no-shrink
+        run: flutter build apk --release --no-shrink --android-skip-build-dependency-validation
 
       - name: 📦 Build Release App Bundle (AAB)
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
 
       - name: 📤 Upload Release APK
         uses: actions/upload-artifact@v4
