@@ -26,6 +26,29 @@ class StandaloneImeView extends StatefulWidget {
 
 class _StandaloneImeViewState extends State<StandaloneImeView> {
   final ImeChannelService _imeService = ImeChannelService();
+  double _keyHeight = ImeChannelService.defaultKeyHeight;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHeight();
+    _imeService.onHeightUpdatedFromNative = (newHeight) {
+      if (mounted) {
+        setState(() {
+          _keyHeight = newHeight;
+        });
+      }
+    };
+  }
+
+  Future<void> _loadHeight() async {
+    final saved = await _imeService.getKeyboardHeight();
+    if (mounted) {
+      setState(() {
+        _keyHeight = saved;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +66,12 @@ class _StandaloneImeViewState extends State<StandaloneImeView> {
           child: KeyboardView(
             imeService: _imeService,
             theme: themeData,
+            keyHeight: _keyHeight,
+            onKeyHeightChanged: (val) {
+              setState(() {
+                _keyHeight = val;
+              });
+            },
             onOpenSettings: () {},
           ),
         ),

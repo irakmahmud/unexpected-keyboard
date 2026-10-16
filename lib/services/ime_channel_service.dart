@@ -3,16 +3,86 @@ import 'package:flutter/services.dart';
 class ImeChannelService {
   static const MethodChannel _channel = MethodChannel('com.antigravity.keyboard/ime');
 
+  static const double minKeyHeight = 34.0;
+  static const double maxKeyHeight = 68.0;
+  static const double defaultKeyHeight = 46.0;
+
   bool isShiftActive = false;
   bool isCapsLock = false;
   bool isCtrlActive = false;
   bool isAltActive = false;
   bool isMetaActive = false;
 
-  /// Callbacks for in-app preview typing
+  /// Callbacks for in-app preview typing & dynamic height updates
   void Function(String text)? onLocalTextInput;
   void Function()? onLocalBackspace;
   void Function()? onLocalEnter;
+  void Function(double keyHeight)? onHeightUpdatedFromNative;
+
+  ImeChannelService() {
+    _channel.setMethodCallHandler(_handleNativeCall);
+  }
+
+  Future<dynamic> _handleNativeCall(MethodCall call) async {
+    if (call.method == 'onHeightChanged') {
+      final raw = call.arguments;
+      if (raw is num) {
+        onHeightUpdatedFromNative?.call(clampKeyHeight(raw.toDouble()));
+      }
+    }
+    return true;
+  }
+
+  static double clampKeyHeight(double height) {
+    if (height < minKeyHeight) return minKeyHeight;
+    if (height > maxKeyHeight) return maxKeyHeight;
+    return height;
+  }
+
+  static int calculateTotalKeyboardHeightDp(
+    double keyHeight, {
+    bool showTerminalBar = true,
+    bool showResizeBar = false,
+  }) {
+    final clamped = clampKeyHeight(keyHeight);
+    final rowsHeight = 4.0 * (clamped + 6.0);
+    final modifierBarHeight = showTerminalBar ? ((clamped * 0.72).clamp(28.0, 46.0) + 6.0) : 0.0;
+    final resizeBarHeight = showResizeBar ? 42.0 : 0.0;
+    return (rowsHeight + modifierBarHeight + resizeBarHeight + 12.0).round();
+  }
+
+  Future<double> getKeyboardHeight() async {
+    try {
+      final result = await _channel.invokeMethod<dynamic>('getKeyboardHeight');
+      if (result is num) {
+        return clampKeyHeight(result.toDouble());
+      }
+    } on PlatformException catch (e) {
+      print('IME Channel getKeyboardHeight error: ${e.message}');
+    } catch (_) {}
+    return defaultKeyHeight;
+  }
+
+  Future<void> setKeyboardHeight(
+    double keyHeight, {
+    bool showTerminalBar = true,
+    bool showResizeBar = false,
+  }) async {
+    final clamped = clampKeyHeight(keyHeight);
+    final totalHeightDp = calculateTotalKeyboardHeightDp(
+      clamped,
+      showTerminalBar: showTerminalBar,
+      showResizeBar: showResizeBar,
+    );
+    try {
+      await _channel.invokeMethod('setKeyboardHeight', {
+        'keyHeight': clamped,
+        'totalHeightDp': totalHeightDp,
+      });
+    } on PlatformException catch (e) {
+      print('IME Channel setKeyboardHeight error: ${e.message}');
+    } catch (_) {}
+  }
 
   int calculateMetaState() {
     int state = 0;
@@ -103,9 +173,7 @@ class ImeChannelService {
     }
   }
 
-  Future<void> triggerHaptic() async {
-    try {
-      HapticFeedback.lightImpact();
-    } catch (_) {}
+  void triggerHaptic() {
+    HapticFeedback.lightImpact();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:unexpected_flutter_keyboard/models/gesture_direction.dart';
 import 'package:unexpected_flutter_keyboard/models/key_model.dart';
 import 'package:unexpected_flutter_keyboard/models/keyboard_layout.dart';
+import 'package:unexpected_flutter_keyboard/services/ime_channel_service.dart';
 
 void main() {
   group('KeyModel and KeyboardLayout Tests', () {
@@ -47,6 +48,19 @@ void main() {
       expect(terminalKeys.any((k) => k.primary == 'CTRL'), true);
       expect(terminalKeys.any((k) => k.primary == 'ALT'), true);
       expect(terminalKeys.any((k) => k.primary == 'TAB'), true);
+    });
+
+    test('Keyboard height clamping and total height calculation work accurately', () {
+      expect(ImeChannelService.clampKeyHeight(20.0), ImeChannelService.minKeyHeight);
+      expect(ImeChannelService.clampKeyHeight(90.0), ImeChannelService.maxKeyHeight);
+      expect(ImeChannelService.clampKeyHeight(52.0), 52.0);
+
+      final compactTotal = ImeChannelService.calculateTotalKeyboardHeightDp(38.0);
+      final normalTotal = ImeChannelService.calculateTotalKeyboardHeightDp(46.0);
+      final tallTotal = ImeChannelService.calculateTotalKeyboardHeightDp(58.0);
+
+      expect(compactTotal < normalTotal, true);
+      expect(normalTotal < tallTotal, true);
     });
   });
 }

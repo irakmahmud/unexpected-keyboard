@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/ime_channel_service.dart';
 import '../themes/keyboard_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -6,6 +7,8 @@ class SettingsScreen extends StatelessWidget {
   final ValueChanged<KeyboardThemeMode> onThemeChanged;
   final bool hapticsEnabled;
   final ValueChanged<bool> onHapticsChanged;
+  final double keyHeight;
+  final ValueChanged<double> onKeyHeightChanged;
   final VoidCallback onBackToKeyboard;
 
   const SettingsScreen({
@@ -14,12 +17,16 @@ class SettingsScreen extends StatelessWidget {
     required this.onThemeChanged,
     required this.hapticsEnabled,
     required this.onHapticsChanged,
+    this.keyHeight = ImeChannelService.defaultKeyHeight,
+    required this.onKeyHeightChanged,
     required this.onBackToKeyboard,
   });
 
   @override
   Widget build(BuildContext context) {
     final themeData = KeyboardThemeData.fromMode(currentThemeMode);
+    final clampedHeight = ImeChannelService.clampKeyHeight(keyHeight);
+    final totalHeightDp = ImeChannelService.calculateTotalKeyboardHeightDp(clampedHeight);
 
     return Scaffold(
       backgroundColor: themeData.backgroundColor,
@@ -34,6 +41,75 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          _buildSectionHeader('Keyboard Height & Key Size', themeData),
+          Card(
+            color: themeData.keyBackgroundColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Key Row Height: ${clampedHeight.round()} dp',
+                        style: TextStyle(
+                          color: themeData.primaryTextColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeData.accentColor.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: themeData.accentColor, width: 1),
+                        ),
+                        child: Text(
+                          'Total: $totalHeightDp dp',
+                          style: TextStyle(
+                            color: themeData.accentColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Slider(
+                    value: clampedHeight,
+                    min: ImeChannelService.minKeyHeight,
+                    max: ImeChannelService.maxKeyHeight,
+                    divisions: (ImeChannelService.maxKeyHeight - ImeChannelService.minKeyHeight).round(),
+                    label: '${clampedHeight.round()} dp',
+                    activeColor: themeData.accentColor,
+                    inactiveColor: themeData.modifierInactiveColor,
+                    onChanged: (val) => onKeyHeightChanged(ImeChannelService.clampKeyHeight(val)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      _buildHeightPresetChip('Compact (38dp)', 38.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Normal (46dp)', 46.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Tall (54dp)', 54.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Extra Tall (62dp)', 62.0, clampedHeight, themeData),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tip: You can also tap or drag the ↕ button on the right side of the keyboard top modifier bar anytime while typing to resize live.',
+                    style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 32),
           _buildSectionHeader('Appearance & Theme', themeData),
           _buildThemeTile(
             title: 'AMOLED Pure Dark',
@@ -129,6 +205,29 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeightPresetChip(
+    String label,
+    double targetHeight,
+    double currentHeight,
+    KeyboardThemeData themeData,
+  ) {
+    final isSelected = (currentHeight - targetHeight).abs() < 1.0;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? themeData.backgroundColor : themeData.primaryTextColor,
+          fontSize: 12.0,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: themeData.accentColor,
+      backgroundColor: themeData.backgroundColor,
+      onSelected: (_) => onKeyHeightChanged(targetHeight),
     );
   }
 

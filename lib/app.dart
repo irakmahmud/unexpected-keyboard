@@ -17,10 +17,21 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
   KeyboardThemeMode _themeMode = KeyboardThemeMode.amoled;
   bool _hapticsEnabled = true;
   bool _isSettingsOpen = false;
+  double _keyHeight = ImeChannelService.defaultKeyHeight;
 
   @override
   void initState() {
     super.initState();
+    _loadInitialHeight();
+
+    _imeService.onHeightUpdatedFromNative = (newHeight) {
+      if (mounted) {
+        setState(() {
+          _keyHeight = newHeight;
+        });
+      }
+    };
+
     _imeService.onLocalTextInput = (text) {
       final val = _testTextController.text;
       final sel = _testTextController.selection;
@@ -68,6 +79,23 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
     };
   }
 
+  Future<void> _loadInitialHeight() async {
+    final saved = await _imeService.getKeyboardHeight();
+    if (mounted) {
+      setState(() {
+        _keyHeight = saved;
+      });
+    }
+  }
+
+  void _updateKeyHeight(double newHeight) {
+    final clamped = ImeChannelService.clampKeyHeight(newHeight);
+    setState(() {
+      _keyHeight = clamped;
+    });
+    _imeService.setKeyboardHeight(clamped);
+  }
+
   @override
   void dispose() {
     _testTextController.dispose();
@@ -96,6 +124,8 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
               onHapticsChanged: (val) {
                 setState(() => _hapticsEnabled = val);
               },
+              keyHeight: _keyHeight,
+              onKeyHeightChanged: _updateKeyHeight,
               onBackToKeyboard: () {
                 setState(() => _isSettingsOpen = false);
               },
@@ -106,6 +136,13 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                 title: const Text('Unexpected Keyboard'),
                 backgroundColor: themeData.keyBackgroundColor,
                 actions: [
+                  IconButton(
+                    icon: const Icon(Icons.height),
+                    tooltip: 'Adjust Keyboard Height',
+                    onPressed: () {
+                      setState(() => _isSettingsOpen = true);
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.settings),
                     tooltip: 'Settings',
@@ -152,7 +189,7 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Corner Gestures Enabled',
+                          'Key Height: ${_keyHeight.round()} dp (Tap ↕ on bar to resize)',
                           style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.0),
                         ),
                         TextButton.icon(
@@ -169,6 +206,8 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                   KeyboardView(
                     imeService: _imeService,
                     theme: themeData,
+                    keyHeight: _keyHeight,
+                    onKeyHeightChanged: _updateKeyHeight,
                     onOpenSettings: () {
                       setState(() => _isSettingsOpen = true);
                     },

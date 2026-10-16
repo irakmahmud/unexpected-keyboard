@@ -1,7 +1,7 @@
 package com.antigravity.keyboard
 
+import android.content.Context
 import android.inputmethodservice.InputMethodService
-import android.os.Build
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +22,11 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     companion object {
         private const val CHANNEL_NAME = "com.antigravity.keyboard/ime"
+        private const val PREFS_NAME = "unexpected_keyboard_prefs"
+        private const val KEY_ROW_HEIGHT_DP = "key_height_dp"
+        private const val KEY_TOTAL_HEIGHT_DP = "total_height_dp"
+        private const val DEFAULT_KEY_HEIGHT_DP = 46.0f
+        private const val DEFAULT_TOTAL_HEIGHT_DP = 265
     }
 
     override fun onCreate() {
@@ -46,6 +51,41 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         }
     }
 
+    private fun getSavedKeyHeightDp(): Float {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getFloat(KEY_ROW_HEIGHT_DP, DEFAULT_KEY_HEIGHT_DP).coerceIn(34.0f, 68.0f)
+    }
+
+    private fun getSavedTotalHeightDp(): Int {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP).coerceIn(190, 420)
+    }
+
+    private fun saveKeyboardHeight(keyHeightDp: Float, totalHeightDp: Int) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_ROW_HEIGHT_DP, keyHeightDp.coerceIn(34.0f, 68.0f))
+            .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 420))
+            .apply()
+    }
+
+    private fun applyKeyboardHeightDp(totalHeightDp: Int) {
+        val view = flutterView ?: return
+        val density = resources.displayMetrics.density
+        val heightPx = (density * totalHeightDp.coerceIn(190, 420)).toInt()
+        val params = view.layoutParams
+        if (params == null) {
+            view.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                heightPx
+            )
+        } else if (params.height != heightPx) {
+            params.height = heightPx
+            view.layoutParams = params
+            view.requestLayout()
+        }
+    }
+
     override fun onCreateInputView(): View {
         initFlutterEngine()
         if (flutterView == null) {
@@ -55,12 +95,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
             (flutterView?.parent as? ViewGroup)?.removeView(flutterView)
         }
 
-        val density = resources.displayMetrics.density
-        val keyboardHeight = (density * 270).toInt()
-        flutterView?.layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            keyboardHeight
-        )
+        applyKeyboardHeightDp(getSavedTotalHeightDp())
         return flutterView!!
     }
 
@@ -76,11 +111,25 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        val savedKeyHeight = getSavedKeyHeightDp()
+        val savedTotalDp = getSavedTotalHeightDp()
+        applyKeyboardHeightDp(savedTotalDp)
+        methodChannel?.invokeMethod("onHeightChanged", savedKeyHeight.toDouble())
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         val ic: InputConnection? = currentInputConnection
         when (call.method) {
+            "getKeyboardHeight" -> {
+                result.success(getSavedKeyHeightDp().toDouble())
+            }
+            "setKeyboardHeight" -> {
+                val keyHeight = call.argument<Double>("keyHeight")?.toFloat() ?: DEFAULT_KEY_HEIGHT_DP
+                val totalHeightDp = call.argument<Int>("totalHeightDp") ?: DEFAULT_TOTAL_HEIGHT_DP
+                saveKeyboardHeight(keyHeight, totalHeightDp)
+                applyKeyboardHeightDp(totalHeightDp)
+                result.success(true)
+            }
             "commitText" -> {
                 val text = call.argument<String>("text") ?: ""
                 ic?.commitText(text, 1)
@@ -145,10 +194,6 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
             }
             else -> result.notImplemented()
         }
-    }
-
-    private fun sendDefaultEnter(ic: InputConnection?) {
-        sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
     }
 
     private fun charToKeyCode(c: Char): Int {
