@@ -42,8 +42,8 @@ commands:
       - restore_cache:
           name: "Restore Cargo & Target Cache"
           keys:
+            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
-            - v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
             - v3-cargo-cache-{{ arch }}-
 
   save-cargo-cache:
@@ -52,7 +52,7 @@ commands:
       - save_cache:
           name: "Save Cargo & Target Cache"
           when: always
-          key: v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
+          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
           paths:
             - ~/.cargo/registry/index
             - ~/.cargo/registry/cache
@@ -85,7 +85,7 @@ jobs:
           command: |
             mkdir -p dist
             cp target/release/attendance-api dist/
-            cp target/release/attendance-cli dist/
+            cp target/release/attendance-admin dist/attendance-cli
             cp target/release/attendance-device-agent dist/
 
             # Verify Target ELF Architecture
