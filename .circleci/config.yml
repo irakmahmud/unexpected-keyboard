@@ -7,8 +7,7 @@ executors:
     working_directory: ~/keyboard
     resource_class: medium+
     environment:
-      JAVA_OPTS: "-Xmx3072m"
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4096m"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Dkotlin.compiler.execution.strategy=in-process"
 
 jobs:
   validate-and-test:
@@ -49,8 +48,13 @@ jobs:
       - restore_cache:
           name: ⚡ Restore Gradle Cache
           keys:
-            - v1-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
-            - v1-gradle-cache-
+            - v2-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}-{{ checksum "android/gradle.properties" }}
+            - v2-gradle-cache-
+      - run:
+          name: 🛠️ Pre-install Required Android SDK & NDK Packages
+          command: |
+            yes | sdkmanager --licenses > /dev/null 2>&1 || true
+            sdkmanager "platforms;android-35" "build-tools;34.0.0" "cmake;3.22.1" "ndk;28.2.13676358"
       - run:
           name: 📥 Fetch Flutter Dependencies
           command: flutter pub get
@@ -65,7 +69,7 @@ jobs:
           command: flutter build appbundle --release --android-skip-build-dependency-validation
       - save_cache:
           name: 💾 Save Gradle Cache
-          key: v1-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
+          key: v2-gradle-cache-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}-{{ checksum "android/gradle.properties" }}
           paths:
             - /root/.gradle/caches
             - /root/.gradle/wrapper
