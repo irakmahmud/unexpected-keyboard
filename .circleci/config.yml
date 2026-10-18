@@ -78,7 +78,7 @@ jobs:
       - run:
           name: "Execute Unit & Integration Tests"
           command: |
-            cargo test --workspace
+            cargo test --release --workspace
       - save-cargo-cache
       - run:
           name: "Package Release Binaries & Checksums"

@@ -26,7 +26,7 @@ fetch_from_circleci_artifacts() {
     if [ "${build_num}" = "latest" ]; then
         echo "🔍 Discovering latest successful build with artifacts on CircleCI..."
         local recent_builds
-        recent_builds=$(curl -s "https://circleci.com/api/v1.1/project/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}?limit=10")
+        recent_builds=$(curl -s "https://circleci.com/api/v1.1/project/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/tree/attendance-system?limit=10")
         build_num=$(echo "${recent_builds}" | jq -r '[.[] | select(.status=="success")] | .[0].build_num' 2>/dev/null || echo "")
         if [ -z "${build_num}" ] || [ "${build_num}" = "null" ]; then
             echo "No successful build found in recent list."

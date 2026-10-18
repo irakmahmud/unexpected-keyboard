@@ -262,7 +262,7 @@ fn run_onet(
             .map_err(|e| AppError::OnnxError(format!("O-Net output error: {e}")))?;
         let reg = outputs[1].to_array_view::<f32>()
             .map_err(|e| AppError::OnnxError(format!("O-Net reg error: {e}")))?;
-        let landmarks_raw = outputs[0].to_array_view::<f32>()
+        let _landmarks_raw = outputs[0].to_array_view::<f32>()
             .map_err(|e| AppError::OnnxError(format!("O-Net landmarks error: {e}")))?;
         
         let score = prob[[0, 1]];

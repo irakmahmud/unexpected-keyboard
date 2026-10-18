@@ -28,8 +28,8 @@ else
 fi
 
 echo ""
-echo "2. CircleCI Public API Probe (v1.1 Live Builds):"
-LATEST_BUILDS=$(curl -s "https://circleci.com/api/v1.1/project/github/${REPO}?limit=5")
+echo "2. CircleCI Public API Probe (v1.1 Live Builds on attendance-system branch):"
+LATEST_BUILDS=$(curl -s "https://circleci.com/api/v1.1/project/github/${REPO}/tree/attendance-system?limit=5")
 if echo "${LATEST_BUILDS}" | jq . >/dev/null 2>&1; then
     echo "${LATEST_BUILDS}" | jq '.[0:5][] | {build_num, status, stop_time, subject, build_url}'
 else

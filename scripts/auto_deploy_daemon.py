@@ -150,7 +150,7 @@ def process_build(build_num):
 
 def check_for_updates():
     last_deployed = get_last_deployed_build()
-    api_url = f"https://circleci.com/api/v1.1/project/github/{GITHUB_REPO}?limit=10"
+    api_url = f"https://circleci.com/api/v1.1/project/github/{GITHUB_REPO}/tree/attendance-system?limit=10"
     try:
         builds = fetch_json(api_url)
     except Exception as e:
