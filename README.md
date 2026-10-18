@@ -28,6 +28,9 @@ A private, gesture-driven Android keyboard (IME) built with Flutter and Kotlin, 
    - Terminal Hacker Green (Matrix style)
    - Cyberpunk Neon
    - Material Dark
+6. **Live Adjustable Keyboard Height & Key Size**:
+   - Tap or drag the `↕` resize button on the top modifier bar anytime while typing to adjust height live (`34 dp` – `68 dp` per row).
+   - Also configurable in Settings with a precision slider and 4 quick presets (`Compact`, `Normal`, `Tall`, `Extra Tall`), persisted natively via Android `SharedPreferences`.
 
 ---
 

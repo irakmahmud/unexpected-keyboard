@@ -35,28 +35,14 @@ if [ "${REPO}" = "UNCONFIGURED" ]; then
 fi
 
 echo ""
-echo "1. GitHub Commit Status (Check-runs):"
-HTTP_CODE=$(curl -s -o /tmp/gh_check_runs.json -w "%{http_code}" "https://api.github.com/repos/${REPO}/commits/${LATEST_COMMIT}/check-runs" || echo "000")
-if [ "${HTTP_CODE}" = "200" ]; then
-    TOTAL_CHECKS=$(grep -o '"total_count": [0-9]*' /tmp/gh_check_runs.json | head -n1 || echo "0")
-    echo "GitHub Check-runs: ${TOTAL_CHECKS}"
-else
-    echo "GitHub API returned HTTP ${HTTP_CODE} for ${REPO}."
-fi
+echo "1. CircleCI Commit Statuses on GitHub:"
+curl -s "https://api.github.com/repos/${REPO}/commits/${LATEST_COMMIT}/status" | jq -r '.statuses[] | "  - [\(.state | ascii_upcase)] \(.context): \(.description) (\(.target_url))"'
 
 echo ""
-echo "2. CircleCI v2 Public Pipelines:"
-CIRCLE_STATUS=$(curl -s "https://circleci.com/api/v2/project/gh/${REPO}/pipeline" || echo "{}")
-echo "${CIRCLE_STATUS}" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    if 'message' in data:
-        print('CircleCI API Message:', data['message'])
-    items = data.get('items', [])
-    for it in items[:5]:
-        print(f\"Pipeline #{it.get('number')} ({it.get('id')}): State={it.get('state')}, Created={it.get('created_at')}\")
-except Exception as e:
-    print('Failed to parse CircleCI status:', e)
-"
+echo "2. CircleCI Recent Builds (API v1.1):"
+curl -s "https://circleci.com/api/v1.1/project/github/${REPO}?limit=5" | jq -r '.[] | "  - Build #\(.build_num) [\(.workflows.job_name // "job")]: status=\(.status), outcome=\(.outcome // "running"), commit=\(.vcs_revision[0:7]) (\(.build_url))"'
+
+echo ""
+echo "3. GitHub Actions Check-runs:"
+curl -s "https://api.github.com/repos/${REPO}/commits/${LATEST_COMMIT}/check-runs" | jq -r '.check_runs[] | "  - [\(.status)/\(.conclusion // "running")] \(.name) (\(.app.name))"'
 echo "===================================================================="
