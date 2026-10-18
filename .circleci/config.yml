@@ -51,6 +51,7 @@ commands:
     steps:
       - save_cache:
           name: "Save Cargo & Target Cache"
+          when: always
           key: v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
           paths:
             - ~/.cargo/registry/index
@@ -66,10 +67,6 @@ jobs:
       - install-system-dependencies
       - restore-cargo-cache
       - run:
-          name: "Execute Unit & Integration Tests"
-          command: |
-            cargo test --workspace
-      - run:
           name: "Remote Cargo Build Release (Heavy Compilation)"
           command: |
             echo "=========================================================="
@@ -78,6 +75,10 @@ jobs:
             echo "Oracle VM remains completely free of local build load."
             echo "=========================================================="
             cargo build --release --workspace
+      - run:
+          name: "Execute Unit & Integration Tests"
+          command: |
+            cargo test --workspace
       - save-cargo-cache
       - run:
           name: "Package Release Binaries & Checksums"

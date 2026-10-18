@@ -1,7 +1,7 @@
 pub mod repos;
 pub mod schema;
 
-use attendance_common::{AppError, Result};
+use attendance_common::{AppError, Result, TimeHelper};
 use attendance_domain::*;
 use parking_lot::Mutex;
 use repos::*;

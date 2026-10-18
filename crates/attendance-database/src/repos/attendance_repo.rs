@@ -158,7 +158,8 @@ impl AttendanceRepo {
                 .optional()
                 .unwrap_or(None);
 
-            let comp_id = comp_uuid_opt.as_deref().unwrap_or(&username.to_uppercase());
+            let upper_uname = username.to_uppercase();
+            let comp_id = comp_uuid_opt.as_deref().unwrap_or(&upper_uname);
             let record_id = TimeHelper::generate_record_id(comp_id, date);
             let stat = status.unwrap_or("PRESENT");
             conn.execute(
