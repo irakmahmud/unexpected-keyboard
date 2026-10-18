@@ -6,8 +6,8 @@
 
 set -euo pipefail
 
-REPO="IroScript/Oracle-VM-Projects"
-LATEST_COMMIT=$(cd /home/opc/Oracle-VM-Projects && git rev-parse HEAD)
+REPO="irakmahmud/unexpected-keyboard"
+LATEST_COMMIT=$(cd /home/opc/attendance_system && git rev-parse HEAD)
 
 echo "===================================================================="
 echo "🔍 Checking CircleCI Pipeline Status for ${REPO}"

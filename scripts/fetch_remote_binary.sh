@@ -11,8 +11,8 @@ WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET_DIR="${WORKSPACE_DIR}/target/release"
 mkdir -p "${TARGET_DIR}"
 
-CIRCLE_PROJECT_USERNAME="${CIRCLE_PROJECT_USERNAME:-IroScript}"
-CIRCLE_PROJECT_REPONAME="${CIRCLE_PROJECT_REPONAME:-Oracle-VM-Projects}"
+CIRCLE_PROJECT_USERNAME="${CIRCLE_PROJECT_USERNAME:-irakmahmud}"
+CIRCLE_PROJECT_REPONAME="${CIRCLE_PROJECT_REPONAME:-unexpected-keyboard}"
 CIRCLE_API_URL="https://circleci.com/api/v1.1"
 
 echo "===================================================================="

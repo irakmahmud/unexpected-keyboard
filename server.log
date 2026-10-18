@@ -1,3 +1,9 @@
-[2m2026-10-11T14:37:27.970378Z[0m [32m INFO[0m [2mattendance_api[0m[2m:[0m Starting Attendance System Rust/Axum Engine...
-[2m2026-10-11T14:37:27.979059Z[0m [33m WARN[0m [2mattendance_api[0m[2m:[0m DeepFace ONNX models not loaded from 'models': Opening "models/facenet512.onnx". (Copy models/*.onnx to enable live FaceNet512 ONNX inference)
-[2m2026-10-11T14:37:27.980375Z[0m [32m INFO[0m [2mattendance_api[0m[2m:[0m Server listening on http://0.0.0.0:8080
+==========================================================
+⚡ Starting Smart Attendance System (Pure Rust + Axum)
+Port: 8080
+Database: sqlite:///home/opc/attendance_system/data/attendance.db
+Binary: /home/opc/attendance_system/target/release/attendance-api
+==========================================================
+[2m2026-10-18T15:00:11.758125Z[0m [32m INFO[0m [2mattendance_api[0m[2m:[0m Starting Attendance System Rust/Axum Engine...
+[2m2026-10-18T15:00:11.761013Z[0m [33m WARN[0m [2mattendance_api[0m[2m:[0m DeepFace ONNX models not loaded from 'models': Opening "models/facenet512.onnx". (Copy models/*.onnx to enable live FaceNet512 ONNX inference)
+[2m2026-10-18T15:00:11.762442Z[0m [32m INFO[0m [2mattendance_api[0m[2m:[0m Server listening on http://0.0.0.0:8080

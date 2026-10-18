@@ -40,7 +40,7 @@
 
 ---
 
-## ৩. লাইভ রানটাইম বাইনারি ও রিমোট CI/CD অবস্থা (Pending Binary Recompilation)
+## ৩. লাইভ রানটাইম বাইনারি ও রিমোট CircleCI সংযোগ (Remote CI/CD Pipeline)
 
 - **সোর্স কোড (`crates/`):** পাইথনের ১০০% লজিক রাস্ট সোর্স কোডে সম্পূর্ণভাবে বাস্তবায়িত ও যাচাইকৃত।
-- **লাইভ বাইনারি (`target/release/attendance-api`):** পোর্ট `8080`-তে চলমান বাইনারিটি `Oct 11 14:37` তারিখে কম্পাইল করা। লোকাল ভিএম-এ `cargo build` নিষিদ্ধ থাকায় এবং GitHub অ্যাকাউন্ট (`IroScript`) বর্তমানে সাসপেন্ডেড (`HTTP 403`) থাকায় CircleCI রিমোট রানারে নতুন বিল্ড ট্রিগার হতে পারছে না। GitHub অ্যাক্সেস সচল হলেই CircleCI নতুন বাইনারি কম্পাইল করে ডিপ্লয় করবে।
+- **CircleCI রিমোট সংযোগ (`irakmahmud/unexpected-keyboard`):** পুরাতন `IroScript` অ্যাকাউন্টের পরিবর্তে সচল গিটহাব অ্যাকাউন্ট `irakmahmud/unexpected-keyboard`-এর ডেডিকেটেড ব্রাঞ্চ `attendance-system`-এর সাথে গিট রিমোট এবং CircleCI পাইপলাইন ([.circleci/config.yml](file:///home/opc/attendance_system/.circleci/config.yml), [auto_deploy_daemon.py](file:///home/opc/attendance_system/scripts/auto_deploy_daemon.py), [fetch_remote_binary.sh](file:///home/opc/attendance_system/scripts/fetch_remote_binary.sh), [check_circleci_status.sh](file:///home/opc/attendance_system/scripts/check_circleci_status.sh)) সংযুক্ত করা হয়েছে। CircleCI রানারে বিল্ড সম্পন্ন হলেই `auto_deploy_daemon.py` স্বয়ংক্রিয়ভাবে নতুন আর্টিফ্যাক্ট (`attendance-api`) পোর্ট `8080`-তে ডিপ্লয় করবে।

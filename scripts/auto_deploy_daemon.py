@@ -25,8 +25,8 @@ STATE_FILE = DATA_DIR / "last_deployed_build.txt"
 DEPLOY_SCRIPT = DEPLOY_DIR / "deploy_remote_binary.sh"
 LOG_FILE = BASE_DIR / "auto_deploy.log"
 
-GITHUB_REPO = "IroScript/Oracle-VM-Projects"
-POLL_INTERVAL_SECONDS = 20
+GITHUB_REPO = "irakmahmud/unexpected-keyboard"
+POLL_INTERVAL_SECONDS = 15
 
 # Setup Logging
 logging.basicConfig(
@@ -98,8 +98,9 @@ def process_build(build_num):
 
     if not (tarball_url or api_bin_url):
         # Build was not an attendance_system build (likely skipped or keyboard job)
-        logging.debug(f"Build #{build_num} does not contain attendance-api artifacts. Skipping.")
-        return False
+        logging.info(f"Build #{build_num} does not contain attendance-api artifacts. Advancing state.")
+        save_last_deployed_build(build_num)
+        return True
 
     logging.info(f"🎯 New attendance release artifacts detected in CircleCI build #{build_num}!")
     STAGING_DIR.mkdir(parents=True, exist_ok=True)
