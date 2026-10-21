@@ -30,6 +30,20 @@ class KeyboardThemeData {
     this.borderRadius = 6.0,
   });
 
+  static KeyboardThemeMode modeFromString(String? name) {
+    switch (name) {
+      case 'terminalGreen':
+        return KeyboardThemeMode.terminalGreen;
+      case 'cyberpunk':
+        return KeyboardThemeMode.cyberpunk;
+      case 'materialDark':
+        return KeyboardThemeMode.materialDark;
+      case 'amoled':
+      default:
+        return KeyboardThemeMode.amoled;
+    }
+  }
+
   static KeyboardThemeData fromMode(KeyboardThemeMode mode) {
     switch (mode) {
       case KeyboardThemeMode.amoled:

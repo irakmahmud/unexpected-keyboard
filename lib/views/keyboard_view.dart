@@ -84,7 +84,15 @@ class _KeyboardViewState extends State<KeyboardView> {
 
     switch (key.actionType) {
       case KeyActionType.inputChar:
+        if (direction == GestureDirection.longPress && key.topLeft == '⚙️') {
+          widget.onOpenSettings();
+          return;
+        }
         final text = key.resolveOutput(direction, isShifted: widget.imeService.isShiftActive);
+        if (text == '⚙️') {
+          widget.onOpenSettings();
+          return;
+        }
         widget.imeService.sendText(text);
         setState(() {});
         break;
@@ -276,7 +284,7 @@ class _KeyboardViewState extends State<KeyboardView> {
           children: [
             if (_isResizeBarOpen) _buildInlineResizeBar(),
 
-            // Top Terminal Modifier Bar (Termux / Hacker Keys + ↕ Resize Button)
+            // Top Terminal Modifier Bar (Termux / Hacker Keys + ↕ Resize Button + ⚙️ Settings Button)
             if (_showTerminalBar)
               ModifierBar(
                 theme: widget.theme,
@@ -287,6 +295,10 @@ class _KeyboardViewState extends State<KeyboardView> {
                 keyHeight: currentKeyHeight,
                 isResizeBarOpen: _isResizeBarOpen,
                 onToggleResizeBar: _toggleResizeBar,
+                onOpenSettings: () {
+                  widget.imeService.triggerHaptic();
+                  widget.onOpenSettings();
+                },
                 onVerticalResizeDrag: (deltaDp) {
                   _updateKeyHeight(currentKeyHeight + deltaDp);
                 },

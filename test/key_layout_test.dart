@@ -57,12 +57,20 @@ void main() {
       expect(qwerty[2].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'p', '⌫']);
       expect(qwerty[2].every((k) => k.flex == 1.0), true);
 
-      // Row 4: Shift (⇧) moved to left of ?123, Space width reduced
+      // Row 4: Shift (⇧) moved to left of ?123, Settings (⚙️) key present, comma has ⚙️ corner, Space width reduced
       expect(qwerty[3][0].primary, '⇧');
       expect(qwerty[3][0].actionType, KeyActionType.shift);
       expect(qwerty[3][1].primary, '?123');
+      expect(qwerty[3][2].primary, '⚙️');
+      expect(qwerty[3][2].actionType, KeyActionType.openSettings);
+      expect(qwerty[3][3].primary, ',');
+      expect(qwerty[3][3].topLeft, '⚙️');
       final spaceKey = qwerty[3].firstWhere((k) => k.actionType == KeyActionType.space);
       expect(spaceKey.flex < 4.0, true);
+
+      // Symbol layout Row 4 also contains Settings (⚙️) key
+      final symbols = KeyboardLayout.symbolLayout;
+      expect(symbols[3].any((k) => k.actionType == KeyActionType.openSettings), true);
 
       final terminalKeys = KeyboardLayout.terminalBarKeys;
       expect(terminalKeys.any((k) => k.primary == 'ESC'), true);

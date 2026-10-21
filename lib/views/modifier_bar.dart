@@ -13,6 +13,7 @@ class ModifierBar extends StatelessWidget {
   final bool isResizeBarOpen;
   final VoidCallback? onToggleResizeBar;
   final ValueChanged<double>? onVerticalResizeDrag;
+  final VoidCallback? onOpenSettings;
 
   const ModifierBar({
     super.key,
@@ -25,6 +26,7 @@ class ModifierBar extends StatelessWidget {
     this.isResizeBarOpen = false,
     this.onToggleResizeBar,
     this.onVerticalResizeDrag,
+    this.onOpenSettings,
   });
 
   @override
@@ -74,6 +76,28 @@ class ModifierBar extends StatelessWidget {
                     Icons.unfold_more,
                     size: 18.0,
                     color: isResizeBarOpen ? theme.accentColor : theme.primaryTextColor,
+                  ),
+                ),
+              ),
+            ),
+          if (onOpenSettings != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 3.0),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onOpenSettings,
+                child: Container(
+                  width: 34.0,
+                  height: barButtonHeight,
+                  decoration: BoxDecoration(
+                    color: theme.keyBackgroundColor,
+                    borderRadius: BorderRadius.circular(theme.borderRadius),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.settings,
+                    size: 17.0,
+                    color: theme.primaryTextColor,
                   ),
                 ),
               ),

@@ -56,14 +56,15 @@ class KeyboardLayout {
       KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.0),
       KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
     ],
-    // Row 4: Shift (left of ?123), ?123, comma, Space (reduced width), dot, Enter
+    // Row 4: Shift (left of ?123), ?123, Settings (⚙️), comma (with ⚙️ on long-press/topLeft), Space, dot, Enter
     [
-      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.2),
-      KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 1.2),
-      KeyModel(primary: ',', topLeft: ';', topRight: '<', bottomLeft: '{', bottomRight: '[', flex: 1.0),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 3.1),
-      KeyModel(primary: '.', topLeft: ':', topRight: '>', bottomLeft: '}', bottomRight: ']', flex: 1.0),
-      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.5, androidKeyCode: 66),
+      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.1),
+      KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 1.1),
+      KeyModel(primary: '⚙️', actionType: KeyActionType.openSettings, flex: 0.9),
+      KeyModel(primary: ',', topLeft: '⚙️', topRight: '<', bottomLeft: ';', bottomRight: '[', flex: 0.9),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.7),
+      KeyModel(primary: '.', topLeft: ':', topRight: '>', bottomLeft: '}', bottomRight: ']', flex: 0.9),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.4, androidKeyCode: 66),
     ],
   ];
 
@@ -105,8 +106,9 @@ class KeyboardLayout {
     ],
     [
       KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 1.2),
-      KeyModel(primary: ',', flex: 1.0),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 4.0),
+      KeyModel(primary: '⚙️', actionType: KeyActionType.openSettings, flex: 1.0),
+      KeyModel(primary: ',', topLeft: '⚙️', flex: 1.0),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 3.3),
       KeyModel(primary: '.', flex: 1.0),
       KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.5, androidKeyCode: 66),
     ],

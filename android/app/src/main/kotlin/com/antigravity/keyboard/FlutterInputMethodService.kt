@@ -1,6 +1,7 @@
 package com.antigravity.keyboard
 
 import android.content.Context
+import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
@@ -25,6 +26,8 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         private const val PREFS_NAME = "unexpected_keyboard_prefs"
         private const val KEY_ROW_HEIGHT_DP = "key_height_dp"
         private const val KEY_TOTAL_HEIGHT_DP = "total_height_dp"
+        private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val DEFAULT_KEY_HEIGHT_DP = 46.0f
         private const val DEFAULT_TOTAL_HEIGHT_DP = 265
     }
@@ -111,14 +114,26 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedKeyHeight = getSavedKeyHeightDp()
         val savedTotalDp = getSavedTotalHeightDp()
+        val savedTheme = prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"
+        val savedHaptics = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
         applyKeyboardHeightDp(savedTotalDp)
         methodChannel?.invokeMethod("onHeightChanged", savedKeyHeight.toDouble())
+        methodChannel?.invokeMethod(
+            "onConfigChanged",
+            mapOf(
+                "keyHeight" to savedKeyHeight.toDouble(),
+                "themeMode" to savedTheme,
+                "hapticsEnabled" to savedHaptics
+            )
+        )
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         val ic: InputConnection? = currentInputConnection
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         when (call.method) {
             "getKeyboardHeight" -> {
                 result.success(getSavedKeyHeightDp().toDouble())
@@ -129,6 +144,36 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
                 saveKeyboardHeight(keyHeight, totalHeightDp)
                 applyKeyboardHeightDp(totalHeightDp)
                 result.success(true)
+            }
+            "getKeyboardConfig" -> {
+                result.success(
+                    mapOf(
+                        "keyHeight" to getSavedKeyHeightDp().toDouble(),
+                        "themeMode" to (prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"),
+                        "hapticsEnabled" to prefs.getBoolean(KEY_HAPTICS_ENABLED, true),
+                        "openSettings" to false
+                    )
+                )
+            }
+            "setKeyboardConfig" -> {
+                val editor = prefs.edit()
+                call.argument<String>("themeMode")?.let { editor.putString(KEY_THEME_MODE, it) }
+                call.argument<Boolean>("hapticsEnabled")?.let { editor.putBoolean(KEY_HAPTICS_ENABLED, it) }
+                editor.apply()
+                result.success(true)
+            }
+            "openSettings" -> {
+                try {
+                    val intent = Intent(this, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        putExtra("open_settings", true)
+                    }
+                    startActivity(intent)
+                    requestHideSelf(0)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("OPEN_SETTINGS_ERR", e.message, null)
+                }
             }
             "commitText" -> {
                 val text = call.argument<String>("text") ?: ""

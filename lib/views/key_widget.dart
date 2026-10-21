@@ -74,6 +74,10 @@ class _KeyWidgetState extends State<KeyWidget> {
     widget.onKeyPress(widget.keyModel, GestureDirection.center);
   }
 
+  void _handleLongPress() {
+    widget.onKeyPress(widget.keyModel, GestureDirection.longPress);
+  }
+
   @override
   Widget build(BuildContext context) {
     final key = widget.keyModel;
@@ -100,6 +104,7 @@ class _KeyWidgetState extends State<KeyWidget> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _handleTap,
+          onLongPress: _handleLongPress,
           onPanStart: _handlePanStart,
           onPanUpdate: _handlePanUpdate,
           onPanEnd: _handlePanEnd,
@@ -181,14 +186,20 @@ class _KeyWidgetState extends State<KeyWidget> {
 
                 // Primary Center Character / Icon
                 Center(
-                  child: Text(
-                    displayPrimary,
-                    style: TextStyle(
-                      fontSize: displayPrimary.length > 2 ? 11.5 : 17.5,
-                      fontWeight: FontWeight.w600,
-                      color: isActiveModifier ? Colors.white : theme.primaryTextColor,
-                    ),
-                  ),
+                  child: key.actionType == KeyActionType.openSettings
+                      ? Icon(
+                          Icons.settings,
+                          size: 19.0,
+                          color: theme.primaryTextColor,
+                        )
+                      : Text(
+                          displayPrimary,
+                          style: TextStyle(
+                            fontSize: displayPrimary.length > 2 ? 11.5 : 17.5,
+                            fontWeight: FontWeight.w600,
+                            color: isActiveModifier ? Colors.white : theme.primaryTextColor,
+                          ),
+                        ),
                 ),
               ],
             ),

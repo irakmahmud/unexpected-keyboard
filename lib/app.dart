@@ -22,12 +22,36 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
   @override
   void initState() {
     super.initState();
-    _loadInitialHeight();
+    _loadInitialConfig();
 
     _imeService.onHeightUpdatedFromNative = (newHeight) {
       if (mounted) {
         setState(() {
           _keyHeight = newHeight;
+        });
+      }
+    };
+
+    _imeService.onThemeUpdatedFromNative = (themeName) {
+      if (mounted) {
+        setState(() {
+          _themeMode = KeyboardThemeData.modeFromString(themeName);
+        });
+      }
+    };
+
+    _imeService.onHapticsUpdatedFromNative = (enabled) {
+      if (mounted) {
+        setState(() {
+          _hapticsEnabled = enabled;
+        });
+      }
+    };
+
+    _imeService.onOpenSettingsFromNative = () {
+      if (mounted) {
+        setState(() {
+          _isSettingsOpen = true;
         });
       }
     };
@@ -79,11 +103,25 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
     };
   }
 
-  Future<void> _loadInitialHeight() async {
-    final saved = await _imeService.getKeyboardHeight();
+  Future<void> _loadInitialConfig() async {
+    final config = await _imeService.getKeyboardConfig();
     if (mounted) {
       setState(() {
-        _keyHeight = saved;
+        final rawH = config['keyHeight'];
+        if (rawH is num) {
+          _keyHeight = ImeChannelService.clampKeyHeight(rawH.toDouble());
+        }
+        final rawTheme = config['themeMode'];
+        if (rawTheme is String) {
+          _themeMode = KeyboardThemeData.modeFromString(rawTheme);
+        }
+        final rawHaptics = config['hapticsEnabled'];
+        if (rawHaptics is bool) {
+          _hapticsEnabled = rawHaptics;
+        }
+        if (config['openSettings'] == true) {
+          _isSettingsOpen = true;
+        }
       });
     }
   }
@@ -94,6 +132,20 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
       _keyHeight = clamped;
     });
     _imeService.setKeyboardHeight(clamped);
+  }
+
+  void _updateThemeMode(KeyboardThemeMode mode) {
+    setState(() {
+      _themeMode = mode;
+    });
+    _imeService.setKeyboardConfig(themeMode: mode.name);
+  }
+
+  void _updateHaptics(bool enabled) {
+    setState(() {
+      _hapticsEnabled = enabled;
+    });
+    _imeService.setKeyboardConfig(haptics: enabled);
   }
 
   @override
@@ -117,17 +169,16 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
       home: _isSettingsOpen
           ? SettingsScreen(
               currentThemeMode: _themeMode,
-              onThemeChanged: (mode) {
-                setState(() => _themeMode = mode);
-              },
+              onThemeChanged: _updateThemeMode,
               hapticsEnabled: _hapticsEnabled,
-              onHapticsChanged: (val) {
-                setState(() => _hapticsEnabled = val);
-              },
+              onHapticsChanged: _updateHaptics,
               keyHeight: _keyHeight,
               onKeyHeightChanged: _updateKeyHeight,
-              onBackToKeyboard: () {
-                setState(() => _isSettingsOpen = false);
+              onBackToKeyboard: () async {
+                final closedExternal = await _imeService.closeSettingsIfExternal();
+                if (!closedExternal && mounted) {
+                  setState(() => _isSettingsOpen = false);
+                }
               },
             )
           : Scaffold(

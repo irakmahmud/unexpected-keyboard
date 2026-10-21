@@ -12,12 +12,16 @@ class ImeChannelService {
   bool isCtrlActive = false;
   bool isAltActive = false;
   bool isMetaActive = false;
+  bool hapticsEnabled = true;
 
-  /// Callbacks for in-app preview typing & dynamic height updates
+  /// Callbacks for in-app preview typing & dynamic config updates
   void Function(String text)? onLocalTextInput;
   void Function()? onLocalBackspace;
   void Function()? onLocalEnter;
   void Function(double keyHeight)? onHeightUpdatedFromNative;
+  void Function(String themeName)? onThemeUpdatedFromNative;
+  void Function(bool enabled)? onHapticsUpdatedFromNative;
+  void Function()? onOpenSettingsFromNative;
 
   ImeChannelService() {
     _channel.setMethodCallHandler(_handleNativeCall);
@@ -29,6 +33,28 @@ class ImeChannelService {
       if (raw is num) {
         onHeightUpdatedFromNative?.call(clampKeyHeight(raw.toDouble()));
       }
+    } else if (call.method == 'onConfigChanged') {
+      final args = call.arguments;
+      if (args is Map) {
+        final rawHeight = args['keyHeight'];
+        if (rawHeight is num) {
+          onHeightUpdatedFromNative?.call(clampKeyHeight(rawHeight.toDouble()));
+        }
+        final rawTheme = args['themeMode'];
+        if (rawTheme is String) {
+          onThemeUpdatedFromNative?.call(rawTheme);
+        }
+        final rawHaptics = args['hapticsEnabled'];
+        if (rawHaptics is bool) {
+          hapticsEnabled = rawHaptics;
+          onHapticsUpdatedFromNative?.call(rawHaptics);
+        }
+        if (args['openSettings'] == true) {
+          onOpenSettingsFromNative?.call();
+        }
+      }
+    } else if (call.method == 'onOpenSettings') {
+      onOpenSettingsFromNative?.call();
     }
     return true;
   }
@@ -82,6 +108,62 @@ class ImeChannelService {
     } on PlatformException catch (e) {
       print('IME Channel setKeyboardHeight error: ${e.message}');
     } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>> getKeyboardConfig() async {
+    try {
+      final result = await _channel.invokeMethod<dynamic>('getKeyboardConfig');
+      if (result is Map) {
+        final map = Map<String, dynamic>.from(result);
+        if (map['hapticsEnabled'] is bool) {
+          hapticsEnabled = map['hapticsEnabled'] as bool;
+        }
+        return map;
+      }
+    } on PlatformException catch (e) {
+      print('IME Channel getKeyboardConfig error: ${e.message}');
+    } catch (_) {}
+    return {
+      'keyHeight': defaultKeyHeight,
+      'themeMode': 'amoled',
+      'hapticsEnabled': true,
+      'openSettings': false,
+    };
+  }
+
+  Future<void> setKeyboardConfig({
+    String? themeMode,
+    bool? haptics,
+  }) async {
+    if (haptics != null) {
+      hapticsEnabled = haptics;
+    }
+    try {
+      await _channel.invokeMethod('setKeyboardConfig', {
+        if (themeMode != null) 'themeMode': themeMode,
+        if (haptics != null) 'hapticsEnabled': haptics,
+      });
+    } on PlatformException catch (e) {
+      print('IME Channel setKeyboardConfig error: ${e.message}');
+    } catch (_) {}
+  }
+
+  Future<void> openSettings() async {
+    try {
+      await _channel.invokeMethod('openSettings');
+    } on PlatformException catch (e) {
+      print('IME Channel openSettings error: ${e.message}');
+    } catch (_) {}
+  }
+
+  Future<bool> closeSettingsIfExternal() async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('closeSettingsIfExternal');
+      return res == true;
+    } on PlatformException catch (e) {
+      print('IME Channel closeSettingsIfExternal error: ${e.message}');
+    } catch (_) {}
+    return false;
   }
 
   int calculateMetaState() {
@@ -174,6 +256,8 @@ class ImeChannelService {
   }
 
   void triggerHaptic() {
-    HapticFeedback.lightImpact();
+    if (hapticsEnabled) {
+      HapticFeedback.lightImpact();
+    }
   }
 }

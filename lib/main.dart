@@ -27,11 +27,12 @@ class StandaloneImeView extends StatefulWidget {
 class _StandaloneImeViewState extends State<StandaloneImeView> {
   final ImeChannelService _imeService = ImeChannelService();
   double _keyHeight = ImeChannelService.defaultKeyHeight;
+  KeyboardThemeMode _themeMode = KeyboardThemeMode.amoled;
 
   @override
   void initState() {
     super.initState();
-    _loadHeight();
+    _loadConfig();
     _imeService.onHeightUpdatedFromNative = (newHeight) {
       if (mounted) {
         setState(() {
@@ -39,20 +40,34 @@ class _StandaloneImeViewState extends State<StandaloneImeView> {
         });
       }
     };
+    _imeService.onThemeUpdatedFromNative = (themeName) {
+      if (mounted) {
+        setState(() {
+          _themeMode = KeyboardThemeData.modeFromString(themeName);
+        });
+      }
+    };
   }
 
-  Future<void> _loadHeight() async {
-    final saved = await _imeService.getKeyboardHeight();
+  Future<void> _loadConfig() async {
+    final config = await _imeService.getKeyboardConfig();
     if (mounted) {
       setState(() {
-        _keyHeight = saved;
+        final rawH = config['keyHeight'];
+        if (rawH is num) {
+          _keyHeight = ImeChannelService.clampKeyHeight(rawH.toDouble());
+        }
+        final rawTheme = config['themeMode'];
+        if (rawTheme is String) {
+          _themeMode = KeyboardThemeData.modeFromString(rawTheme);
+        }
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeData = KeyboardThemeData.fromMode(KeyboardThemeMode.amoled);
+    final themeData = KeyboardThemeData.fromMode(_themeMode);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -72,7 +87,9 @@ class _StandaloneImeViewState extends State<StandaloneImeView> {
                 _keyHeight = val;
               });
             },
-            onOpenSettings: () {},
+            onOpenSettings: () {
+              _imeService.openSettings();
+            },
           ),
         ),
       ),
