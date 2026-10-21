@@ -152,67 +152,83 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                   ),
                 ],
               ),
-              body: Column(
-                children: [
-                  // Test Input Field for in-app typing & gesture preview
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: themeData.keyBackgroundColor.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(color: themeData.modifierInactiveColor),
-                        ),
-                        padding: const EdgeInsets.all(12.0),
-                        child: TextField(
-                          controller: _testTextController,
-                          maxLines: null,
-                          autofocus: false,
-                          readOnly: false,
-                          showCursor: true,
-                          style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Tap or swipe diagonally on keys below to test corner symbols...',
-                            hintStyle: TextStyle(color: themeData.cornerTextColor),
+              body: LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalKbHeight = ImeChannelService.calculateTotalKeyboardHeightDp(_keyHeight).toDouble();
+                  final topAreaHeight = (constraints.maxHeight - totalKbHeight - 44.0).clamp(56.0, 400.0);
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Test Input Field for in-app typing & gesture preview
+                          SizedBox(
+                            height: topAreaHeight,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: themeData.keyBackgroundColor.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  border: Border.all(color: themeData.modifierInactiveColor),
+                                ),
+                                padding: const EdgeInsets.all(12.0),
+                                child: TextField(
+                                  controller: _testTextController,
+                                  maxLines: null,
+                                  autofocus: false,
+                                  readOnly: false,
+                                  showCursor: true,
+                                  style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: 'Tap or swipe diagonally on keys below to test corner symbols...',
+                                    hintStyle: TextStyle(color: themeData.cornerTextColor),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+
+                          // Quick test buttons row
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Key Height: ${_keyHeight.round()} dp (Tap ↕ on bar to resize)',
+                                    style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.0),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => _testTextController.clear(),
+                                  icon: const Icon(Icons.clear_all, size: 16),
+                                  label: const Text('Clear'),
+                                  style: TextButton.styleFrom(foregroundColor: themeData.accentColor),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // The Interactive Keyboard View
+                          KeyboardView(
+                            imeService: _imeService,
+                            theme: themeData,
+                            keyHeight: _keyHeight,
+                            onKeyHeightChanged: _updateKeyHeight,
+                            onOpenSettings: () {
+                              setState(() => _isSettingsOpen = true);
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-
-                  // Quick test buttons row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Key Height: ${_keyHeight.round()} dp (Tap ↕ on bar to resize)',
-                          style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.0),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _testTextController.clear(),
-                          icon: const Icon(Icons.clear_all, size: 16),
-                          label: const Text('Clear'),
-                          style: TextButton.styleFrom(foregroundColor: themeData.accentColor),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // The Interactive Keyboard View
-                  KeyboardView(
-                    imeService: _imeService,
-                    theme: themeData,
-                    keyHeight: _keyHeight,
-                    onKeyHeightChanged: _updateKeyHeight,
-                    onOpenSettings: () {
-                      setState(() => _isSettingsOpen = true);
-                    },
-                  ),
-                ],
+                  );
+                },
               ),
             ),
     );

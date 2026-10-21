@@ -30,7 +30,7 @@ class ModifierBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keys = KeyboardLayout.terminalBarKeys;
-    final barButtonHeight = (keyHeight * 0.72).clamp(28.0, 46.0);
+    final barButtonHeight = (keyHeight * 0.72).clamp(28.0, 68.0);
 
     return Container(
       height: barButtonHeight + 6.0,

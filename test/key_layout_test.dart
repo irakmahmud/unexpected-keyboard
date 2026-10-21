@@ -38,10 +38,31 @@ void main() {
       expect(key.resolveOutput(GestureDirection.center, isShifted: true), 'A');
     });
 
-    test('Layout structure contains expected rows and keys', () {
+    test('Layout structure contains 9 equal-width keys in top 3 rows and Shift in Row 4', () {
       final qwerty = KeyboardLayout.qwertyLayout;
       expect(qwerty.length, 4); // 4 main rows
-      expect(qwerty[0].length, 10); // Row 1 has 10 keys (q..p)
+
+      // Row 1: 9 keys (q..o), p moved to Row 3
+      expect(qwerty[0].length, 9);
+      expect(qwerty[0].map((k) => k.primary).toList(), ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o']);
+      expect(qwerty[0].every((k) => k.flex == 1.0), true);
+
+      // Row 2: 9 keys (a..l), unchanged
+      expect(qwerty[1].length, 9);
+      expect(qwerty[1].map((k) => k.primary).toList(), ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l']);
+      expect(qwerty[1].every((k) => k.flex == 1.0), true);
+
+      // Row 3: 9 keys (z x c v b n m p ⌫), all equal horizontal width (flex 1.0)
+      expect(qwerty[2].length, 9);
+      expect(qwerty[2].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'p', '⌫']);
+      expect(qwerty[2].every((k) => k.flex == 1.0), true);
+
+      // Row 4: Shift (⇧) moved to left of ?123, Space width reduced
+      expect(qwerty[3][0].primary, '⇧');
+      expect(qwerty[3][0].actionType, KeyActionType.shift);
+      expect(qwerty[3][1].primary, '?123');
+      final spaceKey = qwerty[3].firstWhere((k) => k.actionType == KeyActionType.space);
+      expect(spaceKey.flex < 4.0, true);
 
       final terminalKeys = KeyboardLayout.terminalBarKeys;
       expect(terminalKeys.any((k) => k.primary == 'ESC'), true);
@@ -50,17 +71,20 @@ void main() {
       expect(terminalKeys.any((k) => k.primary == 'TAB'), true);
     });
 
-    test('Keyboard height clamping and total height calculation work accurately', () {
+    test('Keyboard height clamping and double-height calculation work accurately', () {
+      expect(ImeChannelService.maxKeyHeight, 136.0);
       expect(ImeChannelService.clampKeyHeight(20.0), ImeChannelService.minKeyHeight);
-      expect(ImeChannelService.clampKeyHeight(90.0), ImeChannelService.maxKeyHeight);
-      expect(ImeChannelService.clampKeyHeight(52.0), 52.0);
+      expect(ImeChannelService.clampKeyHeight(200.0), ImeChannelService.maxKeyHeight);
+      expect(ImeChannelService.clampKeyHeight(120.0), 120.0);
 
       final compactTotal = ImeChannelService.calculateTotalKeyboardHeightDp(38.0);
       final normalTotal = ImeChannelService.calculateTotalKeyboardHeightDp(46.0);
-      final tallTotal = ImeChannelService.calculateTotalKeyboardHeightDp(58.0);
+      final tallTotal = ImeChannelService.calculateTotalKeyboardHeightDp(68.0);
+      final doubleTotal = ImeChannelService.calculateTotalKeyboardHeightDp(136.0);
 
       expect(compactTotal < normalTotal, true);
       expect(normalTotal < tallTotal, true);
+      expect(tallTotal < doubleTotal, true);
     });
   });
 }

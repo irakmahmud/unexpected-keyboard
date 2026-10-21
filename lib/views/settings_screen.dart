@@ -96,8 +96,10 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       _buildHeightPresetChip('Compact (38dp)', 38.0, clampedHeight, themeData),
                       _buildHeightPresetChip('Normal (46dp)', 46.0, clampedHeight, themeData),
-                      _buildHeightPresetChip('Tall (54dp)', 54.0, clampedHeight, themeData),
-                      _buildHeightPresetChip('Extra Tall (62dp)', 62.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Tall (58dp)', 58.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Extra Tall (72dp)', 72.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Ultra Tall (100dp)', 100.0, clampedHeight, themeData),
+                      _buildHeightPresetChip('Double Size (136dp)', 136.0, clampedHeight, themeData),
                     ],
                   ),
                   const SizedBox(height: 8),

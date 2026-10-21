@@ -4,7 +4,7 @@ class ImeChannelService {
   static const MethodChannel _channel = MethodChannel('com.antigravity.keyboard/ime');
 
   static const double minKeyHeight = 34.0;
-  static const double maxKeyHeight = 68.0;
+  static const double maxKeyHeight = 136.0;
   static const double defaultKeyHeight = 46.0;
 
   bool isShiftActive = false;
@@ -46,7 +46,7 @@ class ImeChannelService {
   }) {
     final clamped = clampKeyHeight(keyHeight);
     final rowsHeight = 4.0 * (clamped + 6.0);
-    final modifierBarHeight = showTerminalBar ? ((clamped * 0.72).clamp(28.0, 46.0) + 6.0) : 0.0;
+    final modifierBarHeight = showTerminalBar ? ((clamped * 0.72).clamp(28.0, 68.0) + 6.0) : 0.0;
     final resizeBarHeight = showResizeBar ? 42.0 : 0.0;
     return (rowsHeight + modifierBarHeight + resizeBarHeight + 12.0).round();
   }
