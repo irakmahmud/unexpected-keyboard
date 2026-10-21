@@ -55,6 +55,12 @@ android {
             shrinkResources false
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 flutter {

@@ -59,11 +59,17 @@ jobs:
           name: 📥 Fetch Flutter Dependencies
           command: flutter pub get
       - run:
-          name: 🔨 Compile Remote Debug APK
-          command: flutter build apk --debug --android-skip-build-dependency-validation
+          name: ⚡ Compile Ultra-Light Split-ABI Release APKs (arm64 & arm32)
+          command: |
+            flutter build apk --release --split-per-abi --no-shrink --android-skip-build-dependency-validation
+            mkdir -p /tmp/keyboard-apks
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk /tmp/keyboard-apks/unexpected-keyboard-arm64.apk
+            cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk /tmp/keyboard-apks/unexpected-keyboard-arm32.apk
       - run:
-          name: 🚀 Compile Remote Release APK
-          command: flutter build apk --release --no-shrink --android-skip-build-dependency-validation
+          name: 🚀 Compile Universal Release APK
+          command: |
+            flutter build apk --release --no-shrink --android-skip-build-dependency-validation
+            cp build/app/outputs/flutter-apk/app-release.apk /tmp/keyboard-apks/unexpected-keyboard-release.apk
       - run:
           name: 📦 Compile Remote Release App Bundle (AAB)
           command: flutter build appbundle --release --android-skip-build-dependency-validation
@@ -82,10 +88,8 @@ jobs:
           name: 🔒 Package Artifacts & Generate SHA-256 Checksums
           command: |
             mkdir -p /tmp/keyboard-apks /tmp/keyboard-bundle
-            cp build/app/outputs/flutter-apk/app-debug.apk /tmp/keyboard-apks/unexpected-keyboard-debug.apk
-            cp build/app/outputs/flutter-apk/app-release.apk /tmp/keyboard-apks/unexpected-keyboard-release.apk
             cp build/app/outputs/bundle/release/app-release.aab /tmp/keyboard-bundle/unexpected-keyboard-release.aab
-            cd /tmp/keyboard-apks && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
+            cd /tmp/keyboard-apks && ls -lh *.apk && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
             cd /tmp/keyboard-bundle && sha256sum *.aab > SHA256SUMS.txt && cat SHA256SUMS.txt
       - store_artifacts:
           path: /tmp/keyboard-apks

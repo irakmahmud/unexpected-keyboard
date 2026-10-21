@@ -76,10 +76,16 @@ fetch_from_github_actions() {
     echo "Found Run ID: ${run_id}"
     local tmp_dir="/tmp/gh_apk_fetch_$$"
     mkdir -p "${tmp_dir}"
+    gh run download "${run_id}" --repo "${repo}" -n unexpected-keyboard-arm64-apk -D "${tmp_dir}/arm64" 2>/dev/null || true
     gh run download "${run_id}" --repo "${repo}" -n unexpected-keyboard-release-apk -D "${tmp_dir}/release"
-    gh run download "${run_id}" --repo "${repo}" -n unexpected-keyboard-debug-apk -D "${tmp_dir}/debug"
-    cp -f "${tmp_dir}/release/app-release.apk" "${TARGET_DIR}/unexpected-keyboard-release.apk"
-    cp -f "${tmp_dir}/debug/app-debug.apk" "${TARGET_DIR}/unexpected-keyboard-debug.apk"
+    if [ -f "${tmp_dir}/arm64/unexpected-keyboard-arm64.apk" ]; then
+        cp -f "${tmp_dir}/arm64/unexpected-keyboard-arm64.apk" "${TARGET_DIR}/unexpected-keyboard-arm64.apk"
+    fi
+    if [ -f "${tmp_dir}/release/unexpected-keyboard-release.apk" ]; then
+        cp -f "${tmp_dir}/release/unexpected-keyboard-release.apk" "${TARGET_DIR}/unexpected-keyboard-release.apk"
+    elif [ -f "${tmp_dir}/release/app-release.apk" ]; then
+        cp -f "${tmp_dir}/release/app-release.apk" "${TARGET_DIR}/unexpected-keyboard-release.apk"
+    fi
     rm -rf "${tmp_dir}"
     echo "✅ Successfully updated APKs in ${TARGET_DIR}:"
     ls -lh "${TARGET_DIR}"
@@ -91,17 +97,21 @@ fetch_from_circleci() {
     echo "⬇️ Fetching latest successful build artifacts from CircleCI (${repo})..."
     local artifacts_json
     artifacts_json=$(curl -fsSL "https://circleci.com/api/v1.1/project/github/${repo}/latest/artifacts?branch=main&filter=successful")
-    local release_url debug_url
+    local arm64_url arm32_url release_url
+    arm64_url=$(echo "${artifacts_json}" | jq -r '.[] | select(.path | endswith("unexpected-keyboard-arm64.apk")) | .url' | head -n1)
+    arm32_url=$(echo "${artifacts_json}" | jq -r '.[] | select(.path | endswith("unexpected-keyboard-arm32.apk")) | .url' | head -n1)
     release_url=$(echo "${artifacts_json}" | jq -r '.[] | select(.path | endswith("unexpected-keyboard-release.apk")) | .url' | head -n1)
-    debug_url=$(echo "${artifacts_json}" | jq -r '.[] | select(.path | endswith("unexpected-keyboard-debug.apk")) | .url' | head -n1)
     if [ -z "${release_url}" ] || [ "${release_url}" = "null" ]; then
         echo "❌ No CircleCI release APK artifact found for ${repo}."
         exit 1
     fi
-    fetch_and_verify_apk "${release_url}"
-    if [ -n "${debug_url}" ] && [ "${debug_url}" != "null" ]; then
-        fetch_and_verify_apk "${debug_url}"
+    if [ -n "${arm64_url}" ] && [ "${arm64_url}" != "null" ]; then
+        fetch_and_verify_apk "${arm64_url}"
     fi
+    if [ -n "${arm32_url}" ] && [ "${arm32_url}" != "null" ]; then
+        fetch_and_verify_apk "${arm32_url}"
+    fi
+    fetch_and_verify_apk "${release_url}"
     echo "✅ Successfully updated APKs from CircleCI in ${TARGET_DIR}:"
     ls -lh "${TARGET_DIR}"
     sha256sum "${TARGET_DIR}"/*
