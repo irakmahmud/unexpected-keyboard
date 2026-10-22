@@ -589,8 +589,8 @@ async fn handle_extract_frame(
         "dimension": emb.len(),
         "model": "Facenet512",
         "detector": "MTCNN",
-        "bbox": [det.x1, det.y1, det.x2, det.y2],
-        "detection_score": det.score,
+        "bbox": det.bbox,
+        "detection_score": det.confidence,
         "landmarks": det.landmarks,
         "quality": quality,
         "embedding": emb
@@ -682,7 +682,7 @@ async fn handle_verify_identity(
                 "strong_matches": tiered.strong_matches,
                 "possible_matches": tiered.possible_matches,
                 "total_matches": tiered.total_matches,
-                "bbox": [det.x1, det.y1, det.x2, det.y2],
+                "bbox": det.bbox,
                 "landmarks": det.landmarks,
                 "quality": quality,
                 "embedding": emb
@@ -694,7 +694,7 @@ async fn handle_verify_identity(
         "success": false,
         "matched": false,
         "error": "No confident match found in face database",
-        "bbox": [det.x1, det.y1, det.x2, det.y2],
+        "bbox": det.bbox,
         "landmarks": det.landmarks,
         "quality": quality,
         "embedding": emb
