@@ -104,7 +104,6 @@ def main():
 
     # 2. HR Authentication & Change Password
     st, hr_auth = req("/api/v1/auth/verify-hr", "POST", {
-        "company_uuid": "DTI_2026",
         "company_id": "DTI_2026",
         "password": "HR@123"
     })

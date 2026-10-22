@@ -951,7 +951,6 @@ async function unlockHrManagement() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                company_uuid: activeCompany.company_id,
                 company_id: activeCompany.company_id,
                 password: password
             })
@@ -989,7 +988,6 @@ async function submitChangeHrPassword() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                company_uuid: activeCompany.company_id,
                 company_id: activeCompany.company_id,
                 company_name: activeCompany.company_name,
                 current_password,
