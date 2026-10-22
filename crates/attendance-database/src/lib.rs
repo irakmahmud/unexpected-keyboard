@@ -165,7 +165,7 @@ impl DbPool {
         let conn = self.conn.lock();
         // Compute actual work hours if in_time exists
         let mut work_hours = 8.0f64;
-        let mut overtime_hours = 0.0f64;
+        let overtime_hours = 0.0f64;
         if let Ok(Some(rec)) = AttendanceRepo::get_record(&conn, username, date) {
             if let Some(in_t) = rec.in_time {
                 if let (Ok(t_in), Ok(t_out)) = (TimeHelper::parse_time(&in_t), TimeHelper::parse_time(out_time)) {

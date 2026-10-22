@@ -49,3 +49,16 @@ impl IntoResponse for AppError {
         (status, Json(json!({ "error": message }))).into_response()
     }
 }
+
+impl From<AppError> for attendance_common::AppError {
+    fn from(err: AppError) -> Self {
+        match err {
+            AppError::NoFaceDetected => attendance_common::AppError::NoFaceDetected,
+            AppError::MultipleFacesDetected(n) => {
+                attendance_common::AppError::MultipleFacesDetected(n)
+            }
+            other => attendance_common::AppError::Validation(other.to_string()),
+        }
+    }
+}
+

@@ -1,5 +1,6 @@
 /target
 auto_deploy.log
+tunnel.log
 deploy/backups/
 deploy/staging/
 data/*.db-shm

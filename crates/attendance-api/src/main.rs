@@ -65,6 +65,9 @@ pub struct ApiError(AppError);
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_message) = match &self.0 {
+            AppError::NoFaceDetected | AppError::MultipleFacesDetected(_) => {
+                (StatusCode::UNPROCESSABLE_ENTITY, self.0.to_string())
+            }
             AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
@@ -90,7 +93,21 @@ impl<E: Into<AppError>> From<E> for ApiError {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let _ = dotenvy::dotenv();
+    if let Ok(env_content) = std::fs::read_to_string(".env") {
+        for line in env_content.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+            if let Some((k, v)) = trimmed.split_once('=') {
+                let key = k.trim();
+                let val = v.trim().trim_matches('"').trim_matches('\'');
+                if !key.is_empty() && std::env::var(key).is_err() {
+                    std::env::set_var(key, val);
+                }
+            }
+        }
+    }
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()

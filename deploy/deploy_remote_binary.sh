@@ -152,7 +152,7 @@ restart_service() {
     log "Restarting Axum production attendance service..."
 
     local old_pid
-    old_pid=$(ss -tulpn 2>/dev/null | grep ":8080" | grep -o "pid=[0-9]*" | cut -d'=' -f2 | head -n1 || true)
+    old_pid=$(pgrep -f "target/release/attendance-api" | head -n1 || /usr/sbin/ss -tulpn 2>/dev/null | grep ":8080" | grep -o "pid=[0-9]*" | cut -d'=' -f2 | head -n1 || true)
     if [ -n "${old_pid}" ]; then
         log "Gracefully stopping previous process (PID: ${old_pid})..."
         kill -15 "${old_pid}" 2>/dev/null || kill -9 "${old_pid}" 2>/dev/null || true

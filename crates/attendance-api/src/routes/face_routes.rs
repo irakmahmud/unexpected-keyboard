@@ -495,7 +495,7 @@ async fn handle_upload_ai_model(
     let raw_name = payload
         .model_name
         .unwrap_or_else(|| "facenet512.onnx".to_string());
-    let safe_name = attendance_common::sanitize_filename(&raw_name);
+    let safe_name = attendance_common::sanitize_filename(&raw_name)?;
     if !safe_name.ends_with(".onnx") && !safe_name.ends_with(".h5") {
         return Err(attendance_common::AppError::Validation(
             "Invalid model filename: only .onnx or .h5 model files are permitted".to_string(),
@@ -508,7 +508,7 @@ async fn handle_upload_ai_model(
     std::fs::create_dir_all(models_dir)
         .map_err(|e| attendance_common::AppError::Internal(format!("Failed to create models dir: {}", e)))?;
 
-    let validated_path = attendance_common::validate_filepath(models_dir, &safe_name)?;
+    let validated_path = attendance_common::validate_filepath(&safe_name, Some(models_dir), &["onnx", "h5"])?;
     let target_path = validated_path.to_string_lossy().to_string();
 
     if let Some(ref b64) = payload.model_b64 {
@@ -532,7 +532,7 @@ async fn handle_upload_ai_model(
         }
     }
 
-    let hot_reloaded = state.reload_deepface_from_dir(models_dir);
+    let hot_reloaded = state.reload_deepface_from_dir(&models_dir_str).is_ok();
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -580,7 +580,7 @@ async fn handle_extract_frame(
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let (emb, det) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
+    let (emb, det, _dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
     let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
 
     Ok(Json(serde_json::json!({
@@ -655,7 +655,7 @@ async fn handle_verify_identity(
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let (emb, det) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
+    let (emb, det, _dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
     let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
 
     let tiered_opt = state.face_index.search_tiered(emb.clone())?;

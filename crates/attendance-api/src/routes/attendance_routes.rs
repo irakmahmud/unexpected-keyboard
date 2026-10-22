@@ -105,11 +105,15 @@ async fn handle_punch(
         if !payload.username.trim().is_empty() {
             let captures_dir = std::path::Path::new("data/captures");
             let _ = std::fs::create_dir_all(captures_dir);
-            let upper = attendance_common::sanitize_filename(&payload.username.trim().to_uppercase());
+            let upper = attendance_common::sanitize_filename(&payload.username.trim().to_uppercase())?;
             let date_str = TimeHelper::current_date_dhaka();
             let time_str = TimeHelper::current_time_dhaka().replace(':', "");
             let filename = format!("{}_{}_{}.jpg", upper, date_str, time_str);
-            if let Ok(disk_path) = attendance_common::validate_filepath(captures_dir, &filename) {
+            if let Ok(disk_path) = attendance_common::validate_filepath(
+                &filename,
+                Some(captures_dir),
+                &["jpg", "jpeg", "png"],
+            ) {
                 if std::fs::write(&disk_path, &bytes).is_ok() {
                     payload.video_path = Some(format!("/api/v1/captures/{}", filename));
                 }
@@ -468,9 +472,16 @@ pub async fn serve_capture_image(
     use axum::http::{header, StatusCode};
     use axum::response::IntoResponse;
 
-    let safe_name = attendance_common::sanitize_filename(&filename);
+    let safe_name = match attendance_common::sanitize_filename(&filename) {
+        Ok(s) => s,
+        Err(_) => return (StatusCode::BAD_REQUEST, "Invalid filename").into_response(),
+    };
     let captures_dir = std::path::Path::new("data/captures");
-    let validated = match attendance_common::validate_filepath(captures_dir, &safe_name) {
+    let validated = match attendance_common::validate_filepath(
+        &safe_name,
+        Some(captures_dir),
+        &["jpg", "jpeg", "png"],
+    ) {
         Ok(p) => p,
         Err(_) => return (StatusCode::BAD_REQUEST, "Invalid filename").into_response(),
     };

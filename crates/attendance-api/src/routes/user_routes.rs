@@ -149,8 +149,7 @@ async fn create_user(
                 let save_path = format!("data/captures/{}_REGISTERED.jpg", upper_username);
                 let _ = std::fs::write(&save_path, &img_bytes);
             }
-            let emb = attendance_face::extract_face_embedding_vec(&df_state, &img_bytes)
-                .map_err(|e| attendance_common::AppError::Validation(format!("ONNX FaceNet512 extraction error on frame {}: {}", idx + 1, e)))?;
+            let emb = attendance_face::extract_face_embedding_vec(&df_state, &img_bytes)?;
             extracted_embeddings.push(emb);
         }
     } else if let Some(emb) = payload.face_embedding {

@@ -67,6 +67,12 @@ pub enum AppError {
     #[error("[FACE_RECOGNITION] {0}")]
     Face(String),
 
+    #[error("No face detected in image")]
+    NoFaceDetected,
+
+    #[error("Multiple faces detected in image ({0} faces); please ensure only 1 face is in frame")]
+    MultipleFacesDetected(usize),
+
     #[error("[BIGQUERY_SYNC] {0}")]
     Sync(String),
 
@@ -85,7 +91,9 @@ impl AppError {
             AppError::Conflict(_) => ErrorCode::Conflict,
             AppError::Cooldown(_) => ErrorCode::CooldownActive,
             AppError::LockError(_) => ErrorCode::SingleInstanceLock,
-            AppError::Face(_) => ErrorCode::FaceRecognitionError,
+            AppError::Face(_) | AppError::NoFaceDetected | AppError::MultipleFacesDetected(_) => {
+                ErrorCode::FaceRecognitionError
+            }
             AppError::Sync(_) => ErrorCode::CloudSyncError,
             AppError::Device(_) => ErrorCode::DeviceOffline,
             _ => ErrorCode::InternalError,

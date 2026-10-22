@@ -26,4 +26,6 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 parking_lot = { workspace = true }
+rusqlite = { workspace = true }
 base64 = "0.22"
+
