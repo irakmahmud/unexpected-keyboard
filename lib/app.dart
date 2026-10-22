@@ -242,23 +242,39 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                             ),
                           ),
 
-                          // Quick test buttons row
+                          // Quick 1-Tap Setup & Switch Default Keyboard Buttons + Clear
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                            child: Wrap(
+                              spacing: 8.0,
+                              runSpacing: 6.0,
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    'Key Height: ${_keyHeight.round()} dp (Tap ↕ on bar to resize)',
-                                    style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.0),
-                                    overflow: TextOverflow.ellipsis,
+                                ElevatedButton.icon(
+                                  onPressed: () => _imeService.enableKeyboardInSystemSettings(),
+                                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                                  label: const Text('1. Enable Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeData.keyBackgroundColor,
+                                    foregroundColor: themeData.accentColor,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: () => _imeService.showInputMethodPicker(),
+                                  icon: const Icon(Icons.keyboard, size: 16),
+                                  label: const Text('2. Switch Default Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeData.accentColor,
+                                    foregroundColor: themeData.backgroundColor,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   ),
                                 ),
                                 TextButton.icon(
                                   onPressed: () => _testTextController.clear(),
                                   icon: const Icon(Icons.clear_all, size: 16),
-                                  label: const Text('Clear'),
+                                  label: const Text('Clear', style: TextStyle(fontSize: 12)),
                                   style: TextButton.styleFrom(foregroundColor: themeData.accentColor),
                                 ),
                               ],

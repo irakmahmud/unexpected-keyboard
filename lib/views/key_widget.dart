@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FontVariation;
 import 'package:flutter/material.dart';
 import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
@@ -120,9 +121,11 @@ class _KeyWidgetState extends State<KeyWidget> {
                 child: Text(
                   label,
                   style: TextStyle(
+                    fontFamily: 'sans-serif-thin',
                     color: widget.theme.backgroundColor,
-                    fontSize: label.length > 2 ? 14.0 : 24.0,
-                    fontWeight: FontWeight.w900,
+                    fontSize: label.length > 2 ? 16.0 : 30.0,
+                    fontWeight: FontWeight.w100,
+                    fontVariations: const [FontVariation('wght', 100.0)],
                   ),
                 ),
               ),
@@ -281,9 +284,11 @@ class _KeyWidgetState extends State<KeyWidget> {
                     child: Text(
                       key.topLeft!,
                       style: TextStyle(
+                        fontFamily: 'sans-serif-thin',
                         fontSize: 9.0,
                         height: 1.0,
-                        fontWeight: _activeDirection == GestureDirection.topLeft ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: FontWeight.w100,
+                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -299,9 +304,11 @@ class _KeyWidgetState extends State<KeyWidget> {
                     child: Text(
                       key.topRight!,
                       style: TextStyle(
+                        fontFamily: 'sans-serif-thin',
                         fontSize: 9.0,
                         height: 1.0,
-                        fontWeight: _activeDirection == GestureDirection.topRight ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: FontWeight.w100,
+                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -317,9 +324,11 @@ class _KeyWidgetState extends State<KeyWidget> {
                     child: Text(
                       key.bottomLeft!,
                       style: TextStyle(
+                        fontFamily: 'sans-serif-thin',
                         fontSize: 9.0,
                         height: 1.0,
-                        fontWeight: _activeDirection == GestureDirection.bottomLeft ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: FontWeight.w100,
+                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -335,9 +344,11 @@ class _KeyWidgetState extends State<KeyWidget> {
                     child: Text(
                       key.bottomRight!,
                       style: TextStyle(
+                        fontFamily: 'sans-serif-thin',
                         fontSize: 9.0,
                         height: 1.0,
-                        fontWeight: _activeDirection == GestureDirection.bottomRight ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: FontWeight.w100,
+                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -363,7 +374,7 @@ class _KeyWidgetState extends State<KeyWidget> {
         fit: BoxFit.contain,
         alignment: Alignment.center,
         child: Icon(
-          Icons.settings,
+          Icons.settings_outlined,
           size: 48.0,
           color: fgColor,
         ),
@@ -382,16 +393,18 @@ class _KeyWidgetState extends State<KeyWidget> {
             applyHeightToLastDescent: false,
           ),
           style: TextStyle(
-            fontSize: 90.0, // 5x size increase (18.0 * 5 = 90.0)
+            fontFamily: 'sans-serif-thin',
+            fontSize: 90.0, // 5x size increase (18.0 * 5 = 90.0) with ultra-thin line stroke
             height: 1.0,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w100,
+            fontVariations: const [FontVariation('wght', 100.0)],
             color: fgColor,
           ),
         ),
       );
     }
 
-    // 5x letter size increase (18.0 * 5 = 90.0 for single letters/symbols, 57.5 for multi-char labels)
+    // 5x letter size increase (18.0 * 5 = 90.0) with ultra-thin hairline stroke (FontWeight.w100 / sans-serif-thin)
     final double targetFontSize = displayPrimary.length > 1 ? 57.5 : 90.0;
     final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
 
@@ -403,9 +416,11 @@ class _KeyWidgetState extends State<KeyWidget> {
         applyHeightToLastDescent: false,
       ),
       style: TextStyle(
+        fontFamily: 'sans-serif-thin',
         fontSize: targetFontSize,
         height: 1.0,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w100,
+        fontVariations: const [FontVariation('wght', 100.0)],
         color: fgColor,
       ),
     );

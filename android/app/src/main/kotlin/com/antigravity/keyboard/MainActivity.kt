@@ -3,6 +3,8 @@ package com.antigravity.keyboard
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
+import android.view.inputmethod.InputMethodManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -92,6 +94,25 @@ class MainActivity: FlutterActivity() {
                         result.success(true)
                     } else {
                         result.success(false)
+                    }
+                }
+                "enableKeyboardInSystemSettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("SETTINGS_ERR", e.message, null)
+                    }
+                }
+                "showInputMethodPicker" -> {
+                    try {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        imm?.showInputMethodPicker()
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("IME_PICKER_ERR", e.message, null)
                     }
                 }
                 "commitText", "sendKeyEvent", "deleteSurroundingText", "sendEnterAction", "sendTextWithModifiers", "hideKeyboard" -> {

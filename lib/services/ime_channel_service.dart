@@ -167,6 +167,22 @@ class ImeChannelService {
     return false;
   }
 
+  Future<void> enableKeyboardInSystemSettings() async {
+    try {
+      await _channel.invokeMethod('enableKeyboardInSystemSettings');
+    } on PlatformException catch (e) {
+      print('IME Channel enableKeyboardInSystemSettings error: ${e.message}');
+    } catch (_) {}
+  }
+
+  Future<void> showInputMethodPicker() async {
+    try {
+      await _channel.invokeMethod('showInputMethodPicker');
+    } on PlatformException catch (e) {
+      print('IME Channel showInputMethodPicker error: ${e.message}');
+    } catch (_) {}
+  }
+
   int calculateMetaState() {
     int state = 0;
     if (isShiftActive || isCapsLock) state |= 1; // KeyEvent.META_SHIFT_ON
