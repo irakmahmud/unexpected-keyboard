@@ -103,4 +103,26 @@ impl ReportingService {
         let gen = MusterRollGenerator::new(self.db.clone());
         gen.generate_monthly_muster_roll(year, month, company_id)
     }
+
+    pub fn generate_xlsx_report(&self, date: &str) -> Result<Vec<u8>> {
+        let csv = self.generate_csv_report(date)?;
+        Ok(CsvExporter::csv_to_xlsx_bytes(&csv, "Attendance Report"))
+    }
+
+    pub fn generate_customized_xlsx_report(
+        &self,
+        username: Option<&str>,
+        year: i32,
+        month: u32,
+        from_day: u32,
+        to_day: u32,
+        in_time: &str,
+        out_time: &str,
+    ) -> Result<Vec<u8>> {
+        let csv = self.generate_customized_csv_report(
+            username, year, month, from_day, to_day, in_time, out_time,
+        )?;
+        Ok(CsvExporter::csv_to_xlsx_bytes(&csv, "Attendance Summary"))
+    }
 }
+

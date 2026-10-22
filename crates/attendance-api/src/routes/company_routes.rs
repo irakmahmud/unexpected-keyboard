@@ -77,9 +77,7 @@ async fn verify_and_select_company(
         .ok_or_else(|| attendance_common::AppError::NotFound("Company not found in database".to_string()))?;
 
     let entered = payload.password.trim();
-    let is_valid = entered == comp.password
-        || PasswordHasher::verify(entered, &comp.password)
-        || entered == "admin123";
+    let is_valid = entered == comp.password || PasswordHasher::verify(entered, &comp.password);
 
     if !is_valid {
         return Err(attendance_common::AppError::Unauthorized(
@@ -89,7 +87,7 @@ async fn verify_and_select_company(
     }
 
     // Touch last_updated so this company becomes the active selected company in local database
-    comp.last_updated = Some(chrono::Utc::now().to_rfc3339());
+    comp.last_updated = Some(attendance_common::TimeHelper::now_utc_sqlite_string());
     state.db.save_company(&comp)?;
 
     // Ensure default HR password (HR@123) exists for this company if not yet configured
@@ -135,12 +133,12 @@ async fn setup_company(
     let company_id = payload
         .company_id
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let now = chrono::Utc::now().to_rfc3339();
+    let now = attendance_common::TimeHelper::now_utc_sqlite_string();
 
     let comp = Company {
         company_id: company_id.clone(),
         company_name: company_name.clone(),
-        password,
+        password: PasswordHasher::hash_sha256(&password),
         address_road: payload.address_road,
         address_city: payload.address_city,
         contact_person_name: payload.contact_person_name,
@@ -173,12 +171,20 @@ async fn update_company(
     State(state): State<AppState>,
     Json(mut comp): Json<Company>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
-    comp.last_updated = Some(chrono::Utc::now().to_rfc3339());
+    if comp.password.trim().is_empty() {
+        if let Ok(Some(existing)) = state.db.get_company(&comp.company_id) {
+            comp.password = existing.password;
+        }
+    } else if comp.password.len() != 64 {
+        comp.password = PasswordHasher::hash_sha256(comp.password.trim());
+    }
+    comp.last_updated = Some(attendance_common::TimeHelper::now_utc_sqlite_string());
     state.db.save_company(&comp)?;
     Ok(Json(serde_json::json!({
         "success": true,
         "company_id": comp.company_id,
         "company_name": comp.company_name,
+        "company": comp,
         "message": "Company updated and synced to local database successfully!"
     })))
 }
@@ -199,8 +205,16 @@ async fn update_company_by_id(
         .into());
     }
 
+    if comp.password.trim().is_empty() {
+        if let Some(prev) = existing.iter().find(|c| c.company_id == id) {
+            comp.password = prev.password.clone();
+        }
+    } else if comp.password.len() != 64 {
+        comp.password = PasswordHasher::hash_sha256(comp.password.trim());
+    }
+
     comp.company_id = id;
-    comp.last_updated = Some(chrono::Utc::now().to_rfc3339());
+    comp.last_updated = Some(attendance_common::TimeHelper::now_utc_sqlite_string());
     state.db.save_company(&comp)?;
     Ok(Json(serde_json::json!({
         "success": true,

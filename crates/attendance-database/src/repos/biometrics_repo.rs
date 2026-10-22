@@ -99,16 +99,30 @@ impl BiometricsRepo {
     }
 
     pub fn delete_profiles_by_username(conn: &Connection, username: &str) -> Result<usize> {
+        let upper = username.trim().to_uppercase();
         let rows = conn
-            .execute("DELETE FROM face_profiles WHERE username = ?1", params![username])
+            .execute(
+                "DELETE FROM face_profiles WHERE UPPER(username) = ?1",
+                params![upper],
+            )
             .map_err(|e| AppError::Database(format!("Failed to delete face profiles: {}", e)))?;
-        Ok(rows)
+        let user_rows = conn
+            .execute(
+                "UPDATE users SET face_encoding = NULL, register_with_camera = 'N' WHERE UPPER(username) = ?1",
+                params![upper],
+            )
+            .unwrap_or(0);
+        Ok(rows + user_rows)
     }
 
     pub fn delete_all_profiles(conn: &Connection) -> Result<usize> {
         let rows = conn
             .execute("DELETE FROM face_profiles", [])
             .map_err(|e| AppError::Database(format!("Failed to reset face profiles: {}", e)))?;
+        let _ = conn.execute(
+            "UPDATE users SET face_encoding = NULL, register_with_camera = 'N'",
+            [],
+        );
         Ok(rows)
     }
 

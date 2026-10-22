@@ -30,6 +30,7 @@ pub fn face_router() -> Router<AppState> {
         .route("/enroll-batch", post(handle_enroll_batch))
         .route("/extract-frame", post(handle_extract_frame))
         .route("/verify-identity", post(handle_verify_identity))
+        .route("/verify-2fa", post(handle_verify_identity))
         .route("/match", post(handle_match))
         .route("/identify", post(handle_identify))
         .route("/profiles/:username", get(get_user_profiles).delete(delete_user_profiles))
@@ -185,10 +186,12 @@ async fn delete_user_profiles(
     Path(username): Path<String>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let count = state.db.delete_face_profiles(&username)?;
+    let ram_removed = state.face_index.remove_user(&username);
     Ok(Json(serde_json::json!({
         "success": true,
         "deleted_count": count,
-        "username": username
+        "ram_vectors_removed": ram_removed,
+        "username": username.to_uppercase()
     })))
 }
 
@@ -218,20 +221,35 @@ async fn get_index_status(
 async fn handle_rebuild_index(
     State(state): State<AppState>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    state.face_index.clear();
     let all_profiles = state.db.get_all_face_profiles()?;
     let mut enrolled_count = 0;
+    let mut users_with_profiles = std::collections::HashSet::new();
 
     for p in all_profiles {
-        let _ = state.face_index.enroll_user(&p.username, p.embedding_vector);
-        enrolled_count += 1;
+        if attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&p.embedding_vector) {
+            continue;
+        }
+        let upper = p.username.trim().to_uppercase();
+        if state.face_index.enroll_user(&upper, p.embedding_vector).is_ok() {
+            users_with_profiles.insert(upper);
+            enrolled_count += 1;
+        }
     }
 
     if let Ok(users) = state.db.get_all_users() {
         for u in users {
+            let upper = u.username.trim().to_uppercase();
+            if users_with_profiles.contains(&upper) {
+                continue;
+            }
             if let Some(enc_str) = &u.face_encoding {
                 if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {
-                    if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
-                        if let Ok(()) = state.face_index.enroll_user(&u.username, vec) {
+                    if !vec.is_empty()
+                        && vec.iter().any(|&v| v != 0.0)
+                        && !attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&vec)
+                    {
+                        if let Ok(()) = state.face_index.enroll_user(&upper, vec) {
                             enrolled_count += 1;
                         }
                     }
@@ -393,27 +411,32 @@ async fn get_embeddings_report_csv(
     Ok(response)
 }
 
+fn map_face_err(e: attendance_face::FaceError) -> attendance_common::AppError {
+    match e {
+        attendance_face::FaceError::NoFaceDetected => attendance_common::AppError::NoFaceDetected,
+        attendance_face::FaceError::MultipleFacesDetected(n) => {
+            attendance_common::AppError::MultipleFacesDetected(n)
+        }
+        other => attendance_common::AppError::Validation(other.to_string()),
+    }
+}
+
 /// JSON handler exposing verified pure-Rust FaceNet512 + MTCNN pipeline
 pub async fn handle_verify_json(
     State(state): State<AppState>,
     Json(req): Json<attendance_face::VerifyRequest>,
 ) -> std::result::Result<Json<attendance_face::VerifyResponse>, ApiError> {
-    let deepface_state = state.deepface_state.as_ref().ok_or_else(|| {
+    let deepface_state = state.get_deepface().ok_or_else(|| {
         attendance_common::AppError::Validation(
             "DeepFace ONNX models not loaded. Place facenet512.onnx, mtcnn_pnet.onnx, mtcnn_rnet.onnx, and mtcnn_onet.onnx in ./models/ to enable neural face verification".to_string()
         )
     })?;
 
-    use base64::{engine::general_purpose, Engine as _};
-    let bytes1 = general_purpose::STANDARD
-        .decode(&req.image1_b64)
-        .map_err(|e| attendance_common::AppError::Validation(format!("image1 base64 decode failed: {e}")))?;
-    let bytes2 = general_purpose::STANDARD
-        .decode(&req.image2_b64)
-        .map_err(|e| attendance_common::AppError::Validation(format!("image2 base64 decode failed: {e}")))?;
+    let bytes1 = decode_data_uri(&req.image1_b64)?;
+    let bytes2 = decode_data_uri(&req.image2_b64)?;
 
-    let resp = attendance_face::run_pipeline(deepface_state, &bytes1, &bytes2)
-        .map_err(|e| attendance_common::AppError::Validation(e.to_string()))?;
+    let resp = attendance_face::run_pipeline(&deepface_state, &bytes1, &bytes2)
+        .map_err(map_face_err)?;
 
     Ok(Json(resp))
 }
@@ -423,7 +446,7 @@ pub async fn handle_verify_multipart(
     State(state): State<AppState>,
     mut multipart: axum::extract::Multipart,
 ) -> std::result::Result<Json<attendance_face::VerifyResponse>, ApiError> {
-    let deepface_state = state.deepface_state.as_ref().ok_or_else(|| {
+    let deepface_state = state.get_deepface().ok_or_else(|| {
         attendance_common::AppError::Validation(
             "DeepFace ONNX models not loaded. Place facenet512.onnx, mtcnn_pnet.onnx, mtcnn_rnet.onnx, and mtcnn_onet.onnx in ./models/ to enable neural face verification".to_string()
         )
@@ -453,8 +476,8 @@ pub async fn handle_verify_multipart(
     let bytes1 = image1_bytes.ok_or_else(|| attendance_common::AppError::Validation("missing field: image1".into()))?;
     let bytes2 = image2_bytes.ok_or_else(|| attendance_common::AppError::Validation("missing field: image2".into()))?;
 
-    let resp = attendance_face::run_pipeline(deepface_state, &bytes1, &bytes2)
-        .map_err(|e| attendance_common::AppError::Validation(e.to_string()))?;
+    let resp = attendance_face::run_pipeline(&deepface_state, &bytes1, &bytes2)
+        .map_err(map_face_err)?;
 
     Ok(Json(resp))
 }
@@ -466,29 +489,60 @@ pub struct UploadModelPayload {
 }
 
 async fn handle_upload_ai_model(
+    State(state): State<AppState>,
     Json(payload): Json<UploadModelPayload>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
-    let model_name = payload
+    let raw_name = payload
         .model_name
         .unwrap_or_else(|| "facenet512.onnx".to_string());
-    let safe_name = model_name.rsplit('/').next().unwrap_or("facenet512.onnx");
-    std::fs::create_dir_all("models")
+    let safe_name = attendance_common::sanitize_filename(&raw_name);
+    if !safe_name.ends_with(".onnx") && !safe_name.ends_with(".h5") {
+        return Err(attendance_common::AppError::Validation(
+            "Invalid model filename: only .onnx or .h5 model files are permitted".to_string(),
+        )
+        .into());
+    }
+
+    let models_dir_str = std::env::var("MODELS_DIR").unwrap_or_else(|_| "models".to_string());
+    let models_dir = std::path::Path::new(&models_dir_str);
+    std::fs::create_dir_all(models_dir)
         .map_err(|e| attendance_common::AppError::Internal(format!("Failed to create models dir: {}", e)))?;
 
-    let target_path = format!("models/{}", safe_name);
+    let validated_path = attendance_common::validate_filepath(models_dir, &safe_name)?;
+    let target_path = validated_path.to_string_lossy().to_string();
+
     if let Some(ref b64) = payload.model_b64 {
-        use base64::{engine::general_purpose, Engine as _};
-        let bytes = general_purpose::STANDARD
-            .decode(b64)
-            .map_err(|e| attendance_common::AppError::Validation(format!("Invalid base64 model payload: {}", e)))?;
-        std::fs::write(&target_path, &bytes)
+        let bytes = decode_data_uri(b64)?;
+        if bytes.len() < 64 {
+            return Err(attendance_common::AppError::Validation(
+                "Uploaded model file is too small or empty".to_string(),
+            )
+            .into());
+        }
+        std::fs::write(&validated_path, &bytes)
             .map_err(|e| attendance_common::AppError::Internal(format!("Failed to write model file: {}", e)))?;
+
+        if let Ok(home) = std::env::var("HOME") {
+            let user_models_dir = std::path::PathBuf::from(home)
+                .join("AttendanceSystem_Data")
+                .join("models");
+            if std::fs::create_dir_all(&user_models_dir).is_ok() {
+                let _ = std::fs::write(user_models_dir.join(&safe_name), &bytes);
+            }
+        }
     }
+
+    let hot_reloaded = state.reload_deepface_from_dir(models_dir);
 
     Ok(Json(serde_json::json!({
         "success": true,
         "target_path": target_path,
-        "message": "AI Model file copied successfully to required locations! Please restart the application."
+        "hot_reloaded": hot_reloaded,
+        "message": if hot_reloaded {
+            "AI Model file validated, saved, and hot-reloaded in memory!"
+        } else {
+            "AI Model file saved to models directory."
+        }
     })))
 }
 
@@ -520,14 +574,14 @@ async fn handle_extract_frame(
     State(state): State<AppState>,
     Json(payload): Json<SingleImagePayload>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
-    let df_state = state.deepface_state.as_ref().ok_or_else(|| {
+    let df_state = state.get_deepface().ok_or_else(|| {
         attendance_common::AppError::Validation(
             "DeepFace ONNX models not loaded in ./models/".to_string(),
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let emb = attendance_face::extract_face_embedding_vec(df_state, &bytes)
-        .map_err(|e| attendance_common::AppError::Validation(format!("Face detection/extraction failed: {}", e)))?;
+    let (emb, det) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
+    let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -535,6 +589,10 @@ async fn handle_extract_frame(
         "dimension": emb.len(),
         "model": "Facenet512",
         "detector": "MTCNN",
+        "bbox": [det.x1, det.y1, det.x2, det.y2],
+        "detection_score": det.score,
+        "landmarks": det.landmarks,
+        "quality": quality,
         "embedding": emb
     })))
 }
@@ -561,6 +619,7 @@ async fn handle_enroll_batch(
     }
 
     let _ = state.db.delete_face_profiles(&upper);
+    state.face_index.remove_user(&upper);
     let mut enrolled = 0usize;
     for (idx, mut emb) in payload.embeddings.into_iter().enumerate() {
         DistanceMetrics::l2_normalize(&mut emb);
@@ -590,14 +649,14 @@ async fn handle_verify_identity(
     State(state): State<AppState>,
     Json(payload): Json<SingleImagePayload>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
-    let df_state = state.deepface_state.as_ref().ok_or_else(|| {
+    let df_state = state.get_deepface().ok_or_else(|| {
         attendance_common::AppError::Validation(
             "DeepFace ONNX models not loaded in ./models/".to_string(),
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let emb = attendance_face::extract_face_embedding_vec(df_state, &bytes)
-        .map_err(|e| attendance_common::AppError::Validation(format!("No face detected: {}", e)))?;
+    let (emb, det) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
+    let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
 
     let tiered_opt = state.face_index.search_tiered(emb.clone())?;
     if let Some(tiered) = tiered_opt {
@@ -623,6 +682,9 @@ async fn handle_verify_identity(
                 "strong_matches": tiered.strong_matches,
                 "possible_matches": tiered.possible_matches,
                 "total_matches": tiered.total_matches,
+                "bbox": [det.x1, det.y1, det.x2, det.y2],
+                "landmarks": det.landmarks,
+                "quality": quality,
                 "embedding": emb
             })));
         }
@@ -632,6 +694,10 @@ async fn handle_verify_identity(
         "success": false,
         "matched": false,
         "error": "No confident match found in face database",
+        "bbox": [det.x1, det.y1, det.x2, det.y2],
+        "landmarks": det.landmarks,
+        "quality": quality,
         "embedding": emb
     })))
 }
+

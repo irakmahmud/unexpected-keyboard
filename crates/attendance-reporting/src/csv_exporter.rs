@@ -73,7 +73,10 @@ impl CsvExporter {
         let mut active_dates = std::collections::HashSet::new();
         for r in &all_period_records {
             if r.in_time.is_some() || r.out_time.is_some() {
-                active_dates.insert(r.date.clone());
+                let norm = attendance_common::TimeHelper::parse_date(&r.date)
+                    .map(|d| d.format("%Y-%m-%d").to_string())
+                    .unwrap_or_else(|_| r.date.clone());
+                active_dates.insert(norm);
             }
         }
         let working_days = active_dates.len().max(1);
@@ -94,7 +97,12 @@ impl CsvExporter {
             let user_records = self.db.get_attendance_records_by_range(&start_date, &end_date, Some(&u.username))?;
             let record_map: std::collections::HashMap<String, _> = user_records
                 .into_iter()
-                .map(|r| (r.date.clone(), r))
+                .map(|r| {
+                    let norm = attendance_common::TimeHelper::parse_date(&r.date)
+                        .map(|d| d.format("%Y-%m-%d").to_string())
+                        .unwrap_or_else(|_| r.date.clone());
+                    (norm, r)
+                })
                 .collect();
 
             let mut total_lates = 0usize;
@@ -185,4 +193,191 @@ impl CsvExporter {
 
         Ok(csv)
     }
+
+    /// Convert CSV matrix content into a valid OpenXML .xlsx spreadsheet archive
+    pub fn csv_to_xlsx_bytes(csv_content: &str, sheet_name: &str) -> Vec<u8> {
+        let mut sheet_xml = String::from(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+             <worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n\
+             <sheetData>\n",
+        );
+
+        for (row_idx, line) in csv_content.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let r_num = row_idx + 1;
+            sheet_xml.push_str(&format!("<row r=\"{}\">", r_num));
+            for (col_idx, cell_val) in line.split(',').enumerate() {
+                let col_ref = format!("{}{}", Self::excel_col_name(col_idx), r_num);
+                let trimmed = cell_val.trim().trim_matches('"');
+                let escaped = Self::xml_escape(trimmed);
+                sheet_xml.push_str(&format!(
+                    "<c r=\"{}\" t=\"inlineStr\"><is><t>{}</t></is></c>",
+                    col_ref, escaped
+                ));
+            }
+            sheet_xml.push_str("</row>\n");
+        }
+        sheet_xml.push_str("</sheetData>\n</worksheet>");
+
+        let content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+            <Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n\
+            <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n\
+            <Default Extension=\"xml\" ContentType=\"application/xml\"/>\n\
+            <Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>\n\
+            <Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>\n\
+            </Types>";
+
+        let rels = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+            <Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\
+            <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>\n\
+            </Relationships>";
+
+        let safe_sheet = Self::xml_escape(sheet_name);
+        let workbook = format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+             <workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" \
+             xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n\
+             <sheets><sheet name=\"{}\" sheetId=\"1\" r:id=\"rId1\"/></sheets>\n\
+             </workbook>",
+            safe_sheet
+        );
+
+        let wb_rels = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+            <Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\
+            <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>\n\
+            </Relationships>";
+
+        let entries: Vec<(&str, &[u8])> = vec![
+            ("[Content_Types].xml", content_types.as_bytes()),
+            ("_rels/.rels", rels.as_bytes()),
+            ("xl/workbook.xml", workbook.as_bytes()),
+            ("xl/_rels/workbook.xml.rels", wb_rels.as_bytes()),
+            ("xl/worksheets/sheet1.xml", sheet_xml.as_bytes()),
+        ];
+
+        Self::build_stored_zip(&entries)
+    }
+
+    fn excel_col_name(mut idx: usize) -> String {
+        let mut chars = Vec::new();
+        loop {
+            let rem = idx % 26;
+            chars.push((b'A' + rem as u8) as char);
+            if idx < 26 {
+                break;
+            }
+            idx = (idx / 26) - 1;
+        }
+        chars.into_iter().rev().collect()
+    }
+
+    fn xml_escape(input: &str) -> String {
+        input
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;")
+    }
+
+    fn crc32(data: &[u8]) -> u32 {
+        let mut crc = 0xFFFF_FFFFu32;
+        for &b in data {
+            crc ^= b as u32;
+            for _ in 0..8 {
+                if (crc & 1) != 0 {
+                    crc = (crc >> 1) ^ 0xEDB8_8320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+        !crc
+    }
+
+    fn build_stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut central_dir = Vec::new();
+
+        for &(name, data) in entries {
+            let offset = out.len() as u32;
+            let crc = Self::crc32(data);
+            let size = data.len() as u32;
+            let name_bytes = name.as_bytes();
+            let name_len = name_bytes.len() as u16;
+
+            // Local file header
+            out.extend_from_slice(&0x04034b50u32.to_le_bytes());
+            out.extend_from_slice(&20u16.to_le_bytes()); // version needed
+            out.extend_from_slice(&0u16.to_le_bytes()); // flags
+            out.extend_from_slice(&0u16.to_le_bytes()); // compression: STORE
+            out.extend_from_slice(&0u16.to_le_bytes()); // mod time
+            out.extend_from_slice(&0u16.to_le_bytes()); // mod date
+            out.extend_from_slice(&crc.to_le_bytes());
+            out.extend_from_slice(&size.to_le_bytes());
+            out.extend_from_slice(&size.to_le_bytes());
+            out.extend_from_slice(&name_len.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes()); // extra len
+            out.extend_from_slice(name_bytes);
+            out.extend_from_slice(data);
+
+            // Central directory header
+            central_dir.extend_from_slice(&0x02014b50u32.to_le_bytes());
+            central_dir.extend_from_slice(&20u16.to_le_bytes()); // version made by
+            central_dir.extend_from_slice(&20u16.to_le_bytes()); // version needed
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // flags
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // compression: STORE
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // mod time
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // mod date
+            central_dir.extend_from_slice(&crc.to_le_bytes());
+            central_dir.extend_from_slice(&size.to_le_bytes());
+            central_dir.extend_from_slice(&size.to_le_bytes());
+            central_dir.extend_from_slice(&name_len.to_le_bytes());
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // extra len
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // comment len
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // disk number
+            central_dir.extend_from_slice(&0u16.to_le_bytes()); // internal attrs
+            central_dir.extend_from_slice(&0u32.to_le_bytes()); // external attrs
+            central_dir.extend_from_slice(&offset.to_le_bytes());
+            central_dir.extend_from_slice(name_bytes);
+        }
+
+        let cd_offset = out.len() as u32;
+        let cd_size = central_dir.len() as u32;
+        let total_entries = entries.len() as u16;
+        out.extend_from_slice(&central_dir);
+
+        // End of central directory record
+        out.extend_from_slice(&0x06054b50u32.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        out.extend_from_slice(&0u16.to_le_bytes()); // start disk
+        out.extend_from_slice(&total_entries.to_le_bytes());
+        out.extend_from_slice(&total_entries.to_le_bytes());
+        out.extend_from_slice(&cd_size.to_le_bytes());
+        out.extend_from_slice(&cd_offset.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // comment len
+
+        out
+    }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_csv_to_xlsx_bytes_generates_valid_zip() {
+        let csv = "User ID,Username,Total Lates\nU1,JOLIE,0\nU2,EINSTEIN,1\n";
+        let bytes = CsvExporter::csv_to_xlsx_bytes(csv, "Attendance Summary");
+        assert!(bytes.len() > 200);
+        assert_eq!(&bytes[0..4], b"PK\x03\x04");
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(text.contains("xl/workbook.xml"));
+        assert!(text.contains("xl/worksheets/sheet1.xml"));
+        assert!(text.contains("JOLIE"));
+    }
+}
+
+

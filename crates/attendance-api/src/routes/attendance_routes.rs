@@ -48,6 +48,7 @@ pub fn attendance_router() -> Router<AppState> {
         .route("/range", get(get_range_attendance))
         .route("/summary", get(get_attendance_summary))
         .route("/history-7days", get(get_seven_day_history))
+        .route("/history/:username", get(get_seven_day_history_by_path))
         .route("/user/:username", get(get_user_punch_history))
         .route("/user-stats/:username", get(get_user_monthly_stats))
         .route("/adjust", post(handle_manual_adjustment))
@@ -68,16 +69,19 @@ async fn handle_punch(
                 .split_once(',')
                 .map(|(_, d)| d)
                 .unwrap_or_else(|| b64.trim());
-            if let Ok(bytes) = general_purpose::STANDARD.decode(clean) {
-                if payload.face_embedding.is_none() {
-                    if let Some(ref df_state) = state.deepface_state {
-                        if let Ok(emb) = attendance_face::extract_face_embedding_vec(df_state, &bytes) {
-                            payload.face_embedding = Some(emb);
-                        }
-                    }
-                }
-                decoded_image_bytes = Some(bytes);
+            let bytes = general_purpose::STANDARD.decode(clean).map_err(|e| {
+                attendance_common::AppError::Validation(format!("Invalid base64 image: {}", e))
+            })?;
+            if payload.face_embedding.is_none() {
+                let df_state = state.get_deepface().ok_or_else(|| {
+                    attendance_common::AppError::Validation(
+                        "DeepFace ONNX models not loaded in ./models/".to_string(),
+                    )
+                })?;
+                let emb = attendance_face::extract_face_embedding_vec(&df_state, &bytes)?;
+                payload.face_embedding = Some(emb);
             }
+            decoded_image_bytes = Some(bytes);
         }
     }
 
@@ -88,19 +92,27 @@ async fn handle_punch(
                     payload.username = match_res.username;
                 }
             }
+            if payload.username.trim().is_empty() {
+                return Err(attendance_common::AppError::Unauthorized(
+                    "Face verification failed: no confident match found in enrolled profiles".to_string(),
+                )
+                .into());
+            }
         }
     }
 
     if let Some(bytes) = decoded_image_bytes {
         if !payload.username.trim().is_empty() {
-            let _ = std::fs::create_dir_all("data/captures");
-            let upper = payload.username.trim().to_uppercase();
+            let captures_dir = std::path::Path::new("data/captures");
+            let _ = std::fs::create_dir_all(captures_dir);
+            let upper = attendance_common::sanitize_filename(&payload.username.trim().to_uppercase());
             let date_str = TimeHelper::current_date_dhaka();
             let time_str = TimeHelper::current_time_dhaka().replace(':', "");
             let filename = format!("{}_{}_{}.jpg", upper, date_str, time_str);
-            let disk_path = format!("data/captures/{}", filename);
-            if std::fs::write(&disk_path, &bytes).is_ok() {
-                payload.video_path = Some(format!("/api/v1/captures/{}", filename));
+            if let Ok(disk_path) = attendance_common::validate_filepath(captures_dir, &filename) {
+                if std::fs::write(&disk_path, &bytes).is_ok() {
+                    payload.video_path = Some(format!("/api/v1/captures/{}", filename));
+                }
             }
         }
     }
@@ -181,6 +193,19 @@ async fn get_attendance_summary(
     Ok(Json(summary))
 }
 
+async fn get_seven_day_history_by_path(
+    State(state): State<AppState>,
+    Path(username): Path<String>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    get_seven_day_history(
+        State(state),
+        Query(SevenDayHistoryQuery {
+            username: Some(username),
+        }),
+    )
+    .await
+}
+
 async fn get_seven_day_history(
     State(state): State<AppState>,
     Query(query): Query<SevenDayHistoryQuery>,
@@ -207,7 +232,10 @@ async fn get_seven_day_history(
 
     let mut rec_by_date = std::collections::HashMap::new();
     for r in records {
-        rec_by_date.insert(r.date.clone(), r);
+        let norm_date = TimeHelper::parse_date(&r.date)
+            .map(|d| d.format("%Y-%m-%d").to_string())
+            .unwrap_or_else(|_| r.date.clone());
+        rec_by_date.insert(norm_date, r);
     }
 
     let mut rows = Vec::new();
@@ -277,7 +305,8 @@ async fn get_seven_day_history(
         "username": target_user,
         "title": format!("{} - 7 Day Attendance History", target_user),
         "generated_on": today_date.format("%d %b %Y").to_string(),
-        "history": rows
+        "history": rows,
+        "records": rows
     })))
 }
 
@@ -400,18 +429,26 @@ async fn get_user_monthly_stats(
     let mut late_absents = 0usize;
     let mut early_leaves = 0usize;
 
+    let nine_am = chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap();
+    let ten_am = chrono::NaiveTime::from_hms_opt(10, 0, 0).unwrap();
+    let five_pm = chrono::NaiveTime::from_hms_opt(17, 0, 0).unwrap();
+
     for r in records {
         if let Some(ref in_t) = r.in_time {
-            if in_t.as_str() >= "09:00:00" {
-                lates += 1;
-            }
-            if in_t.as_str() >= "10:00:00" {
-                late_absents += 1;
+            if let Ok(parsed_in) = TimeHelper::parse_time(in_t) {
+                if parsed_in >= nine_am {
+                    lates += 1;
+                }
+                if parsed_in >= ten_am {
+                    late_absents += 1;
+                }
             }
         }
         if let Some(ref out_t) = r.out_time {
-            if out_t.as_str() < "17:00:00" {
-                early_leaves += 1;
+            if let Ok(parsed_out) = TimeHelper::parse_time(out_t) {
+                if parsed_out < five_pm {
+                    early_leaves += 1;
+                }
             }
         }
     }
@@ -431,12 +468,13 @@ pub async fn serve_capture_image(
     use axum::http::{header, StatusCode};
     use axum::response::IntoResponse;
 
-    let safe_name = filename.rsplit('/').next().unwrap_or("");
-    if safe_name.is_empty() || safe_name.contains("..") {
-        return (StatusCode::BAD_REQUEST, "Invalid filename").into_response();
-    }
-    let path = format!("data/captures/{}", safe_name);
-    match std::fs::read(&path) {
+    let safe_name = attendance_common::sanitize_filename(&filename);
+    let captures_dir = std::path::Path::new("data/captures");
+    let validated = match attendance_common::validate_filepath(captures_dir, &safe_name) {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::BAD_REQUEST, "Invalid filename").into_response(),
+    };
+    match std::fs::read(&validated) {
         Ok(bytes) => (
             StatusCode::OK,
             [(header::CONTENT_TYPE, "image/jpeg")],
@@ -446,3 +484,4 @@ pub async fn serve_capture_image(
         Err(_) => (StatusCode::NOT_FOUND, "Capture image not found").into_response(),
     }
 }
+

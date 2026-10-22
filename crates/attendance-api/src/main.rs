@@ -36,6 +36,27 @@ pub struct AppState {
     pub bq_client: Arc<BigQueryClient>,
     pub outbox_worker: Arc<OutboxWorker>,
     pub deepface_state: Option<Arc<attendance_face::DeepFaceAppState>>,
+    pub deepface_reloadable: Arc<parking_lot::RwLock<Option<Arc<attendance_face::DeepFaceAppState>>>>,
+}
+
+impl AppState {
+    pub fn get_deepface(&self) -> Option<Arc<attendance_face::DeepFaceAppState>> {
+        self.deepface_reloadable
+            .read()
+            .clone()
+            .or_else(|| self.deepface_state.clone())
+    }
+
+    pub fn reload_deepface_from_dir(&self, models_dir: &str) -> std::result::Result<(), String> {
+        match attendance_face::DeepFaceAppState::load_from_dir(models_dir) {
+            Ok(s) => {
+                let mut guard = self.deepface_reloadable.write();
+                *guard = Some(Arc::new(s));
+                Ok(())
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    }
 }
 
 // Custom error responder
@@ -69,6 +90,7 @@ impl<E: Into<AppError>> From<E> for ApiError {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let _ = dotenvy::dotenv();
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -79,7 +101,30 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting Attendance System Rust/Axum Engine...");
 
-    let db_path = std::env::var("DATABASE_URL")
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8080);
+
+    // CAP-01: SingleInstanceManager lock (55531 for default port 8080, offset for staging ports)
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+    let lock_port = if port == 8080 { 55531 } else { 47451u16.saturating_add(port % 10000) };
+    let lock_file = if port == 8080 {
+        format!("{}/attendance_system.lock", home)
+    } else {
+        format!("{}/attendance_system_{}.lock", home, port)
+    };
+    let mut single_instance = attendance_common::SingleInstanceManager::new(lock_port)
+        .with_lock_file(&lock_file);
+    if let Err(e) = single_instance.acquire_lock() {
+        tracing::warn!("SingleInstanceManager lock warning: {}", e);
+    }
+
+    // CAP-03: Startup time integrity verification and persistence (~/.attendance_time_check)
+    let _ = TimeHelper::verify_and_persist_time_integrity();
+
+    let db_path = std::env::var("ATTENDANCE_DB_PATH")
+        .or_else(|_| std::env::var("DATABASE_URL"))
         .unwrap_or_else(|_| "data/attendance.db".to_string())
         .replace("sqlite://", "");
 
@@ -98,7 +143,9 @@ async fn main() -> Result<()> {
     seed_if_empty(&db, &face_index)?;
     bootstrap_face_index(&db, &face_index)?;
 
-    let models_dir = std::env::var("MODELS_DIR").unwrap_or_else(|_| "models".to_string());
+    let models_dir = std::env::var("MODELS_DIR")
+        .or_else(|_| std::env::var("ATTENDANCE_MODELS_DIR"))
+        .unwrap_or_else(|_| "models".to_string());
     let deepface_state = match attendance_face::DeepFaceAppState::load_from_dir(&models_dir) {
         Ok(s) => {
             tracing::info!("FaceNet512 & MTCNN ONNX models loaded successfully from {}", models_dir);
@@ -109,6 +156,7 @@ async fn main() -> Result<()> {
             None
         }
     };
+    let deepface_reloadable = Arc::new(parking_lot::RwLock::new(deepface_state.clone()));
 
     let state = AppState {
         db,
@@ -119,6 +167,7 @@ async fn main() -> Result<()> {
         bq_client,
         outbox_worker,
         deepface_state,
+        deepface_reloadable,
     };
 
     let app = Router::new()
@@ -142,11 +191,6 @@ async fn main() -> Result<()> {
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
-
-    let port: u16 = std::env::var("PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(8080);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("Server listening on http://{}", addr);
@@ -179,7 +223,6 @@ async fn handle_root_fallback(
                 })),
             ).into_response();
         } else {
-            // Python line 5829 parity: {"status": "ready", "session_id": self.path[1:]}
             return (
                 StatusCode::OK,
                 Json(serde_json::json!({
@@ -199,7 +242,7 @@ async fn handle_root_fallback(
     ).into_response()
 }
 
-fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
+fn seed_if_empty(db: &DbPool, _face_index: &FaceVectorIndex) -> Result<()> {
     if db.list_companies()?.is_empty() {
         let now = TimeHelper::now_utc_sqlite_string();
         let default_comp = CompanyInfo {
@@ -228,7 +271,7 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
 
     let users = db.get_all_users()?;
     if users.is_empty() {
-        tracing::info!("Seeding initial users and sample face vectors...");
+        tracing::info!("Seeding initial users...");
         let sample_users = vec![
             ("ADMIN", "System Administrator", "ADM000"),
             ("RAHIM", "Software Architect", "DEV001"),
@@ -238,12 +281,6 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
         ];
 
         for (name, role, emp_id) in sample_users {
-            let mut emb = vec![0.0f32; 512];
-            for (i, val) in emb.iter_mut().enumerate() {
-                *val = ((name.as_bytes()[0] as f32 + i as f32) % 17.0) / 17.0;
-            }
-            face_index.enroll_user(name, emb.clone())?;
-
             let u = User {
                 company_user_uuid: format!("C_{}", emp_id),
                 company_name: Some("Smart Attendance HQ".to_string()),
@@ -252,7 +289,7 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
                 user_uuid: Some(uuid::Uuid::new_v4().to_string()),
                 user_designation: Some(role.to_string()),
                 user_android_id: Some(format!("ANDR_{}", emp_id)),
-                face_encoding: Some(serde_json::to_string(&emb)?),
+                face_encoding: None,
                 password: Some(AuthService::hash_password("admin123")),
                 role: if name == "ADMIN" { UserRole::SuperAdmin } else { UserRole::Employee },
                 status: UserStatus::Active,
@@ -267,7 +304,7 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
                 id: None,
                 employee_code: emp_id.to_string(),
                 user_uuid: u.user_uuid.clone().unwrap(),
-                company_id: "TECHFIRM_01".to_string(),
+                company_id: "HQ_001".to_string(),
                 first_name: name.to_string(),
                 last_name: "Staff".to_string(),
                 full_name: format!("{} Staff", name),
@@ -296,28 +333,48 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
 
 fn bootstrap_face_index(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
     let mut loaded = 0;
+    let mut users_with_profiles = std::collections::HashSet::new();
+
     if let Ok(profiles) = db.get_all_face_profiles() {
         for p in profiles {
-            if !p.embedding_vector.is_empty() && p.embedding_vector.iter().any(|&v| v != 0.0) {
+            if !p.embedding_vector.is_empty()
+                && !FaceVectorIndex::is_corrupted_constant_vector(&p.embedding_vector)
+            {
                 if face_index.enroll_user(&p.username, p.embedding_vector).is_ok() {
+                    users_with_profiles.insert(p.username.to_uppercase());
                     loaded += 1;
                 }
+            } else if let Some(pid) = p.id {
+                // CAP-42: Clean up corrupted constant seed vectors from face_profiles
+                let conn = db.get_connection();
+                let _ = conn.execute("DELETE FROM face_profiles WHERE id = ?1", rusqlite::params![pid]);
+                tracing::warn!("Removed corrupted constant face_profile id={} for user={}", pid, p.username);
             }
         }
     }
 
     let users = db.get_all_users()?;
     for u in users {
+        if users_with_profiles.contains(&u.username.to_uppercase()) {
+            continue;
+        }
         if let Some(enc_str) = &u.face_encoding {
             if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {
-                if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
+                if !vec.is_empty() && !FaceVectorIndex::is_corrupted_constant_vector(&vec) {
                     if let Ok(()) = face_index.enroll_user(&u.username, vec) {
                         loaded += 1;
                     }
+                } else {
+                    let conn = db.get_connection();
+                    let _ = conn.execute(
+                        "UPDATE users SET face_encoding = NULL WHERE UPPER(username) = ?1",
+                        rusqlite::params![u.username.to_uppercase()],
+                    );
                 }
             }
         }
     }
-    tracing::info!("Bootstrapped {} face embeddings into memory index", loaded);
+    let _ = face_index.sync_faiss_files();
+    tracing::info!("Bootstrapped {} valid face embeddings into memory index", loaded);
     Ok(())
 }

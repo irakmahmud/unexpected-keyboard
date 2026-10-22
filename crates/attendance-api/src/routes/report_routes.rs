@@ -38,8 +38,13 @@ pub fn report_router() -> Router<AppState> {
         .route("/muster-roll", get(get_muster_roll))
         .route("/muster-roll/html", get(get_muster_roll_html))
         .route("/export.csv", get(export_csv_report))
+        .route("/csv", get(export_csv_report))
         .route("/customized", get(export_customized_report))
         .route("/customized.csv", get(export_customized_report))
+        .route("/xlsx", get(export_customized_xlsx_report))
+        .route("/excel", get(export_customized_xlsx_report))
+        .route("/export.xlsx", get(export_customized_xlsx_report))
+        .route("/customized.xlsx", get(export_customized_xlsx_report))
         .route("/verify-images", get(get_verify_images))
         .route("/department-breakdown", get(get_department_breakdown))
 }
@@ -151,6 +156,46 @@ async fn export_customized_report(
     );
     Ok(response)
 }
+
+async fn export_customized_xlsx_report(
+    State(state): State<AppState>,
+    Query(query): Query<CustomizedReportQuery>,
+) -> std::result::Result<Response, ApiError> {
+    let year = query.year.unwrap_or(2026);
+    let month_str = query.month.as_deref().unwrap_or("10");
+    let month = TimeHelper::parse_month(month_str).unwrap_or(10);
+    let max_days = TimeHelper::days_in_month(year, month);
+    let from_day = query.from_day.unwrap_or(1).clamp(1, max_days);
+    let to_day = query.to_day.unwrap_or(max_days).clamp(from_day, max_days);
+    let in_time = query.in_time.as_deref().unwrap_or("09:00:00");
+    let out_time = query.out_time.as_deref().unwrap_or("17:00:00");
+
+    let xlsx_bytes = state.reporting.generate_customized_xlsx_report(
+        query.username.as_deref(),
+        year,
+        month,
+        from_day,
+        to_day,
+        in_time,
+        out_time,
+    )?;
+
+    let mut response = xlsx_bytes.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!(
+            "attachment; filename=\"attendance_customized_{}_{:02}.xlsx\"",
+            year, month
+        ))
+        .unwrap(),
+    );
+    Ok(response)
+}
+
 
 async fn get_verify_images(
     State(state): State<AppState>,

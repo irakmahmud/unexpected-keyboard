@@ -149,4 +149,13 @@ impl FaceQualityAssessor {
             failure_reasons,
         }
     }
+
+    /// Assess image quality directly from encoded image bytes (JPEG/PNG)
+    pub fn assess_image_bytes(image_bytes: &[u8]) -> Option<FaceQualityScore> {
+        let img = image::load_from_memory(image_bytes).ok()?;
+        let gray = img.to_luma8();
+        let (w, h) = (gray.width() as usize, gray.height() as usize);
+        Some(Self::assess_face_quality(gray.as_raw(), w, h))
+    }
 }
+

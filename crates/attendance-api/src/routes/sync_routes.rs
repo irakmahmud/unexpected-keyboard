@@ -18,6 +18,7 @@ pub struct OutboxStatusReport {
 pub fn sync_router() -> Router<AppState> {
     Router::new()
         .route("/trigger", post(handle_trigger_sync))
+        .route("/process", post(handle_trigger_sync))
         .route("/status", get(get_outbox_status))
         .route("/users-to-local", post(handle_sync_users_to_local))
         .route("/users-to-cloud", post(handle_sync_users_to_cloud))
@@ -47,12 +48,20 @@ async fn handle_sync_users_to_local(
     State(state): State<AppState>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let users = state.db.get_all_users()?;
+    let existing_embeddings = state.face_index.get_all_embeddings();
     let mut indexed = 0usize;
     for u in &users {
+        let upper = u.username.trim().to_uppercase();
+        if existing_embeddings.contains_key(&upper) {
+            continue;
+        }
         if let Some(ref enc_str) = u.face_encoding {
             if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {
-                if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
-                    if state.face_index.enroll_user(&u.username, vec).is_ok() {
+                if !vec.is_empty()
+                    && vec.iter().any(|&v| v != 0.0)
+                    && !attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&vec)
+                {
+                    if state.face_index.enroll_user(&upper, vec).is_ok() {
                         indexed += 1;
                     }
                 }
@@ -66,6 +75,7 @@ async fn handle_sync_users_to_local(
         "message": format!("Synchronized {} users and {} facial encodings in local database", users.len(), indexed)
     })))
 }
+
 
 async fn handle_sync_users_to_cloud(
     State(state): State<AppState>,

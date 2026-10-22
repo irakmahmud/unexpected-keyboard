@@ -24,12 +24,6 @@ impl HrAuthService {
             }
         }
 
-        // Master override credentials for system deployment
-        if entered_password == "HR@123" || entered_password == "1234" || entered_password == "admin123" || entered_password == "hr2026" {
-            tracing::warn!("HR authentication used master/default credentials for company {}", company_uuid);
-            return Ok(true);
-        }
-
         Err(AppError::Unauthorized("Invalid HR password! Please try again.".to_string()))
     }
 
@@ -62,3 +56,28 @@ impl HrAuthService {
         db.set_hr_password(&hr)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hr_auth_rejects_backdoors_and_honors_password_change() {
+        let db = DbPool::new_in_memory().unwrap();
+        // Default auto-init is HR@123
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "HR@123").unwrap());
+        // Backdoor strings must be rejected
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "1234").is_err());
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "admin123").is_err());
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "hr2026").is_err());
+
+        // Change password to NewSec#2026
+        HrAuthService::change_hr_password(&db, "COMP_TEST", "Test Co", "HR@123", "NewSec#2026").unwrap();
+
+        // Old default HR@123 must now be rejected
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "HR@123").is_err());
+        // New password must succeed
+        assert!(HrAuthService::verify_hr_access(&db, "COMP_TEST", "NewSec#2026").unwrap());
+    }
+}
+

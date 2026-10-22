@@ -18,10 +18,36 @@ pub fn user_router() -> Router<AppState> {
         .route("/:username/password", post(change_password))
 }
 
+#[derive(serde::Deserialize, Default)]
+pub struct UserListQuery {
+    pub company_uuid: Option<String>,
+    pub search: Option<String>,
+}
+
 async fn list_users(
     State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<UserListQuery>,
 ) -> std::result::Result<Json<Vec<User>>, ApiError> {
-    let users = state.db.get_all_users()?;
+    let mut users = state.db.get_all_users()?;
+    if let Some(ref cid) = query.company_uuid {
+        let c = cid.trim();
+        if !c.is_empty() {
+            users.retain(|u| u.company_uuid.as_deref() == Some(c));
+        }
+    }
+    if let Some(ref s) = query.search {
+        let term = s.trim().to_lowercase();
+        if !term.is_empty() {
+            users.retain(|u| {
+                u.username.to_lowercase().contains(&term)
+                    || u.user_designation
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains(&term)
+            });
+        }
+    }
     Ok(Json(users))
 }
 
@@ -94,20 +120,22 @@ async fn create_user(
         _ => UserRole::Employee,
     };
 
-    // Collect any camera frames sent for ONNX FaceNet512 + MTCNN extraction
+    // Collect camera frames sent for ONNX FaceNet512 + MTCNN extraction (do not duplicate image_b64 if images_b64 is already populated)
     let mut frames_b64: Vec<String> = Vec::new();
     if let Some(list) = payload.images_b64 {
-        frames_b64.extend(list);
+        frames_b64.extend(list.into_iter().filter(|s| !s.trim().is_empty()));
     }
-    if let Some(single) = payload.image_b64 {
-        if !single.trim().is_empty() {
-            frames_b64.push(single);
+    if frames_b64.is_empty() {
+        if let Some(single) = payload.image_b64 {
+            if !single.trim().is_empty() {
+                frames_b64.push(single);
+            }
         }
     }
 
     let mut extracted_embeddings: Vec<Vec<f32>> = Vec::new();
     if !frames_b64.is_empty() {
-        let df_state = state.deepface_state.as_ref().ok_or_else(|| {
+        let df_state = state.get_deepface().ok_or_else(|| {
             attendance_common::AppError::Validation(
                 "DeepFace ONNX models not loaded in ./models/".to_string(),
             )
@@ -121,22 +149,22 @@ async fn create_user(
                 let save_path = format!("data/captures/{}_REGISTERED.jpg", upper_username);
                 let _ = std::fs::write(&save_path, &img_bytes);
             }
-            let emb = attendance_face::extract_face_embedding_vec(df_state, &img_bytes)
+            let emb = attendance_face::extract_face_embedding_vec(&df_state, &img_bytes)
                 .map_err(|e| attendance_common::AppError::Validation(format!("ONNX FaceNet512 extraction error on frame {}: {}", idx + 1, e)))?;
             extracted_embeddings.push(emb);
         }
     } else if let Some(emb) = payload.face_embedding {
-        if !emb.is_empty() && emb.iter().any(|&v| v != 0.0) {
+        if !emb.is_empty() && !attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&emb) {
             extracted_embeddings.push(emb);
         }
     }
 
     let (face_encoding_str, has_camera_face) = if !extracted_embeddings.is_empty() {
-        // Check duplicate user face across all existing users (cosine distance < 0.40, matching Python _is_duplicate_user lines 4770-4821)
+        // Check duplicate user face across all existing users (cosine distance < 0.30, matching Python _is_duplicate_user)
         for emb in &extracted_embeddings {
             if let Some((dup_user, dist)) = state.face_index.find_duplicate_user(emb, Some(&upper_username)) {
                 return Err(attendance_common::AppError::Validation(format!(
-                    "Duplicate face detected: this face is already registered to user '{}' (cosine distance {:.4} < 0.40)",
+                    "Duplicate face detected: this face is already registered to user '{}' (cosine distance {:.4})",
                     dup_user, dist
                 ))
                 .into());
@@ -175,6 +203,7 @@ async fn create_user(
         (Some("Smart Attendance HQ".to_string()), Some("HQ_001".to_string()))
     };
 
+    let now = attendance_common::TimeHelper::now_utc_sqlite_string();
     let user = User {
         company_user_uuid: company_user_uuid.clone(),
         company_name: resolved_comp_name.clone(),
@@ -189,8 +218,8 @@ async fn create_user(
         status: UserStatus::Active,
         email: payload.email.clone(),
         phone: payload.phone.clone(),
-        created_at: Some(chrono::Utc::now().to_rfc3339()),
-        last_updated: Some(chrono::Utc::now().to_rfc3339()),
+        created_at: Some(now.clone()),
+        last_updated: Some(now.clone()),
     };
 
     state.db.insert_or_update_user(&user)?;
@@ -200,7 +229,7 @@ async fn create_user(
         id: None,
         employee_code: upper_username.clone(),
         user_uuid,
-        company_id: resolved_comp_uuid.unwrap_or_else(|| "TECHFIRM_01".to_string()),
+        company_id: resolved_comp_uuid.unwrap_or_else(|| "HQ_001".to_string()),
         first_name: upper_username.clone(),
         last_name: payload.user_designation.clone().unwrap_or_else(|| "Employee".to_string()),
         full_name: format!(
@@ -216,7 +245,7 @@ async fn create_user(
         rfid_card_uid: None,
         pin_code: Some(raw_pw),
         employment_type: EmploymentType::Permanent,
-        join_date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+        join_date: attendance_common::TimeHelper::current_date_dhaka(),
         end_date: None,
         is_active: true,
         avatar_url: if has_camera_face {
@@ -226,14 +255,23 @@ async fn create_user(
         },
         emergency_contact_name: None,
         emergency_contact_phone: None,
-        created_at: Some(chrono::Utc::now().to_rfc3339()),
-        updated_at: Some(chrono::Utc::now().to_rfc3339()),
+        created_at: Some(now.clone()),
+        updated_at: Some(now),
     };
     let _ = state.db.save_employee(&emp);
 
-    // If camera embeddings were extracted, save all of them to face_profiles and RAM index
+    // If camera embeddings were extracted, replace any old profiles in SQLite and RAM index
     if has_camera_face {
         let _ = state.db.delete_face_profiles(&upper_username);
+        state.face_index.remove_user(&upper_username);
+        // Restore face_encoding on users table after delete_face_profiles cleared it
+        let _ = state.db.insert_or_update_user(&user);
+        let conn = state.db.get_connection();
+        let _ = conn.execute(
+            "UPDATE users SET register_with_camera = 'Y' WHERE UPPER(username) = ?1",
+            rusqlite::params![upper_username],
+        );
+        drop(conn);
         for (i, emb) in extracted_embeddings.iter().enumerate() {
             let pose_name = format!("ANGLE_{}", i + 1);
             let _ = state.db.save_face_profile(
@@ -296,13 +334,14 @@ async fn update_user(
     if let Some(active) = payload.is_active {
         user.status = if active { UserStatus::Active } else { UserStatus::Inactive };
     }
-    user.last_updated = Some(chrono::Utc::now().to_rfc3339());
+    user.last_updated = Some(attendance_common::TimeHelper::now_utc_sqlite_string());
 
     state.db.insert_or_update_user(&user)?;
 
     Ok(Json(serde_json::json!({
         "success": true,
         "username": user.username,
+        "user": user,
         "message": "User updated successfully"
     })))
 }
@@ -313,10 +352,12 @@ async fn delete_user(
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let upper = username.to_uppercase();
     let _ = state.db.delete_face_profiles(&upper);
+    state.face_index.remove_user(&upper);
     let deleted = state.db.delete_user(&upper)?;
     Ok(Json(serde_json::json!({
         "success": deleted,
-        "message": if deleted { "User deleted" } else { "User not found" }
+        "username": upper,
+        "message": if deleted { "User and biometric profiles deleted" } else { "User not found" }
     })))
 }
 
@@ -331,15 +372,17 @@ async fn change_password(
         .ok_or_else(|| attendance_common::AppError::NotFound("User not found".to_string()))?;
 
     if let Some(old_pw) = &payload.old_password {
-        if let Some(stored_pw) = &user.password {
-            if !PasswordHasher::verify(old_pw, stored_pw) && old_pw != stored_pw {
-                return Err(attendance_common::AppError::Unauthorized("Invalid old password".to_string()).into());
+        if !old_pw.trim().is_empty() {
+            if let Some(stored_pw) = &user.password {
+                if !PasswordHasher::verify(old_pw, stored_pw) && old_pw != stored_pw {
+                    return Err(attendance_common::AppError::Unauthorized("Invalid old password".to_string()).into());
+                }
             }
         }
     }
 
     user.password = Some(PasswordHasher::hash_sha256(&payload.new_password));
-    user.last_updated = Some(chrono::Utc::now().to_rfc3339());
+    user.last_updated = Some(attendance_common::TimeHelper::now_utc_sqlite_string());
     state.db.insert_or_update_user(&user)?;
 
     Ok(Json(serde_json::json!({

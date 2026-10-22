@@ -55,19 +55,99 @@ impl TimeHelper {
         Ok(dhaka_dt.format("%Y-%m-%d %H:%M:%S").to_string())
     }
 
-    /// Parse date string in format YYYY-MM-DD
+    /// Parse date string in format YYYY-MM-DD or DD_Mon_YYYY (e.g. 17_Apr_2026 or 5_Oct_2026)
     pub fn parse_date(date_str: &str) -> Result<NaiveDate> {
         let trimmed = date_str.trim();
-        // If datetime string with space: "2026-10-12 09:15:30"
         let date_part = if let Some(first) = trimmed.split_whitespace().next() {
             first
         } else {
             trimmed
         };
-        // If RFC3339 with 'T'
         let clean_date = date_part.split('T').next().unwrap_or(date_part);
+        if let Ok(d) = NaiveDate::parse_from_str(clean_date, "%Y-%m-%d") {
+            return Ok(d);
+        }
+        if let Ok(d) = NaiveDate::parse_from_str(clean_date, "%d_%b_%Y") {
+            return Ok(d);
+        }
+        let normalized = clean_date.replace('_', " ");
+        if let Ok(d) = NaiveDate::parse_from_str(&normalized, "%d %b %Y") {
+            return Ok(d);
+        }
         NaiveDate::parse_from_str(clean_date, "%Y-%m-%d")
-            .map_err(|e| AppError::Validation(format!("Invalid date format (expected YYYY-MM-DD): {}", e)))
+            .map_err(|e| AppError::Validation(format!("Invalid date format (expected YYYY-MM-DD or DD_Mon_YYYY): {}", e)))
+    }
+
+    /// Return (YYYY-MM-DD, DD_Mon_YYYY) variants for dual-format SQLite compatibility (CAP-36)
+    pub fn date_variants(date_str: &str) -> (String, String) {
+        if let Ok(d) = Self::parse_date(date_str) {
+            (d.format("%Y-%m-%d").to_string(), d.format("%d_%b_%Y").to_string())
+        } else {
+            (date_str.to_string(), date_str.to_string())
+        }
+    }
+
+    /// Current date in Asia/Dhaka in Python DD_Mon_YYYY format (e.g. 22_Oct_2026)
+    pub fn current_date_python_dhaka() -> String {
+        let utc_now = Utc::now();
+        let dhaka_time = utc_now.with_timezone(&Self::dhaka_offset());
+        dhaka_time.format("%d_%b_%Y").to_string()
+    }
+
+    /// Verify system clock against persisted ~/.attendance_time_check (CAP-03 anti-tampering)
+    pub fn verify_and_persist_time_integrity() -> TimeValidationResult {
+        let now = Utc::now();
+        let now_ts = now.timestamp();
+        let server_str = now
+            .with_timezone(&Self::dhaka_offset())
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+        let check_paths = [
+            std::path::PathBuf::from(&home).join(".attendance_time_check"),
+            std::path::PathBuf::from("data").join(".attendance_time_check"),
+        ];
+
+        let mut last_recorded: Option<i64> = None;
+        for p in &check_paths {
+            if let Ok(raw) = std::fs::read_to_string(p) {
+                if let Ok(val) = raw.trim().parse::<i64>() {
+                    last_recorded = Some(last_recorded.map_or(val, |prev| prev.max(val)));
+                }
+            }
+        }
+
+        if let Some(prev_ts) = last_recorded {
+            if now_ts + 60 < prev_ts {
+                let drift = prev_ts - now_ts;
+                return TimeValidationResult {
+                    is_valid: false,
+                    drift_seconds: drift,
+                    server_time: server_str,
+                    client_time: None,
+                    warning: Some(format!(
+                        "System clock backward tampering detected: current time is {}s behind last recorded timestamp",
+                        drift
+                    )),
+                };
+            }
+        }
+
+        for p in &check_paths {
+            if let Some(parent) = p.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(p, now_ts.to_string());
+        }
+
+        TimeValidationResult {
+            is_valid: true,
+            drift_seconds: 0,
+            server_time: server_str,
+            client_time: None,
+            warning: None,
+        }
     }
 
     /// Generate record ID exactly matching Python attendance_v8.py line 5040:

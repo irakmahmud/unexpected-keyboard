@@ -27,7 +27,36 @@ impl MusterRollGenerator {
 
     /// Generate monthly muster roll matrix
     pub fn generate_monthly_muster_roll(&self, year: i32, month: u32, company_id: &str) -> Result<Vec<EmployeeMusterRow>> {
-        let employees = self.db.list_employees(company_id)?;
+        let mut employees = self.db.list_employees(company_id)?;
+        if let Ok(users) = self.db.get_all_users() {
+            let existing_codes: std::collections::HashSet<String> = employees
+                .iter()
+                .map(|e| e.employee_code.to_uppercase())
+                .collect();
+            for u in users {
+                let code = u.username.trim().to_uppercase();
+                if !existing_codes.contains(&code) {
+                    employees.push(attendance_domain::Employee {
+                        id: None,
+                        user_uuid: u.company_user_uuid.clone(),
+                        employee_code: code.clone(),
+                        full_name: u.username.clone(),
+                        email: None,
+                        phone: None,
+                        department_id: None,
+                        shift_id: None,
+                        designation: Some("Employee".to_string()),
+                        joining_date: None,
+                        is_active: true,
+                        pin_code: None,
+                        rfid_uid: None,
+                        company_id: company_id.to_string(),
+                        created_at: None,
+                        updated_at: None,
+                    });
+                }
+            }
+        }
         let mut rows = Vec::new();
 
         let days_in_month = match month {
@@ -37,6 +66,7 @@ impl MusterRollGenerator {
         };
 
         for emp in employees {
+
             let mut days_map = HashMap::new();
             let mut total_present = 0;
             let mut total_late = 0;

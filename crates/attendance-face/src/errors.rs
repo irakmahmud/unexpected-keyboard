@@ -18,6 +18,9 @@ pub enum AppError {
     #[error("No face detected in image")]
     NoFaceDetected,
 
+    #[error("Multiple faces detected in image ({0} faces); please ensure only 1 face is in frame")]
+    MultipleFacesDetected(usize),
+
     #[error("Image decode failed: {0}")]
     ImageDecode(String),
 
@@ -35,11 +38,12 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
-            AppError::NoFaceDetected  => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
-            AppError::ImageDecode(_)  => (StatusCode::BAD_REQUEST,           self.to_string()),
-            AppError::BadRequest(_)   => (StatusCode::BAD_REQUEST,           self.to_string()),
-            AppError::OnnxError(_)    => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::ShapeError(_)   => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::NoFaceDetected          => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
+            AppError::MultipleFacesDetected(_) => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
+            AppError::ImageDecode(_)          => (StatusCode::BAD_REQUEST,           self.to_string()),
+            AppError::BadRequest(_)           => (StatusCode::BAD_REQUEST,           self.to_string()),
+            AppError::OnnxError(_)            => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::ShapeError(_)           => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };
 
         (status, Json(json!({ "error": message }))).into_response()

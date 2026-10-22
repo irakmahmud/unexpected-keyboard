@@ -46,14 +46,14 @@ struct BBox {
 }
 
 // ============================================================================
-// detect_face — main entry point for MTCNN detection
+// detect_faces — returns all finalized MTCNN face detections after Min-NMS
 // ============================================================================
-pub fn detect_face(state: &AppState, img: &DynamicImage) -> Result<FaceDetection, AppError> {
+pub fn detect_faces(state: &AppState, img: &DynamicImage) -> Result<Vec<FaceDetection>, AppError> {
     use tracing::info;
-    
+
     let rgb = img.to_rgb8();
     let (width, height) = img.dimensions();
-    
+
     // Stage 1: P-Net (Proposal Network) - multi-scale detection
     info!("MTCNN Stage 1: P-Net starting...");
     let mut boxes = run_pnet(state, &rgb, width, height)?;
@@ -61,7 +61,7 @@ pub fn detect_face(state: &AppState, img: &DynamicImage) -> Result<FaceDetection
     if boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
-    
+
     // Stage 2: R-Net (Refine Network) - refine proposals
     info!("MTCNN Stage 2: R-Net starting with {} boxes...", boxes.len());
     boxes = run_rnet(state, &rgb, boxes)?;
@@ -69,7 +69,7 @@ pub fn detect_face(state: &AppState, img: &DynamicImage) -> Result<FaceDetection
     if boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
-    
+
     // Stage 3: O-Net (Output Network) - final detection + landmarks
     info!("MTCNN Stage 3: O-Net starting with {} boxes...", boxes.len());
     let (final_boxes, landmarks) = run_onet(state, &rgb, boxes)?;
@@ -77,22 +77,52 @@ pub fn detect_face(state: &AppState, img: &DynamicImage) -> Result<FaceDetection
     if final_boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
-    
-    // Return the face with highest confidence
-    let best_idx = final_boxes.iter()
-        .enumerate()
-        .max_by(|(_, a), (_, b)| a.score.partial_cmp(&b.score).unwrap())
-        .map(|(idx, _)| idx)
-        .unwrap();
-    
-    let best_box = &final_boxes[best_idx];
-    let best_landmarks = landmarks[best_idx];
-    
-    Ok(FaceDetection {
-        bbox: (best_box.x1, best_box.y1, best_box.x2, best_box.y2),
-        landmarks: best_landmarks,
-        confidence: best_box.score,
-    })
+
+    let detections: Vec<FaceDetection> = final_boxes
+        .into_iter()
+        .zip(landmarks.into_iter())
+        .map(|(b, lm)| FaceDetection {
+            bbox: (b.x1, b.y1, b.x2, b.y2),
+            landmarks: lm,
+            confidence: b.score,
+        })
+        .collect();
+
+    Ok(detections)
+}
+
+// ============================================================================
+// detect_face — main entry point for MTCNN detection (enforces single face)
+// ============================================================================
+pub fn detect_face(state: &AppState, img: &DynamicImage) -> Result<FaceDetection, AppError> {
+    let detections = detect_faces(state, img)?;
+    if detections.is_empty() {
+        return Err(AppError::NoFaceDetected);
+    }
+
+    let max_area = detections
+        .iter()
+        .map(|d| ((d.bbox.2 - d.bbox.0).max(1.0)) * ((d.bbox.3 - d.bbox.1).max(1.0)))
+        .fold(1.0_f32, f32::max);
+
+    let prominent: Vec<&FaceDetection> = detections
+        .iter()
+        .filter(|d| {
+            let area = ((d.bbox.2 - d.bbox.0).max(0.0)) * ((d.bbox.3 - d.bbox.1).max(0.0));
+            d.confidence >= 0.92 && area >= max_area * 0.20
+        })
+        .collect();
+
+    if prominent.len() > 1 {
+        return Err(AppError::MultipleFacesDetected(prominent.len()));
+    }
+
+    let best = detections
+        .into_iter()
+        .max_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap_or(std::cmp::Ordering::Equal))
+        .ok_or(AppError::NoFaceDetected)?;
+
+    Ok(best)
 }
 
 // ============================================================================
@@ -260,13 +290,19 @@ fn run_onet(
         
         let prob = outputs[2].to_array_view::<f32>()
             .map_err(|e| AppError::OnnxError(format!("O-Net output error: {e}")))?;
-        let reg = outputs[1].to_array_view::<f32>()
-            .map_err(|e| AppError::OnnxError(format!("O-Net reg error: {e}")))?;
-        let _landmarks_raw = outputs[0].to_array_view::<f32>()
-            .map_err(|e| AppError::OnnxError(format!("O-Net landmarks error: {e}")))?;
-        
+        let out0 = outputs[0].to_array_view::<f32>()
+            .map_err(|e| AppError::OnnxError(format!("O-Net out0 error: {e}")))?;
+        let out1 = outputs[1].to_array_view::<f32>()
+            .map_err(|e| AppError::OnnxError(format!("O-Net out1 error: {e}")))?;
+
+        let (landmarks_raw, reg) = if out0.shape().len() >= 2 && out0.shape()[1] >= 10 {
+            (out0, out1)
+        } else {
+            (out1, out0)
+        };
+
         let score = prob[[0, 1]];
-        
+
         if score > ONET_THRESHOLD {
             let mut new_box = bbox.clone();
             new_box.score = score;
@@ -276,40 +312,70 @@ fn run_onet(
                 reg[[0, 2]],
                 reg[[0, 3]],
             ];
-            
-            // Extract landmarks - the ONNX model outputs only 4 values
-            // These appear to be bbox regression, not landmarks
-            // For now, estimate landmarks from bbox
+
             let w = bbox.x2 - bbox.x1;
             let h = bbox.y2 - bbox.y1;
-            let cx = (bbox.x1 + bbox.x2) / 2.0;
-            let cy = (bbox.y1 + bbox.y2) / 2.0;
-            
-            // Standard facial proportions for landmark estimation
-            let eye_y = cy - h * 0.15;
-            let mouth_y = cy + h * 0.2;
-            
-            let landmarks = [
-                (cx - w * 0.25, eye_y),      // left eye
-                (cx + w * 0.25, eye_y),      // right eye
-                (cx, cy),                     // nose
-                (cx - w * 0.15, mouth_y),    // mouth left
-                (cx + w * 0.15, mouth_y),    // mouth right
-            ];
-            
+            let landmarks = if landmarks_raw.shape().len() >= 2 && landmarks_raw.shape()[1] >= 10 {
+                [
+                    (bbox.x1 + landmarks_raw[[0, 0]] * w, bbox.y1 + landmarks_raw[[0, 5]] * h), // left eye
+                    (bbox.x1 + landmarks_raw[[0, 1]] * w, bbox.y1 + landmarks_raw[[0, 6]] * h), // right eye
+                    (bbox.x1 + landmarks_raw[[0, 2]] * w, bbox.y1 + landmarks_raw[[0, 7]] * h), // nose
+                    (bbox.x1 + landmarks_raw[[0, 3]] * w, bbox.y1 + landmarks_raw[[0, 8]] * h), // mouth left
+                    (bbox.x1 + landmarks_raw[[0, 4]] * w, bbox.y1 + landmarks_raw[[0, 9]] * h), // mouth right
+                ]
+            } else {
+                let cx = (bbox.x1 + bbox.x2) / 2.0;
+                let cy = (bbox.y1 + bbox.y2) / 2.0;
+                let eye_y = cy - h * 0.15;
+                let mouth_y = cy + h * 0.2;
+                [
+                    (cx - w * 0.25, eye_y),
+                    (cx + w * 0.25, eye_y),
+                    (cx, cy),
+                    (cx - w * 0.15, mouth_y),
+                    (cx + w * 0.15, mouth_y),
+                ]
+            };
+
             final_boxes.push(new_box);
             all_landmarks.push(landmarks);
         }
     }
-    
+
     if final_boxes.is_empty() {
         return Ok((Vec::new(), Vec::new()));
     }
-    
+
     // Apply regression
-    let final_boxes = apply_regression(&final_boxes);
-    
-    Ok((final_boxes, all_landmarks))
+    let regressed_boxes = apply_regression(&final_boxes);
+
+    // Apply O-Net Min-NMS to merge overlapping detections of the same face while preserving landmarks
+    let mut indexed: Vec<(BBox, [(f32, f32); 5])> = regressed_boxes
+        .into_iter()
+        .zip(all_landmarks.into_iter())
+        .collect();
+    indexed.sort_by(|a, b| b.0.score.partial_cmp(&a.0.score).unwrap_or(std::cmp::Ordering::Equal));
+
+    let mut kept_boxes = Vec::new();
+    let mut kept_landmarks = Vec::new();
+    while !indexed.is_empty() {
+        let (curr_box, curr_lm) = indexed.remove(0);
+        kept_boxes.push(curr_box.clone());
+        kept_landmarks.push(curr_lm);
+        indexed.retain(|(other_box, _)| {
+            let x1 = curr_box.x1.max(other_box.x1);
+            let y1 = curr_box.y1.max(other_box.y1);
+            let x2 = curr_box.x2.min(other_box.x2);
+            let y2 = curr_box.y2.min(other_box.y2);
+            let inter = (x2 - x1).max(0.0) * (y2 - y1).max(0.0);
+            let a1 = ((curr_box.x2 - curr_box.x1) * (curr_box.y2 - curr_box.y1)).max(1.0);
+            let a2 = ((other_box.x2 - other_box.x1) * (other_box.y2 - other_box.y1)).max(1.0);
+            let min_iou = inter / a1.min(a2);
+            min_iou < NMS_THRESHOLD
+        });
+    }
+
+    Ok((kept_boxes, kept_landmarks))
 }
 
 // ============================================================================

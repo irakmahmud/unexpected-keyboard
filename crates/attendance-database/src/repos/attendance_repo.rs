@@ -5,17 +5,32 @@ use rusqlite::{params, Connection, OptionalExtension};
 pub struct AttendanceRepo;
 
 impl AttendanceRepo {
+    fn normalize_db_time(raw: Option<String>) -> Option<String> {
+        raw.map(|s| {
+            let trimmed = s.trim();
+            if trimmed.len() == 19 && trimmed.chars().nth(4) == Some('-') && trimmed.contains(' ') {
+                if let Ok(dhaka_full) = TimeHelper::utc_to_dhaka_string(trimmed) {
+                    if let Some(time_part) = dhaka_full.split_whitespace().nth(1) {
+                        return time_part.to_string();
+                    }
+                }
+            }
+            trimmed.to_string()
+        })
+    }
+
     pub fn get_record(conn: &Connection, username: &str, date: &str) -> Result<Option<AttendanceRecord>> {
         let upper = username.to_uppercase();
+        let (iso_date, py_date) = TimeHelper::date_variants(date);
         let mut stmt = conn.prepare(
             "SELECT record_id, company_user_uuid, username, date, in_time, out_time,
                     video_path_in, video_path_out, in_time_with_camera, out_time_with_camera,
                     in_time_with_qr, out_time_with_qr, status, work_hours, overtime_hours,
                     late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at
-             FROM attendance_records WHERE UPPER(username) = ? AND date = ?"
+             FROM attendance_records WHERE UPPER(username) = ?1 AND (date = ?2 OR date = ?3)"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
-        let rec = stmt.query_row(params![upper, date], |row| {
+        let rec = stmt.query_row(params![upper, iso_date, py_date], |row| {
             let status_str: String = row.get(12).unwrap_or_else(|_| "PRESENT".to_string());
             let status = match status_str.as_str() {
                 "LATE" => AttendanceStatus::Late,
@@ -34,8 +49,8 @@ impl AttendanceRepo {
                 company_user_uuid: row.get(1)?,
                 username: row.get(2)?,
                 date: row.get(3)?,
-                in_time: row.get(4)?,
-                out_time: row.get(5)?,
+                in_time: Self::normalize_db_time(row.get(4)?),
+                out_time: Self::normalize_db_time(row.get(5)?),
                 video_path_in: row.get(6)?,
                 video_path_out: row.get(7)?,
                 in_time_with_camera: row.get(8)?,
@@ -121,6 +136,7 @@ impl AttendanceRepo {
         let now = TimeHelper::now_utc_sqlite_string();
         let cam_flag = if with_camera { "Y" } else { "N" };
         let qr_flag = if with_qr { "Y" } else { "N" };
+        let (iso_date, py_date) = TimeHelper::date_variants(date);
 
         let affected = conn.execute(
             "UPDATE attendance_records
@@ -132,7 +148,7 @@ impl AttendanceRepo {
                  overtime_hours = ?6,
                  early_exit_minutes = ?7,
                  status = COALESCE(?8, status)
-             WHERE UPPER(username) = ?9 AND date = ?10",
+             WHERE UPPER(username) = ?9 AND (date = ?10 OR date = ?11)",
             params![
                 out_time,
                 video_path,
@@ -143,12 +159,12 @@ impl AttendanceRepo {
                 early_exit_minutes,
                 status,
                 username.to_uppercase(),
-                date
+                iso_date,
+                py_date
             ],
         ).map_err(|e| AppError::Database(format!("Failed to update out_time: {}", e)))?;
 
         if affected == 0 {
-            // Standalone out-time punch: resolve company_user_uuid matching Python lines 5105-5114
             let comp_uuid_opt: Option<String> = conn
                 .query_row(
                     "SELECT company_user_uuid FROM users WHERE UPPER(username) = ?1",
@@ -253,15 +269,16 @@ impl AttendanceRepo {
     }
 
     pub fn get_by_date(conn: &Connection, date: &str) -> Result<Vec<AttendanceRecord>> {
+        let (iso_date, py_date) = TimeHelper::date_variants(date);
         let mut stmt = conn.prepare(
             "SELECT record_id, company_user_uuid, username, date, in_time, out_time,
                     video_path_in, video_path_out, in_time_with_camera, out_time_with_camera,
                     in_time_with_qr, out_time_with_qr, status, work_hours, overtime_hours,
                     late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at
-             FROM attendance_records WHERE date = ? ORDER BY in_time DESC"
+             FROM attendance_records WHERE date = ?1 OR date = ?2 ORDER BY in_time DESC"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
-        let rows = stmt.query_map(params![date], |row| {
+        let rows = stmt.query_map(params![iso_date, py_date], |row| {
             let status_str: String = row.get(12).unwrap_or_else(|_| "PRESENT".to_string());
             let status = match status_str.as_str() {
                 "LATE" => AttendanceStatus::Late,
@@ -280,8 +297,8 @@ impl AttendanceRepo {
                 company_user_uuid: row.get(1)?,
                 username: row.get(2)?,
                 date: row.get(3)?,
-                in_time: row.get(4)?,
-                out_time: row.get(5)?,
+                in_time: Self::normalize_db_time(row.get(4)?),
+                out_time: Self::normalize_db_time(row.get(5)?),
                 video_path_in: row.get(6)?,
                 video_path_out: row.get(7)?,
                 in_time_with_camera: row.get(8)?,
@@ -313,6 +330,9 @@ impl AttendanceRepo {
         to_date: &str,
         username: Option<&str>,
     ) -> Result<Vec<AttendanceRecord>> {
+        let start_naive = TimeHelper::parse_date(from_date).ok();
+        let end_naive = TimeHelper::parse_date(to_date).ok();
+
         let (sql, params_vec): (String, Vec<rusqlite::types::Value>) = if let Some(u) = username {
             (
                 "SELECT record_id, company_user_uuid, username, date, in_time, out_time,
@@ -320,13 +340,9 @@ impl AttendanceRepo {
                         in_time_with_qr, out_time_with_qr, status, work_hours, overtime_hours,
                         late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at
                  FROM attendance_records 
-                 WHERE date BETWEEN ?1 AND ?2 AND UPPER(username) = ?3
+                 WHERE UPPER(username) = ?1
                  ORDER BY date ASC, in_time ASC".to_string(),
-                vec![
-                    rusqlite::types::Value::Text(from_date.to_string()),
-                    rusqlite::types::Value::Text(to_date.to_string()),
-                    rusqlite::types::Value::Text(u.to_uppercase()),
-                ],
+                vec![rusqlite::types::Value::Text(u.to_uppercase())],
             )
         } else {
             (
@@ -335,12 +351,8 @@ impl AttendanceRepo {
                         in_time_with_qr, out_time_with_qr, status, work_hours, overtime_hours,
                         late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at
                  FROM attendance_records 
-                 WHERE date BETWEEN ?1 AND ?2
                  ORDER BY date ASC, in_time ASC".to_string(),
-                vec![
-                    rusqlite::types::Value::Text(from_date.to_string()),
-                    rusqlite::types::Value::Text(to_date.to_string()),
-                ],
+                vec![],
             )
         };
 
@@ -359,13 +371,18 @@ impl AttendanceRepo {
                 _ => AttendanceStatus::Present,
             };
 
+            let raw_date: String = row.get(3)?;
+            let norm_date = TimeHelper::parse_date(&raw_date)
+                .map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or(raw_date);
+
             Ok(AttendanceRecord {
                 record_id: row.get(0)?,
                 company_user_uuid: row.get(1)?,
                 username: row.get(2)?,
-                date: row.get(3)?,
-                in_time: row.get(4)?,
-                out_time: row.get(5)?,
+                date: norm_date,
+                in_time: Self::normalize_db_time(row.get(4)?),
+                out_time: Self::normalize_db_time(row.get(5)?),
                 video_path_in: row.get(6)?,
                 video_path_out: row.get(7)?,
                 in_time_with_camera: row.get(8)?,
@@ -386,8 +403,19 @@ impl AttendanceRepo {
 
         let mut list = Vec::new();
         for r in rows {
-            list.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            let rec = r.map_err(|e| AppError::Database(e.to_string()))?;
+            if let (Some(s), Some(e)) = (start_naive, end_naive) {
+                if let Ok(rec_d) = TimeHelper::parse_date(&rec.date) {
+                    if rec_d < s || rec_d > e {
+                        continue;
+                    }
+                }
+            } else if rec.date.as_str() < from_date || rec.date.as_str() > to_date {
+                continue;
+            }
+            list.push(rec);
         }
+        list.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| a.in_time.cmp(&b.in_time)));
         Ok(list)
     }
 

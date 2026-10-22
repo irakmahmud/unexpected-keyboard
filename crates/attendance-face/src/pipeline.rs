@@ -80,40 +80,33 @@ pub struct VerifyResponse {
     pub metric: &'static str,
 }
 
-/// Extract face embedding from raw image bytes using the complete rust_deepFace pipeline
+/// Extract face embedding from raw image bytes using the complete rust_deepFace pipeline (enforce_detection=True)
 pub fn extract_face_embedding(state: &AppState, img_bytes: &[u8]) -> Result<Array1<f32>, AppError> {
     let img: DynamicImage = image::load_from_memory(img_bytes)
         .map_err(|e| AppError::ImageDecode(e.to_string()))?;
-    let det = match mtcnn::detect_face(state, &img) {
-        Ok(d) => d,
-        Err(_) => {
-            let (w, h) = img.dimensions();
-            let fw = (w as f32) * 0.60;
-            let fh = (h as f32) * 0.70;
-            let x1 = ((w as f32) - fw) * 0.50;
-            let y1 = ((h as f32) - fh) * 0.50;
-            let x2 = x1 + fw;
-            let y2 = y1 + fh;
-            let cx = (w as f32) * 0.50;
-            let cy = (h as f32) * 0.50;
-            mtcnn::FaceDetection {
-                bbox: (x1, y1, x2, y2),
-                landmarks: [
-                    (cx - fw * 0.20, cy - fh * 0.12),
-                    (cx + fw * 0.20, cy - fh * 0.12),
-                    (cx, cy),
-                    (cx - fw * 0.15, cy + fh * 0.20),
-                    (cx + fw * 0.15, cy + fh * 0.20),
-                ],
-                confidence: 0.98,
-            }
-        }
-    };
+    let det = mtcnn::detect_face(state, &img)?;
     let aligned = alignment::align_face(&img, &det);
     let cropped = preprocessing::crop_and_resize(&aligned, &det, 160, 160);
     let tensor = preprocessing::normalize_facenet(&cropped);
     let raw = inference::get_embedding(&state.facenet_model, tensor)?;
     Ok(math::l2_normalize(&raw))
+}
+
+/// Extract 512-D L2-normalized FaceNet512 embedding together with MTCNN FaceDetection and image dimensions
+pub fn extract_face_embedding_with_detection(
+    state: &AppState,
+    img_bytes: &[u8],
+) -> Result<(Vec<f32>, mtcnn::FaceDetection, (u32, u32)), AppError> {
+    let img: DynamicImage = image::load_from_memory(img_bytes)
+        .map_err(|e| AppError::ImageDecode(e.to_string()))?;
+    let dims = img.dimensions();
+    let det = mtcnn::detect_face(state, &img)?;
+    let aligned = alignment::align_face(&img, &det);
+    let cropped = preprocessing::crop_and_resize(&aligned, &det, 160, 160);
+    let tensor = preprocessing::normalize_facenet(&cropped);
+    let raw = inference::get_embedding(&state.facenet_model, tensor)?;
+    let norm = math::l2_normalize(&raw);
+    Ok((norm.to_vec(), det, dims))
 }
 
 /// Extract 512-D L2-normalized FaceNet512 embedding as Vec<f32>

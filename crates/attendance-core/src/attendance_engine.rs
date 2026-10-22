@@ -115,7 +115,15 @@ impl AttendanceEngine {
         // 4. Geofence check if coordinates provided (default office: Dhaka HQ)
         let _ = AntiTamperService::verify_geofence(req.latitude, req.longitude, 23.8103, 90.4125, 500.0);
 
-        // 5. Time resolution (Authoritative Asia/Dhaka)
+        // 5. Anti-tamper clock integrity check & persistence (~/.attendance_time_check)
+        let time_check = TimeHelper::verify_and_persist_time_integrity();
+        if !time_check.is_valid {
+            return Err(attendance_common::AppError::Validation(
+                time_check.warning.unwrap_or_else(|| "System clock tampering detected".to_string()),
+            ));
+        }
+
+        // 6. Time resolution (Authoritative Asia/Dhaka)
         let current_date = TimeHelper::current_date_dhaka();
         let current_time = TimeHelper::current_time_dhaka();
         let login_type = self.determine_login_type(&upper_username, &current_date)?;

@@ -3,16 +3,18 @@ pub fn get_kiosk_js() -> &'static str {
 let cameraStream = null;
 let hrRegCameraStream = null;
 let activeCompany = {
-    company_id: 'HQ_001',
-    company_name: 'Smart Attendance HQ',
-    company_address: 'Dhaka, Bangladesh'
+    company_id: 'TECHFIRM_01',
+    company_name: 'TechFirm Bangladesh Ltd.',
+    address_city: 'Dhaka'
 };
 let lastCapturedImageB64 = null;
 let lastVerifyResult = null;
 let verifyCountdownTimer = null;
 let verifySecondsLeft = 5;
 let qrPollTimer = null;
+let hrQrPollTimer = null;
 let currentDisplayedUser = null;
+let cachedCompaniesList = [];
 
 // 20 Bilingual Pose Instructions (attendance_v8.py lines 4862-4903)
 const POSE_INSTRUCTIONS = [
@@ -100,7 +102,7 @@ function exportConsoleLogs() {
 async function forceSync() {
     addTerminalLog('Force sync triggered by user...', 'SYNC');
     try {
-        const res = await fetch('/api/v1/sync/process', { method: 'POST' });
+        const res = await fetch('/api/v1/sync/trigger', { method: 'POST' });
         const data = await res.json();
         addTerminalLog(`BigQuery sync complete: ${JSON.stringify(data)}`, 'SYNC');
     } catch (e) {
@@ -109,19 +111,32 @@ async function forceSync() {
 }
 
 // ============================================================================
-// COMPANY MANAGEMENT (attendance_v8.py lines 11106-11740 Parity)
+// COMPANY MANAGEMENT (attendance_v8.py lines 10366-11600 Parity)
 // ============================================================================
+function updateCompanyBadges(comp) {
+    if (!comp || !comp.company_name) return;
+    activeCompany = comp;
+    const headerName = document.getElementById('header-company-name');
+    if (headerName) {
+        headerName.innerText = `Company: ${comp.company_name}`;
+    }
+    const banner = document.getElementById('company-active-banner');
+    if (banner) {
+        banner.innerText = `${comp.company_name} (${comp.company_id})`;
+    }
+    const hrLabel = document.getElementById('hr-auth-company-label');
+    if (hrLabel) {
+        hrLabel.innerText = `${comp.company_name} (${comp.company_id})`;
+    }
+}
+
 async function loadActiveCompany() {
     try {
         const res = await fetch('/api/v1/companies/profile');
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.company_name) {
-            activeCompany = data;
-            const badge = document.getElementById('header-company-badge');
-            if (badge) {
-                badge.innerText = `🏢 ${data.company_name} (${data.company_id})`;
-            }
+            updateCompanyBadges(data);
             addTerminalLog(`Active Company loaded: ${data.company_name} (${data.company_id})`, 'COMPANY');
         }
     } catch (e) {
@@ -131,99 +146,130 @@ async function loadActiveCompany() {
 
 function openCompanyManagement() {
     closeHrManagement();
-    document.getElementById('modal-company').style.display = 'flex';
-    showCompanySubView('main');
+    const modal = document.getElementById('modal-company');
+    if (modal) modal.style.display = 'flex';
+    updateCompanyBadges(activeCompany);
+    showCompanySubView('menu');
 }
 
 function closeCompanyManagement() {
-    document.getElementById('modal-company').style.display = 'none';
+    const modal = document.getElementById('modal-company');
+    if (modal) modal.style.display = 'none';
 }
 
 function showCompanySubView(view) {
-    document.getElementById('company-main-menu').style.display = view === 'main' ? 'block' : 'none';
-    document.getElementById('company-select-view').style.display = view === 'select' ? 'block' : 'none';
-    document.getElementById('company-create-view').style.display = view === 'create' ? 'block' : 'none';
-    document.getElementById('company-edit-view').style.display = view === 'edit' ? 'block' : 'none';
+    const target = (view === 'main') ? 'menu' : view;
+    const menuEl = document.getElementById('company-view-menu');
+    const selectEl = document.getElementById('company-view-select');
+    const createEl = document.getElementById('company-view-create');
+    const editEl = document.getElementById('company-view-edit');
 
-    if (view === 'select') {
-        document.getElementById('select-company-search').value = '';
-        document.getElementById('select-company-password').value = '';
+    if (menuEl) menuEl.style.display = target === 'menu' ? 'block' : 'none';
+    if (selectEl) selectEl.style.display = target === 'select' ? 'block' : 'none';
+    if (createEl) createEl.style.display = target === 'create' ? 'block' : 'none';
+    if (editEl) editEl.style.display = target === 'edit' ? 'block' : 'none';
+
+    if (target === 'menu') {
+        updateCompanyBadges(activeCompany);
+    } else if (target === 'select') {
+        const sInput = document.getElementById('comp-select-search');
+        const pInput = document.getElementById('comp-select-password');
+        const stEl = document.getElementById('comp-select-status');
+        if (sInput) sInput.value = '';
+        if (pInput) pInput.value = '';
+        if (stEl) stEl.innerText = '';
         loadCompanyListForSelect();
-    } else if (view === 'create') {
-        document.getElementById('create-comp-name').value = '';
-        document.getElementById('create-comp-id').value = '';
-        document.getElementById('create-comp-address').value = '';
-        document.getElementById('create-comp-contact-name').value = '';
-        document.getElementById('create-comp-contact-desig').value = '';
-        document.getElementById('create-comp-contact-num').value = '';
-        document.getElementById('create-comp-password').value = '';
-    } else if (view === 'edit') {
-        document.getElementById('edit-company-search').value = '';
-        document.getElementById('edit-verify-password').value = '';
-        document.getElementById('edit-company-form-box').style.display = 'none';
+    } else if (target === 'create') {
+        ['comp-new-name', 'comp-new-password', 'comp-new-road', 'comp-new-city',
+         'comp-new-contact-name', 'comp-new-contact-desig', 'comp-new-contact-num'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const stEl = document.getElementById('comp-create-status');
+        if (stEl) stEl.innerText = '';
+    } else if (target === 'edit') {
+        const sInput = document.getElementById('comp-edit-search');
+        const pInput = document.getElementById('comp-edit-verify-pw');
+        const st1 = document.getElementById('comp-edit-verify-status');
+        const step1 = document.getElementById('comp-edit-step1');
+        const step2 = document.getElementById('comp-edit-step2');
+        if (sInput) sInput.value = '';
+        if (pInput) pInput.value = '';
+        if (st1) st1.innerText = '';
+        if (step1) step1.style.display = 'block';
+        if (step2) step2.style.display = 'none';
         loadCompanyListForEdit();
     }
 }
 
 async function loadCompanyListForSelect() {
-    const search = document.getElementById('select-company-search').value.trim();
-    const sel = document.getElementById('select-company-dropdown');
+    const searchEl = document.getElementById('comp-select-search');
+    const search = searchEl ? searchEl.value.trim() : '';
+    const sel = document.getElementById('comp-select-listbox');
+    if (!sel) return;
     try {
         const res = await fetch(`/api/v1/companies/list?search=${encodeURIComponent(search)}`);
         const list = await res.json();
-        if (!list || list.length === 0) {
+        cachedCompaniesList = Array.isArray(list) ? list : [];
+        if (cachedCompaniesList.length === 0) {
             sel.innerHTML = '<option value="">No companies found</option>';
             return;
         }
-        sel.innerHTML = list.map(c => `<option value="${c.company_id}" ${c.is_active ? 'selected' : ''}>${c.company_name} (ID: ${c.company_id}) ${c.is_active ? '✓ Active' : ''}</option>`).join('');
+        sel.innerHTML = cachedCompaniesList.map((c, idx) => {
+            const isAct = activeCompany && c.company_id === activeCompany.company_id;
+            return `<option value="${c.company_id}" ${isAct || idx === 0 ? 'selected' : ''}>${c.company_name} (${c.company_id})${isAct ? ' ✓ Active' : ''}</option>`;
+        }).join('');
     } catch (e) {
-        sel.innerHTML = `<option value="">Error loading companies</option>`;
+        sel.innerHTML = '<option value="">Error loading companies</option>';
     }
 }
 
 async function verifyAndSelectCompany() {
-    const company_id = document.getElementById('select-company-dropdown').value;
-    const password = document.getElementById('select-company-password').value;
+    const sel = document.getElementById('comp-select-listbox');
+    const pwEl = document.getElementById('comp-select-password');
+    const stEl = document.getElementById('comp-select-status');
+    const company_id = sel ? sel.value : '';
+    const password = pwEl ? pwEl.value : '';
+
     if (!company_id) {
-        alert('Please select a company from the list.');
+        if (stEl) stEl.innerText = 'Please select a company from the list.';
         return;
     }
     if (!password) {
-        alert('Please enter the company password.');
+        if (stEl) stEl.innerText = 'Please enter the company password.';
         return;
     }
     try {
         const res = await fetch('/api/v1/companies/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ company_id, password, set_active: true })
+            body: JSON.stringify({ company_id, password })
         });
         const data = await res.json();
-        if (data.success && data.company) {
-            activeCompany = data.company;
-            await loadActiveCompany();
+        if (res.ok && data.success && data.company) {
+            updateCompanyBadges(data.company);
             addTerminalLog(`Company switched to: ${data.company.company_name} (${data.company.company_id})`, 'COMPANY');
-            alert(`✅ Company "${data.company.company_name}" selected and activated successfully!`);
             closeCompanyManagement();
         } else {
-            alert('❌ ' + (data.message || 'Invalid company password'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Invalid company password';
         }
     } catch (e) {
-        alert('Error verifying company: ' + e.message);
+        if (stEl) stEl.innerText = 'Error verifying company: ' + e.message;
     }
 }
 
 async function submitCreateCompany() {
-    const company_name = document.getElementById('create-comp-name').value.trim();
-    const company_id = document.getElementById('create-comp-id').value.trim();
-    const company_address = document.getElementById('create-comp-address').value.trim();
-    const contact_person_name = document.getElementById('create-comp-contact-name').value.trim();
-    const contact_person_designation = document.getElementById('create-comp-contact-desig').value.trim();
-    const contact_person_number = document.getElementById('create-comp-contact-num').value.trim();
-    const password = document.getElementById('create-comp-password').value;
+    const company_name = (document.getElementById('comp-new-name')?.value || '').trim();
+    const password = document.getElementById('comp-new-password')?.value || '';
+    const address_road = (document.getElementById('comp-new-road')?.value || '').trim();
+    const address_city = (document.getElementById('comp-new-city')?.value || '').trim();
+    const contact_person_name = (document.getElementById('comp-new-contact-name')?.value || '').trim();
+    const contact_person_designation = (document.getElementById('comp-new-contact-desig')?.value || '').trim();
+    const contact_person_number = (document.getElementById('comp-new-contact-num')?.value || '').trim();
+    const stEl = document.getElementById('comp-create-status');
 
-    if (!company_name || !company_id || !password) {
-        alert('Company Name, Company ID, and Password are required!');
+    if (!company_name || !password) {
+        if (stEl) stEl.innerText = 'Company Name and Password are required!';
         return;
     }
 
@@ -233,117 +279,124 @@ async function submitCreateCompany() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 company_name,
-                company_id,
-                company_address,
+                password,
+                address_road,
+                address_city,
                 contact_person_name,
                 contact_person_designation,
-                contact_person_number,
-                password
+                contact_person_number
             })
         });
         const data = await res.json();
-        if (res.ok && data.success) {
-            await loadActiveCompany();
-            addTerminalLog(`New company created & activated: ${company_name} (${company_id})`, 'COMPANY');
-            alert(`✅ Company "${company_name}" created and set as active company!`);
+        if (res.ok && data.success && data.company) {
+            updateCompanyBadges(data.company);
+            addTerminalLog(`New company created & activated: ${data.company.company_name} (${data.company.company_id})`, 'COMPANY');
             closeCompanyManagement();
         } else {
-            alert('❌ Failed to create company: ' + (data.error || data.message || 'Duplicate name or ID'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Failed to create company';
         }
     } catch (e) {
-        alert('Error creating company: ' + e.message);
+        if (stEl) stEl.innerText = 'Error creating company: ' + e.message;
     }
 }
 
 async function loadCompanyListForEdit() {
-    const search = document.getElementById('edit-company-search').value.trim();
-    const sel = document.getElementById('edit-company-dropdown');
+    const searchEl = document.getElementById('comp-edit-search');
+    const search = searchEl ? searchEl.value.trim() : '';
+    const sel = document.getElementById('comp-edit-listbox');
+    if (!sel) return;
     try {
         const res = await fetch(`/api/v1/companies/list?search=${encodeURIComponent(search)}`);
         const list = await res.json();
-        if (!list || list.length === 0) {
+        cachedCompaniesList = Array.isArray(list) ? list : [];
+        if (cachedCompaniesList.length === 0) {
             sel.innerHTML = '<option value="">No companies found</option>';
             return;
         }
-        sel.innerHTML = list.map(c => `<option value="${c.company_id}" data-dbid="${c.id}" ${c.is_active ? 'selected' : ''}>${c.company_name} (ID: ${c.company_id})</option>`).join('');
+        sel.innerHTML = cachedCompaniesList.map((c, idx) =>
+            `<option value="${c.company_id}" ${idx === 0 ? 'selected' : ''}>${c.company_name} (${c.company_id})</option>`
+        ).join('');
     } catch (e) {
-        sel.innerHTML = `<option value="">Error loading companies</option>`;
+        sel.innerHTML = '<option value="">Error loading companies</option>';
     }
 }
 
 async function verifyCompanyForEdit() {
-    const company_id = document.getElementById('edit-company-dropdown').value;
-    const password = document.getElementById('edit-verify-password').value;
+    const company_id = document.getElementById('comp-edit-listbox')?.value || '';
+    const password = document.getElementById('comp-edit-verify-pw')?.value || '';
+    const stEl = document.getElementById('comp-edit-verify-status');
     if (!company_id || !password) {
-        alert('Please select a company and enter its current password.');
+        if (stEl) stEl.innerText = 'Please select a company and enter its password.';
         return;
     }
     try {
         const res = await fetch('/api/v1/companies/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ company_id, password, set_active: false })
+            body: JSON.stringify({ company_id, password })
         });
         const data = await res.json();
-        if (data.success && data.company) {
+        if (res.ok && data.success && data.company) {
             const c = data.company;
-            document.getElementById('edit-comp-db-id').value = c.id;
-            document.getElementById('edit-comp-name').value = c.company_name || '';
-            document.getElementById('edit-comp-id').value = c.company_id || '';
-            document.getElementById('edit-comp-address').value = c.company_address || '';
-            document.getElementById('edit-comp-contact-name').value = c.contact_person_name || '';
-            document.getElementById('edit-comp-contact-desig').value = c.contact_person_designation || '';
-            document.getElementById('edit-comp-contact-num').value = c.contact_person_number || '';
-            document.getElementById('edit-comp-password').value = '';
-            document.getElementById('edit-company-form-box').style.display = 'block';
+            document.getElementById('comp-edit-id').value = c.company_id;
+            document.getElementById('comp-edit-name').value = c.company_name || '';
+            document.getElementById('comp-edit-password').value = '';
+            document.getElementById('comp-edit-road').value = c.address_road || '';
+            document.getElementById('comp-edit-city').value = c.address_city || '';
+            document.getElementById('comp-edit-contact-name').value = c.contact_person_name || '';
+            document.getElementById('comp-edit-contact-desig').value = c.contact_person_designation || '';
+            document.getElementById('comp-edit-contact-num').value = c.contact_person_number || '';
+            document.getElementById('comp-edit-step1').style.display = 'none';
+            document.getElementById('comp-edit-step2').style.display = 'block';
         } else {
-            alert('❌ ' + (data.message || 'Incorrect company password'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Incorrect company password';
         }
     } catch (e) {
-        alert('Error verifying company: ' + e.message);
+        if (stEl) stEl.innerText = 'Error verifying company: ' + e.message;
     }
 }
 
 async function submitUpdateCompany() {
-    const dbId = document.getElementById('edit-comp-db-id').value;
-    const company_name = document.getElementById('edit-comp-name').value.trim();
-    const company_id = document.getElementById('edit-comp-id').value.trim();
-    const company_address = document.getElementById('edit-comp-address').value.trim();
-    const contact_person_name = document.getElementById('edit-comp-contact-name').value.trim();
-    const contact_person_designation = document.getElementById('edit-comp-contact-desig').value.trim();
-    const contact_person_number = document.getElementById('edit-comp-contact-num').value.trim();
-    const password = document.getElementById('edit-comp-password').value;
+    const company_id = document.getElementById('comp-edit-id')?.value || '';
+    const company_name = (document.getElementById('comp-edit-name')?.value || '').trim();
+    const password = document.getElementById('comp-edit-password')?.value || '';
+    const address_road = (document.getElementById('comp-edit-road')?.value || '').trim();
+    const address_city = (document.getElementById('comp-edit-city')?.value || '').trim();
+    const contact_person_name = (document.getElementById('comp-edit-contact-name')?.value || '').trim();
+    const contact_person_designation = (document.getElementById('comp-edit-contact-desig')?.value || '').trim();
+    const contact_person_number = (document.getElementById('comp-edit-contact-num')?.value || '').trim();
+    const stEl = document.getElementById('comp-edit-save-status');
 
     if (!company_name || !company_id) {
-        alert('Company Name and Company ID cannot be empty.');
+        if (stEl) stEl.innerText = 'Company Name cannot be empty.';
         return;
     }
 
     try {
-        const res = await fetch(`/api/v1/companies/${dbId}`, {
+        const res = await fetch(`/api/v1/companies/${encodeURIComponent(company_id)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                company_name,
                 company_id,
-                company_address,
+                company_name,
+                password,
+                address_road,
+                address_city,
                 contact_person_name,
                 contact_person_designation,
-                contact_person_number,
-                password
+                contact_person_number
             })
         });
         const data = await res.json();
-        if (res.ok && data.success) {
-            await loadActiveCompany();
+        if (res.ok && data.success && data.company) {
+            updateCompanyBadges(data.company);
             addTerminalLog(`Company information updated for ${company_name} (${company_id})`, 'COMPANY');
-            alert('✅ Company information updated successfully!');
             closeCompanyManagement();
         } else {
-            alert('❌ Failed to update company: ' + (data.error || 'Unknown error'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Failed to update company';
         }
     } catch (e) {
-        alert('Error updating company: ' + e.message);
+        if (stEl) stEl.innerText = 'Error updating company: ' + e.message;
     }
 }
 
@@ -370,7 +423,7 @@ async function loadLastAttendanceData() {
                 login_type: last.out_time ? 'OUT_TIME' : 'IN_TIME',
                 attendance_type: last.status || 'On Time',
                 date: last.date,
-                method: last.device_id && last.device_id.includes('CAM') ? 'Camera' : (last.device_id && last.device_id.includes('ANDROID') ? 'QR Code' : 'Without Camera'),
+                method: last.in_time_with_camera === 'Y' ? 'Camera' : (last.in_time_with_qr === 'Y' ? 'QR Code' : 'Without Camera'),
                 lates: String(stats.total_lates || 0),
                 late_absents: String(stats.total_late_absents || 0),
                 early_leaves: String(stats.total_early_leaves || 0)
@@ -396,8 +449,10 @@ function updateAttendanceCards(data) {
     if (document.getElementById('card-total-early-leaves')) document.getElementById('card-total-early-leaves').innerText = data.early_leaves || '0';
 }
 
-// Helper: capture current video frame (or synthetic fallback if camera hardware unavailable) as base64 JPEG
-function captureFrameFromVideoElement(videoEl, seedLabel = '') {
+function captureFrameFromVideoElement(videoEl) {
+    if (window.__TEST_FACE_B64) {
+        return window.__TEST_FACE_B64;
+    }
     const canvas = document.getElementById('camera-canvas') || document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -405,36 +460,12 @@ function captureFrameFromVideoElement(videoEl, seedLabel = '') {
 
     if (videoEl && videoEl.srcObject && videoEl.readyState >= 2) {
         ctx.drawImage(videoEl, 0, 0, 640, 480);
-    } else {
-        // Fallback synthetic face canvas when testing in headless/no-webcam environment
-        ctx.fillStyle = '#1e272e';
-        ctx.fillRect(0, 0, 640, 480);
-        ctx.fillStyle = '#f5cd79';
-        ctx.beginPath();
-        ctx.arc(320, 220, 110, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2f3640';
-        ctx.beginPath();
-        ctx.arc(280, 195, 14, 0, Math.PI * 2);
-        ctx.arc(360, 195, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#2f3640';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(320, 240, 40, 0.15 * Math.PI, 0.85 * Math.PI);
-        ctx.stroke();
-        if (seedLabel) {
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 18px monospace';
-            ctx.fillText(seedLabel, 20, 450);
-        }
     }
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.92);
 }
 
 // ============================================================================
 // 1. IN & OUT WITH CAMERA + IDENTITY VERIFICATION SPLIT WINDOW
-// (attendance_v8.py lines 11773 & 2576-2870 Parity)
 // ============================================================================
 async function openCameraLogin() {
     document.getElementById('modal-camera').style.display = 'flex';
@@ -452,10 +483,10 @@ async function openCameraLogin() {
         captureBtn.disabled = false;
         addTerminalLog('Webcam stream started for ONNX FaceNet512 verification', 'CAMERA');
     } catch (e) {
-        status.innerText = 'No physical webcam detected — Fallback/Simulated Frame Ready (Click Capture)';
+        status.innerText = 'No physical webcam detected — Ready for capture / test frame';
         status.style.color = '#fdcb6e';
         captureBtn.disabled = false;
-        addTerminalLog('No physical webcam (' + e.message + ') - Canvas capture fallback enabled', 'CAMERA');
+        addTerminalLog('Webcam unavailable (' + e.message + ')', 'CAMERA');
     }
 }
 
@@ -474,7 +505,7 @@ async function executeCaptureImage() {
     status.style.color = '#e67e22';
 
     lastCapturedImageB64 = captureFrameFromVideoElement(video);
-    addTerminalLog('Captured 640x480 frame -> Running MTCNN + FaceNet512 ONNX 512-D embedding extraction...', 'AI_CORE');
+    addTerminalLog('Captured frame -> Running MTCNN + FaceNet512 ONNX 512-D embedding extraction...', 'AI_CORE');
 
     try {
         const res = await fetch('/api/v1/face/verify-identity', {
@@ -495,16 +526,24 @@ async function executeCaptureImage() {
 
 function openIdentityVerificationModal(verifyData, imgB64) {
     const modal = document.getElementById('modal-identity-verify');
-    modal.style.display = 'flex';
+    if (modal) modal.style.display = 'flex';
 
     const imgEl = document.getElementById('verify-captured-img');
-    if (imgEl) imgEl.src = imgB64;
+    if (imgEl && imgB64) imgEl.src = imgB64;
 
-    const confEl = document.getElementById('verify-confidence-text');
-    const distEl = document.getElementById('verify-distance-text');
-    const qualEl = document.getElementById('verify-quality-text');
-    const nameEl = document.getElementById('verify-recognized-name');
-    const detailsEl = document.getElementById('verify-match-details');
+    const qualEl = document.getElementById('verify-match-quality');
+    const confEl = document.getElementById('verify-confidence');
+    const confBar = document.getElementById('verify-conf-bar');
+    const minDistEl = document.getElementById('verify-min-dist');
+    const exactStrongEl = document.getElementById('verify-exact-strong');
+    const totalMatchesEl = document.getElementById('verify-total-matches');
+    const userDisplayEl = document.getElementById('verify-user-display');
+    const typeDisplayEl = document.getElementById('verify-type-display');
+    const timeDisplayEl = document.getElementById('verify-time-display');
+    const dateDisplayEl = document.getElementById('verify-date-display');
+    const countdownLabel = document.getElementById('verify-countdown-label');
+    const questionLabel = document.getElementById('verify-question-label');
+    const yesBtn = document.getElementById('btn-verify-yes');
 
     if (verifyCountdownTimer) {
         clearInterval(verifyCountdownTimer);
@@ -512,38 +551,44 @@ function openIdentityVerificationModal(verifyData, imgB64) {
     }
 
     if (verifyData && verifyData.matched && verifyData.username) {
-        const conf = Number(verifyData.confidence || 0).toFixed(1);
+        const conf = Number(verifyData.confidence || 0).toFixed(2);
         const dist = Number(verifyData.min_distance ?? verifyData.distance ?? 0).toFixed(4);
-        const matchedFrames = verifyData.total_matches ?? verifyData.matched_frames ?? 1;
         const quality = verifyData.match_quality || 'EXACT';
+        const uname = verifyData.username.toUpperCase();
 
-        confEl.innerText = `Confidence: ${conf}%`;
-        confEl.style.color = conf >= 60 ? '#27ae60' : '#f39c12';
-        distEl.innerText = `Cosine Distance: ${dist} (Threshold: 0.40)`;
-        qualEl.innerText = `Match Quality: ${quality} (512-D ONNX)`;
+        if (qualEl) {
+            qualEl.innerText = quality;
+            qualEl.style.color = '#198754';
+        }
+        if (confEl) confEl.innerText = `${conf}%`;
+        if (confBar) {
+            confBar.style.width = `${Math.min(100, Math.max(5, Number(conf)))}%`;
+            confBar.style.background = '#198754';
+        }
+        if (minDistEl) minDistEl.innerText = dist;
+        if (exactStrongEl) exactStrongEl.innerText = `${verifyData.exact_matches || 0} / ${verifyData.strong_matches || 0}`;
+        if (totalMatchesEl) totalMatchesEl.innerText = String(verifyData.total_matches || 1);
+        if (userDisplayEl) {
+            userDisplayEl.innerText = uname;
+            userDisplayEl.style.color = '#198754';
+        }
+        if (typeDisplayEl) typeDisplayEl.innerText = verifyData.login_type || 'IN_TIME';
+        if (timeDisplayEl) timeDisplayEl.innerText = verifyData.time || '--:--';
+        if (dateDisplayEl) dateDisplayEl.innerText = verifyData.date || '--';
+        if (questionLabel) questionLabel.innerText = `Are you ${uname}?`;
+        if (yesBtn) {
+            yesBtn.innerText = `Yes, I am ${uname}`;
+            yesBtn.disabled = false;
+        }
 
-        nameEl.innerText = verifyData.username.toUpperCase();
-        nameEl.style.color = '#27ae60';
-        detailsEl.innerHTML = `
-            <div><strong>Login Type:</strong> ${verifyData.login_type || 'IN_TIME'}</div>
-            <div><strong>Matched Frames:</strong> ${matchedFrames} (Exact: ${verifyData.exact_matches || 0}, Strong: ${verifyData.strong_matches || 0})</div>
-            <div><strong>Cosine Distance:</strong> ${dist}</div>
-            <div><strong>Confidence Score:</strong> ${conf}% (${quality})</div>
-        `;
+        addTerminalLog(`Face matched: ${uname} (Distance: ${dist}, Confidence: ${conf}%)`, 'AI_CORE');
 
-        addTerminalLog(`Face matched: ${verifyData.username} (Distance: ${dist}, Confidence: ${conf}%)`, 'AI_CORE');
-
-        // Start 5-second auto-verification countdown (attendance_v8.py lines 2816-2862)
         verifySecondsLeft = 5;
-        const barEl = document.getElementById('verify-countdown-bar');
-        const txtEl = document.getElementById('verify-countdown-text');
-        if (barEl) barEl.style.width = '100%';
-        if (txtEl) txtEl.innerText = `Auto-confirming in ${verifySecondsLeft}s...`;
+        if (countdownLabel) countdownLabel.innerText = `Auto-verification in: ${verifySecondsLeft} seconds`;
 
         verifyCountdownTimer = setInterval(() => {
             verifySecondsLeft -= 1;
-            if (barEl) barEl.style.width = `${(verifySecondsLeft / 5) * 100}%`;
-            if (txtEl) txtEl.innerText = `Auto-confirming in ${verifySecondsLeft}s...`;
+            if (countdownLabel) countdownLabel.innerText = `Auto-verification in: ${verifySecondsLeft} seconds`;
             if (verifySecondsLeft <= 0) {
                 clearInterval(verifyCountdownTimer);
                 verifyCountdownTimer = null;
@@ -551,21 +596,33 @@ function openIdentityVerificationModal(verifyData, imgB64) {
             }
         }, 1000);
     } else {
-        confEl.innerText = `Confidence: 0.0%`;
-        confEl.style.color = '#e74c3c';
-        distEl.innerText = `Cosine Distance: ${verifyData && verifyData.distance !== undefined ? Number(verifyData.distance).toFixed(4) : '1.0000'}`;
-        qualEl.innerText = `Match Quality: NO_MATCH`;
-
-        nameEl.innerText = 'NO MATCH FOUND';
-        nameEl.style.color = '#e74c3c';
-        detailsEl.innerHTML = `
-            <div style="color: #c0392b;">${(verifyData && verifyData.message) || 'Face not recognized in enrolled profiles. Please register your face in HR Management or try again.'}</div>
-        `;
-        const barEl = document.getElementById('verify-countdown-bar');
-        const txtEl = document.getElementById('verify-countdown-text');
-        if (barEl) barEl.style.width = '0%';
-        if (txtEl) txtEl.innerText = 'Auto-confirmation paused (No match found)';
-        addTerminalLog('Face verification: No matching profile found', 'WARNING');
+        const errMsg = (verifyData && (verifyData.error || verifyData.message)) || 'No confident match found';
+        if (qualEl) {
+            qualEl.innerText = 'NO MATCH';
+            qualEl.style.color = '#dc3545';
+        }
+        if (confEl) confEl.innerText = '0.00%';
+        if (confBar) {
+            confBar.style.width = '0%';
+            confBar.style.background = '#dc3545';
+        }
+        if (minDistEl) minDistEl.innerText = '1.0000';
+        if (exactStrongEl) exactStrongEl.innerText = '0 / 0';
+        if (totalMatchesEl) totalMatchesEl.innerText = '0';
+        if (userDisplayEl) {
+            userDisplayEl.innerText = 'UNRECOGNIZED';
+            userDisplayEl.style.color = '#dc3545';
+        }
+        if (typeDisplayEl) typeDisplayEl.innerText = '---';
+        if (timeDisplayEl) timeDisplayEl.innerText = '--:--';
+        if (dateDisplayEl) dateDisplayEl.innerText = errMsg;
+        if (countdownLabel) countdownLabel.innerText = 'Verification paused — No match found';
+        if (questionLabel) questionLabel.innerText = errMsg;
+        if (yesBtn) {
+            yesBtn.innerText = 'No Match Found';
+            yesBtn.disabled = true;
+        }
+        addTerminalLog(`Face verification rejected: ${errMsg}`, 'WARNING');
     }
 }
 
@@ -574,12 +631,13 @@ function closeIdentityVerifyModal() {
         clearInterval(verifyCountdownTimer);
         verifyCountdownTimer = null;
     }
-    document.getElementById('modal-identity-verify').style.display = 'none';
+    const modal = document.getElementById('modal-identity-verify');
+    if (modal) modal.style.display = 'none';
 }
 
 function denyIdentityAndRetry() {
     closeIdentityVerifyModal();
-    addTerminalLog('User clicked "NO, NOT ME" — Retrying camera capture...', 'USER');
+    addTerminalLog('User clicked "No, I\'m someone else" — Retrying camera capture...', 'USER');
     openCameraLogin();
 }
 
@@ -589,7 +647,6 @@ async function confirmIdentityAndPunch() {
         verifyCountdownTimer = null;
     }
     if (!lastVerifyResult || !lastVerifyResult.matched || !lastVerifyResult.username) {
-        alert('No matched user to confirm! Please retry camera capture.');
         return;
     }
     const matchedUsername = lastVerifyResult.username;
@@ -600,6 +657,7 @@ async function confirmIdentityAndPunch() {
             username: matchedUsername,
             method: 'CAMERA',
             device_id: 'KIOSK-CAM-01',
+            face_embedding: lastVerifyResult.embedding || null,
             image_b64: lastCapturedImageB64,
             remarks: 'Verified via ONNX FaceNet512 Split-Window'
         };
@@ -611,7 +669,7 @@ async function confirmIdentityAndPunch() {
         });
         const data = await res.json();
 
-        if (data.success) {
+        if (res.ok && data.success) {
             addTerminalLog(`Attendance recorded: ${data.username} (${data.login_type}) at ${data.timestamp}`, 'SUCCESS');
             let stats = { total_lates: 0, total_late_absents: 0, total_early_leaves: 0 };
             try {
@@ -619,21 +677,19 @@ async function confirmIdentityAndPunch() {
                 if (stRes.ok) stats = await stRes.json();
             } catch (_) {}
 
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             updateAttendanceCards({
                 username: data.username,
                 record_time: data.timestamp,
                 login_type: data.login_type,
-                attendance_type: data.message && data.message.includes('LATE') ? 'Late' : 'On Time',
-                date: dateStr,
+                attendance_type: data.shift_status || 'On Time',
+                date: data.date,
                 method: 'Camera',
                 lates: String(stats.total_lates || 0),
                 late_absents: String(stats.total_late_absents || 0),
                 early_leaves: String(stats.total_early_leaves || 0)
             });
         } else {
-            alert('❌ Attendance punch failed: ' + (data.error || data.message || 'Unknown error'));
+            addTerminalLog('Attendance punch failed: ' + (data.error || data.message || 'Unknown error'), 'ERROR');
         }
     } catch (e) {
         addTerminalLog('Error recording camera attendance: ' + e.message, 'ERROR');
@@ -641,11 +697,13 @@ async function confirmIdentityAndPunch() {
 }
 
 // ============================================================================
-// 2. IN & OUT WITHOUT CAMERA (attendance_v8.py line 8295 Parity)
+// 2. IN & OUT WITHOUT CAMERA + INTERACTIVE FORGOT PASSWORD (CAP-19)
 // ============================================================================
 function openNoCameraLogin() {
+    const errEl = document.getElementById('no-cam-error');
+    if (errEl) errEl.style.display = 'none';
     document.getElementById('modal-no-camera').style.display = 'flex';
-    document.getElementById('no-cam-username').focus();
+    document.getElementById('no-cam-username')?.focus();
 }
 
 function closeNoCameraLogin() {
@@ -654,26 +712,83 @@ function closeNoCameraLogin() {
 
 function togglePasswordVisibility() {
     const pw = document.getElementById('no-cam-password');
-    if (pw.type === 'password') pw.type = 'text';
-    else pw.type = 'password';
+    if (!pw) return;
+    pw.type = pw.type === 'password' ? 'text' : 'password';
 }
 
 function showForgotPasswordPopup() {
-    alert(
-        "🔑 Forgot Password - Recovery Instructions\n\n" +
-        "If you have forgotten your attendance password:\n" +
-        "1. Please contact your HR Administrator.\n" +
-        "2. HR can reset or overwrite your user credentials in 'HR Management -> User Registration without Camera' or 'Sync User Data to Local'.\n" +
-        "3. Active Company: " + (activeCompany ? activeCompany.company_name : "Smart Attendance HQ")
-    );
+    let resetBox = document.getElementById('no-cam-reset-box');
+    if (!resetBox) {
+        const parent = document.getElementById('btn-no-cam-login')?.parentElement;
+        if (!parent) return;
+        resetBox = document.createElement('div');
+        resetBox.id = 'no-cam-reset-box';
+        resetBox.style.cssText = 'margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #334155;';
+        resetBox.innerHTML = `
+            <div style="font-size: 0.85rem; font-weight: 700; color: #a29bfe; margin-bottom: 0.5rem;">🔑 Reset Forgotten Password</div>
+            <input type="text" id="fp-username" class="form-input" style="margin-bottom: 0.5rem; padding: 0.55rem;" placeholder="Username (e.g. JOLIE)">
+            <input type="password" id="fp-hr-verify" class="form-input" style="margin-bottom: 0.5rem; padding: 0.55rem;" placeholder="HR Password or Registered Android ID">
+            <input type="password" id="fp-new-password" class="form-input" style="margin-bottom: 0.5rem; padding: 0.55rem;" placeholder="New Password (min 3 chars)">
+            <div id="fp-status-msg" style="font-size: 0.8rem; margin-bottom: 0.5rem;"></div>
+            <button type="button" class="btn-primary-action" style="background: #00b894; color: #fff; padding: 0.6rem;" onclick="submitForgotPasswordReset()">Reset Password</button>
+        `;
+        parent.appendChild(resetBox);
+    } else {
+        resetBox.style.display = resetBox.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+async function submitForgotPasswordReset() {
+    const username = (document.getElementById('fp-username')?.value || document.getElementById('no-cam-username')?.value || '').trim();
+    const hr_password = (document.getElementById('fp-hr-verify')?.value || '').trim();
+    const new_password = (document.getElementById('fp-new-password')?.value || '').trim();
+    const stEl = document.getElementById('fp-status-msg');
+
+    if (!username || !hr_password || !new_password) {
+        if (stEl) {
+            stEl.style.color = '#ff7675';
+            stEl.innerText = 'All fields are required to reset password.';
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/v1/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, hr_password, new_password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (stEl) {
+                stEl.style.color = '#00b894';
+                stEl.innerText = data.message || 'Password reset successfully!';
+            }
+            addTerminalLog(`Password reset completed for user ${username.toUpperCase()}`, 'AUTH');
+        } else {
+            if (stEl) {
+                stEl.style.color = '#ff7675';
+                stEl.innerText = data.error || data.message || 'Password reset failed';
+            }
+        }
+    } catch (e) {
+        if (stEl) {
+            stEl.style.color = '#ff7675';
+            stEl.innerText = 'Error: ' + e.message;
+        }
+    }
 }
 
 async function submitNoCameraLogin() {
-    const username = document.getElementById('no-cam-username').value.trim();
-    const password = document.getElementById('no-cam-password').value;
+    const username = (document.getElementById('no-cam-username')?.value || '').trim();
+    const password = document.getElementById('no-cam-password')?.value || '';
+    const errEl = document.getElementById('no-cam-error');
 
     if (!username || !password) {
-        alert('Please enter both Username and Password!');
+        if (errEl) {
+            errEl.style.display = 'block';
+            errEl.innerText = 'Please enter both Username and Password!';
+        }
         return;
     }
 
@@ -699,6 +814,7 @@ async function submitNoCameraLogin() {
             closeNoCameraLogin();
             document.getElementById('no-cam-username').value = '';
             document.getElementById('no-cam-password').value = '';
+            if (errEl) errEl.style.display = 'none';
 
             addTerminalLog(`Login successful: ${data.username} (${data.login_type}) recorded`, 'SUCCESS');
 
@@ -708,21 +824,22 @@ async function submitNoCameraLogin() {
                 if (stRes.ok) stats = await stRes.json();
             } catch (_) {}
 
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             updateAttendanceCards({
                 username: data.username,
                 record_time: data.timestamp,
                 login_type: data.login_type,
-                attendance_type: 'On Time',
-                date: dateStr,
+                attendance_type: data.shift_status || 'On Time',
+                date: data.date,
                 method: 'Without Camera',
                 lates: String(stats.total_lates || 0),
                 late_absents: String(stats.total_late_absents || 0),
                 early_leaves: String(stats.total_early_leaves || 0)
             });
         } else {
-            alert('❌ Login failed: ' + (data.error || data.message || 'Invalid username or password'));
+            if (errEl) {
+                errEl.style.display = 'block';
+                errEl.innerText = data.error || data.message || 'Invalid username or password';
+            }
             addTerminalLog(`No-camera login failed for ${username}: ${data.error || 'Invalid credentials'}`, 'ERROR');
         }
     } catch (e) {
@@ -735,36 +852,40 @@ async function submitNoCameraLogin() {
 // ============================================================================
 async function openQrLogin() {
     document.getElementById('modal-qr').style.display = 'flex';
-    const svgBox = document.getElementById('qr-svg-container');
-    const urlText = document.getElementById('qr-session-url-text');
+    const svgBox = document.getElementById('qr-login-box');
+    const statusText = document.getElementById('qr-session-status');
 
     try {
         const res = await fetch('/api/v1/devices/session', { method: 'POST' });
         const data = await res.json();
-        const fullUrl = window.location.origin + data.qr_url;
-        if (urlText) {
-            urlText.innerHTML = `<a href="${fullUrl}" target="_blank" style="color: #74b9ff;">${fullUrl}</a>`;
-        }
+        const sessionPath = `/receive_android_id?session=${encodeURIComponent(data.session_id)}`;
+        const fullUrl = window.location.origin + sessionPath;
         if (svgBox) {
             svgBox.innerHTML = generateSimpleQrSvg(fullUrl);
+        }
+        if (statusText) {
+            statusText.innerHTML = `Session <strong>${data.session_id}</strong> — Waiting for mobile scan...`;
         }
         addTerminalLog(`QR Session created: ${data.session_id}`, 'QR');
 
         if (qrPollTimer) clearInterval(qrPollTimer);
         qrPollTimer = setInterval(async () => {
             try {
-                const pollRes = await fetch(`/api/v1/devices/session/${data.session_id}`);
+                const pollRes = await fetch(`/api/v1/devices/session/${encodeURIComponent(data.session_id)}`);
                 const pollData = await pollRes.json();
-                if (pollData.status === 'COMPLETED' && pollData.android_id) {
+                const aid = pollData.registered_android_id || pollData.android_id;
+                if ((pollData.session_status === 'CONNECTED' || pollData.status === 'COMPLETED') && aid) {
                     clearInterval(qrPollTimer);
                     qrPollTimer = null;
-                    document.getElementById('qr-device-id').value = pollData.android_id;
-                    submitQrLogin();
+                    document.getElementById('qr-device-id').value = aid;
+                    closeQrLogin();
+                    await loadLastAttendanceData();
+                    addTerminalLog(`QR mobile scan completed for Android ID: ${aid}`, 'QR');
                 }
             } catch (_) {}
         }, 2000);
     } catch (e) {
-        if (urlText) urlText.innerText = 'Ready for Android ID input';
+        if (statusText) statusText.innerText = 'Ready for Android ID input';
     }
 }
 
@@ -777,7 +898,6 @@ function closeQrLogin() {
 }
 
 function generateSimpleQrSvg(text) {
-    // Deterministic 21x21 QR-like visual matrix for the session URL
     const size = 21;
     let hash = 2166136261;
     for (let i = 0; i < text.length; i++) {
@@ -811,9 +931,10 @@ function generateSimpleQrSvg(text) {
 }
 
 async function submitQrLogin() {
-    const deviceId = document.getElementById('qr-device-id').value.trim();
+    const deviceId = (document.getElementById('qr-device-id')?.value || '').trim();
+    const statusText = document.getElementById('qr-session-status');
     if (!deviceId) {
-        alert('Please scan QR code or enter Android Device ID!');
+        if (statusText) statusText.innerText = 'Please scan QR code or enter Android Device ID!';
         return;
     }
     addTerminalLog(`QR Code / AndroidID received: ${deviceId}`, 'QR');
@@ -844,21 +965,22 @@ async function submitQrLogin() {
                 if (stRes.ok) stats = await stRes.json();
             } catch (_) {}
 
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             updateAttendanceCards({
                 username: data.username,
                 record_time: data.timestamp,
                 login_type: data.login_type,
-                attendance_type: 'On Time',
-                date: dateStr,
+                attendance_type: data.shift_status || 'On Time',
+                date: data.date,
                 method: 'QR Code',
                 lates: String(stats.total_lates || 0),
                 late_absents: String(stats.total_late_absents || 0),
                 early_leaves: String(stats.total_early_leaves || 0)
             });
         } else {
-            alert('❌ QR Login Failed: ' + (data.error || data.message || 'Unregistered Android ID'));
+            if (statusText) {
+                statusText.style.color = '#ff7675';
+                statusText.innerText = data.error || data.message || 'Unregistered Android ID';
+            }
         }
     } catch (e) {
         addTerminalLog('QR Error: ' + e.message, 'ERROR');
@@ -870,9 +992,6 @@ async function submitQrLogin() {
 // ============================================================================
 async function openSevenDayHistory() {
     document.getElementById('modal-seven-days').style.display = 'flex';
-    const now = new Date();
-    document.getElementById('history-header-date').innerText = `Generated on: ${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}${currentDisplayedUser ? ' | User: ' + currentDisplayedUser.toUpperCase() : ''}`;
-
     const tbody = document.getElementById('seven-day-tbody');
     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 1rem; color: #666;">Loading 7-day history...</td></tr>';
 
@@ -880,19 +999,25 @@ async function openSevenDayHistory() {
         const q = currentDisplayedUser ? `?username=${encodeURIComponent(currentDisplayedUser)}` : '';
         const res = await fetch(`/api/v1/attendance/history-7days${q}`);
         const data = await res.json();
-        const rows = [];
+        const list = Array.isArray(data) ? data : (data.history || data.records || []);
 
-        for (let i = 0; i < data.length; i++) {
-            const rec = data[i];
+        const titleEl = document.getElementById('history-header-title');
+        const dateEl = document.getElementById('history-header-date');
+        if (titleEl && data.title) titleEl.innerText = data.title;
+        if (dateEl) dateEl.innerText = `Generated on: ${data.generated_on || new Date().toLocaleDateString('en-GB')}`;
+
+        const rows = [];
+        for (let i = 0; i < list.length; i++) {
+            const rec = list[i];
             const isToday = i === 0;
             const inTime = rec.in_time || '---';
             const outTime = rec.out_time || '---';
             const duration = rec.duration || '---';
-            const bg = (inTime !== '---' && outTime !== '---') ? '#e8f5e9' : (inTime !== '---' ? '#fff3e0' : (i % 2 === 0 ? '#f8f9fa' : 'white'));
+            const bg = rec.status_color || ((inTime !== '---' && outTime !== '---') ? '#e8f5e9' : (inTime !== '---' ? '#fff3e0' : (i % 2 === 0 ? '#f8f9fa' : 'white')));
 
             rows.push(`
                 <tr style="background: ${bg}; border-bottom: 1px solid #e0e0e0;">
-                    <td style="padding: 10px 15px; color: ${isToday ? '#1976d2' : '#333'}; font-weight: ${isToday ? 'bold' : 'normal'};">${rec.date}${isToday ? ' (Today)' : ''}</td>
+                    <td style="padding: 10px 15px; color: ${isToday ? '#1976d2' : '#333'}; font-weight: ${isToday ? 'bold' : 'normal'};">${rec.date}</td>
                     <td style="padding: 10px 15px; font-family: monospace;">${inTime}</td>
                     <td style="padding: 10px 15px; font-family: monospace;">${outTime}</td>
                     <td style="padding: 10px 15px; font-family: monospace;">${duration}</td>
@@ -915,15 +1040,18 @@ function closeSevenDayHistory() {
 // ============================================================================
 function openHrManagement() {
     if (!activeCompany || !activeCompany.company_id) {
-        alert('Please select or create a company first!');
         openCompanyManagement();
         return;
     }
-    document.getElementById('hr-auth-company-label').innerText = `🏢 Active Company: ${activeCompany.company_name} (${activeCompany.company_id})`;
-    document.getElementById('hr-admin-pin').value = '';
+    const label = document.getElementById('hr-auth-company-label');
+    if (label) label.innerText = `${activeCompany.company_name} (${activeCompany.company_id})`;
+    const pinEl = document.getElementById('hr-admin-pin');
+    if (pinEl) pinEl.value = '';
+    const stEl = document.getElementById('hr-auth-status');
+    if (stEl) stEl.innerText = '';
     toggleHrChangePasswordView(false);
     document.getElementById('modal-hr-auth').style.display = 'flex';
-    document.getElementById('hr-admin-pin').focus();
+    pinEl?.focus();
 }
 
 function closeHrAuthModal() {
@@ -931,19 +1059,27 @@ function closeHrAuthModal() {
 }
 
 function toggleHrChangePasswordView(show) {
-    document.getElementById('hr-login-view').style.display = show ? 'none' : 'block';
-    document.getElementById('hr-change-pw-view').style.display = show ? 'block' : 'none';
+    const loginView = document.getElementById('hr-auth-login-view');
+    const changeView = document.getElementById('hr-auth-change-view');
+    if (loginView) loginView.style.display = show ? 'none' : 'block';
+    if (changeView) changeView.style.display = show ? 'block' : 'none';
     if (show) {
-        document.getElementById('hr-cp-current').value = '';
-        document.getElementById('hr-cp-new').value = '';
-        document.getElementById('hr-cp-confirm').value = '';
+        const sub = document.getElementById('hr-change-comp-sub');
+        if (sub && activeCompany) sub.innerText = `Company: ${activeCompany.company_name}`;
+        ['hr-cp-current', 'hr-cp-new', 'hr-cp-confirm'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const st = document.getElementById('hr-cp-status');
+        if (st) st.innerText = '';
     }
 }
 
 async function unlockHrManagement() {
-    const password = document.getElementById('hr-admin-pin').value;
+    const password = document.getElementById('hr-admin-pin')?.value || '';
+    const stEl = document.getElementById('hr-auth-status');
     if (!password) {
-        alert('Please enter HR Password (default: HR@123)');
+        if (stEl) stEl.innerText = 'Please enter HR Password (default: HR@123)';
         return;
     }
     try {
@@ -951,35 +1087,36 @@ async function unlockHrManagement() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                company_id: activeCompany.company_id,
+                company_uuid: activeCompany.company_id,
                 password: password
             })
         });
         const data = await res.json();
-        if (data.authenticated) {
+        if (res.ok && data.authenticated) {
             closeHrAuthModal();
             document.getElementById('modal-hr').style.display = 'flex';
             backToHrMainMenu();
             addTerminalLog(`HR Management unlocked for company ${activeCompany.company_name}`, 'AUTH');
         } else {
-            alert('❌ ' + (data.message || 'Invalid HR Password! Default password is HR@123'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Invalid HR Password!';
         }
     } catch (e) {
-        alert('Error verifying HR password: ' + e.message);
+        if (stEl) stEl.innerText = 'Error verifying HR password: ' + e.message;
     }
 }
 
 async function submitChangeHrPassword() {
-    const current_password = document.getElementById('hr-cp-current').value;
-    const new_password = document.getElementById('hr-cp-new').value;
-    const confirm_password = document.getElementById('hr-cp-confirm').value;
+    const current_password = document.getElementById('hr-cp-current')?.value || '';
+    const new_password = document.getElementById('hr-cp-new')?.value || '';
+    const confirm_password = document.getElementById('hr-cp-confirm')?.value || '';
+    const stEl = document.getElementById('hr-cp-status');
 
     if (!current_password || !new_password || !confirm_password) {
-        alert('All password fields are required!');
+        if (stEl) stEl.innerText = 'All password fields are required!';
         return;
     }
     if (new_password !== confirm_password) {
-        alert('New password and confirm password do not match!');
+        if (stEl) stEl.innerText = 'New password and confirm password do not match!';
         return;
     }
 
@@ -988,36 +1125,50 @@ async function submitChangeHrPassword() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                company_id: activeCompany.company_id,
+                company_uuid: activeCompany.company_id,
                 company_name: activeCompany.company_name,
                 current_password,
-                new_password,
-                confirm_password
+                new_password
             })
         });
         const data = await res.json();
-        if (data.success) {
-            alert('✅ ' + data.message);
+        if (res.ok && data.success) {
             toggleHrChangePasswordView(false);
+            const authSt = document.getElementById('hr-auth-status');
+            if (authSt) {
+                authSt.style.color = '#00b894';
+                authSt.innerText = data.message || 'HR password changed successfully!';
+            }
             addTerminalLog('HR password changed successfully', 'AUTH');
         } else {
-            alert('❌ ' + (data.message || 'Failed to change HR password'));
+            if (stEl) stEl.innerText = data.error || data.message || 'Failed to change HR password';
         }
     } catch (e) {
-        alert('Error changing HR password: ' + e.message);
+        if (stEl) stEl.innerText = 'Error changing HR password: ' + e.message;
     }
 }
 
 function closeHrManagement() {
     stopHrRegCamera();
+    if (hrQrPollTimer) {
+        clearInterval(hrQrPollTimer);
+        hrQrPollTimer = null;
+    }
     document.getElementById('modal-hr').style.display = 'none';
 }
 
 function backToHrMainMenu() {
     stopHrRegCamera();
-    document.getElementById('hr-main-menu-grid').style.display = 'grid';
-    document.getElementById('hr-action-workspace').style.display = 'none';
-    document.getElementById('hr-workspace-content').innerHTML = '';
+    if (hrQrPollTimer) {
+        clearInterval(hrQrPollTimer);
+        hrQrPollTimer = null;
+    }
+    const grid = document.getElementById('hr-main-menu-grid');
+    const ws = document.getElementById('hr-action-workspace');
+    const body = document.getElementById('hr-workspace-body');
+    if (grid) grid.style.display = 'block';
+    if (ws) ws.style.display = 'none';
+    if (body) body.innerHTML = '';
 }
 
 function stopHrRegCamera() {
@@ -1028,21 +1179,59 @@ function stopHrRegCamera() {
 }
 
 // ============================================================================
-// 6. ALL 12 HR MANAGEMENT ACTIONS (attendance_v8.py lines 6076-6160 Parity)
+// 6. ALL 12 HR MANAGEMENT ACTIONS + USERS LIST
 // ============================================================================
 let regCapturedFrames = [];
 let regCurrentPoseIdx = 0;
 
 async function openHrAction(action) {
-    document.getElementById('hr-main-menu-grid').style.display = 'none';
-    document.getElementById('hr-action-workspace').style.display = 'block';
-    const box = document.getElementById('hr-workspace-content');
+    const grid = document.getElementById('hr-main-menu-grid');
+    const ws = document.getElementById('hr-action-workspace');
+    const box = document.getElementById('hr-workspace-body');
+    const titleEl = document.getElementById('hr-workspace-title');
+    if (grid) grid.style.display = 'none';
+    if (ws) ws.style.display = 'block';
+    if (!box) return;
 
-    if (action === 'reg-camera') {
+    if (action === 'users-list') {
+        if (titleEl) titleEl.innerText = '👥 Registered Users';
+        box.innerHTML = `<p style="color:#ccc;">Loading registered users...</p>`;
+        const res = await fetch('/api/v1/users');
+        const users = await res.json();
+        const list = Array.isArray(users) ? users : [];
+        box.innerHTML = `
+            <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                <table class="attendance-table" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); text-align:left;">
+                            <th style="padding:8px;">Username</th>
+                            <th style="padding:8px;">Designation</th>
+                            <th style="padding:8px;">Camera</th>
+                            <th style="padding:8px;">Android ID</th>
+                            <th style="padding:8px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${list.map(u => `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                <td style="padding:8px;"><strong>${u.username}</strong></td>
+                                <td style="padding:8px;">${u.user_designation || 'Employee'}</td>
+                                <td style="padding:8px;">${u.register_with_camera || 'N'}</td>
+                                <td style="padding:8px;">${u.user_android_id || '---'}</td>
+                                <td style="padding:8px;">
+                                    <button onclick="deleteUserAccount('${u.username}')" style="background:#e74c3c;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else if (action === 'reg-camera') {
+        if (titleEl) titleEl.innerText = '📷 1. User Registration with Camera (20-Pose ONNX FaceNet512)';
         regCapturedFrames = [];
         regCurrentPoseIdx = 0;
         box.innerHTML = `
-            <h3 style="color: #2ecc71; margin-bottom: 0.75rem;">👤 User Registration with Camera (20-Pose ONNX FaceNet512)</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
                 <div>
                     <label style="font-size: 0.85rem; color: #ccc;">Username (Full Name / ID):</label>
@@ -1066,6 +1255,7 @@ async function openHrAction(action) {
                         <button class="btn-primary-action" style="flex: 1; background: #2ecc71; color: #fff;" onclick="captureSingleRegPose()">📸 Capture Pose</button>
                         <button class="btn-primary-action" style="flex: 1; background: #3498db; color: #fff;" onclick="runAuto20PoseCapture()">⚡ Auto Capture All 20 Poses</button>
                     </div>
+                    <div id="reg-cam-result-msg" style="font-size: 0.85rem; margin-top: 0.5rem;"></div>
                     <button id="btn-finish-cam-reg" class="btn-primary-action" style="margin-top: 0.75rem; background: #9b59b6; color: #fff;" onclick="submitCameraRegistration()">✅ Complete ONNX Face Registration</button>
                 </div>
                 <div>
@@ -1083,12 +1273,12 @@ async function openHrAction(action) {
             if (v) v.srcObject = hrRegCameraStream;
             document.getElementById('hr-reg-cam-msg').innerText = 'Webcam Live — Follow the 20 pose instructions';
         } catch (e) {
-            document.getElementById('hr-reg-cam-msg').innerText = 'No physical webcam — Synthetic/Canvas 20-Pose ONNX generator active';
+            document.getElementById('hr-reg-cam-msg').innerText = 'Webcam unavailable — Ready for frame capture';
             document.getElementById('hr-reg-cam-msg').style.color = '#fdcb6e';
         }
     } else if (action === 'reg-no-camera') {
+        if (titleEl) titleEl.innerText = '👤 2. User Registration without Camera';
         box.innerHTML = `
-            <h3 style="color: #3498db; margin-bottom: 1rem;">📝 User Registration without Camera</h3>
             <div style="max-width: 480px;">
                 <label style="font-size: 0.85rem; color: #ccc;">Username:</label>
                 <input type="text" id="reg-nocam-username" class="form-input" placeholder="Enter Username">
@@ -1096,46 +1286,78 @@ async function openHrAction(action) {
                 <input type="text" id="reg-nocam-desig" class="form-input" placeholder="Enter Designation">
                 <label style="font-size: 0.85rem; color: #ccc;">Password:</label>
                 <input type="password" id="reg-nocam-password" class="form-input" placeholder="Enter Password">
+                <div id="reg-nocam-status" style="font-size: 0.85rem; margin-bottom: 0.5rem;"></div>
                 <button class="btn-primary-action" style="background: #3498db; color: white; margin-top: 0.5rem;" onclick="submitNoCameraRegistration()">✅ Register User (Without Camera)</button>
             </div>
         `;
     } else if (action === 'reg-qr') {
+        if (titleEl) titleEl.innerText = '📲 11. User Registration with QR Code';
         box.innerHTML = `
-            <h3 style="color: #34495e; color: #74b9ff; margin-bottom: 1rem;">📱 User Registration with QR Code</h3>
-            <div style="max-width: 520px;">
-                <label style="font-size: 0.85rem; color: #ccc;">Username:</label>
-                <input type="text" id="reg-qr-username" class="form-input" placeholder="Enter Username">
-                <label style="font-size: 0.85rem; color: #ccc;">Designation:</label>
-                <input type="text" id="reg-qr-desig" class="form-input" placeholder="Enter Designation">
-                <label style="font-size: 0.85rem; color: #ccc;">Password:</label>
-                <input type="password" id="reg-qr-password" class="form-input" placeholder="Enter Password">
-                <label style="font-size: 0.85rem; color: #ccc;">Android Device ID (from QR Scan):</label>
-                <input type="text" id="reg-qr-android-id" class="form-input" placeholder="e.g. ANDROID_DEV_991">
-                <button class="btn-primary-action" style="background: #27ae60; color: white; margin-top: 0.5rem;" onclick="submitQrRegistration()">✅ Register User with QR Device ID</button>
+            <div style="display: grid; grid-template-columns: 1fr 220px; gap: 1.25rem; align-items: start;">
+                <div>
+                    <label style="font-size: 0.85rem; color: #ccc;">Username:</label>
+                    <input type="text" id="reg-qr-username" class="form-input" placeholder="Enter Username">
+                    <label style="font-size: 0.85rem; color: #ccc;">Designation:</label>
+                    <input type="text" id="reg-qr-desig" class="form-input" placeholder="Enter Designation">
+                    <label style="font-size: 0.85rem; color: #ccc;">Password:</label>
+                    <input type="password" id="reg-qr-password" class="form-input" placeholder="Enter Password">
+                    <label style="font-size: 0.85rem; color: #ccc;">Android Device ID (from QR Scan):</label>
+                    <input type="text" id="reg-qr-android-id" class="form-input" placeholder="Scan QR or enter Android ID">
+                    <div id="reg-qr-status" style="font-size: 0.85rem; margin-bottom: 0.5rem;"></div>
+                    <button class="btn-primary-action" style="background: #27ae60; color: white; margin-top: 0.5rem;" onclick="submitQrRegistration()">✅ Register User with QR Device ID</button>
+                </div>
+                <div style="text-align: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 10px;">
+                    <div id="hr-reg-qr-svg" style="display: inline-block; background: #fff; padding: 8px; border-radius: 8px;"></div>
+                    <div id="hr-reg-qr-session-text" style="font-size: 0.78rem; color: #00d2d3; margin-top: 0.5rem;">Generating QR session...</div>
+                </div>
             </div>
         `;
+        try {
+            const sRes = await fetch('/api/v1/devices/session', { method: 'POST' });
+            const sData = await sRes.json();
+            const qrUrl = `${window.location.origin}/receive_android_id?session=${encodeURIComponent(sData.session_id)}`;
+            const svgEl = document.getElementById('hr-reg-qr-svg');
+            const txtEl = document.getElementById('hr-reg-qr-session-text');
+            if (svgEl) svgEl.innerHTML = generateSimpleQrSvg(qrUrl);
+            if (txtEl) txtEl.innerText = `Session: ${sData.session_id} (Scan with mobile)`;
+            if (hrQrPollTimer) clearInterval(hrQrPollTimer);
+            hrQrPollTimer = setInterval(async () => {
+                try {
+                    const pRes = await fetch(`/api/v1/devices/session/${encodeURIComponent(sData.session_id)}`);
+                    const pData = await pRes.json();
+                    const aid = pData.registered_android_id || pData.android_id;
+                    if (aid) {
+                        clearInterval(hrQrPollTimer);
+                        hrQrPollTimer = null;
+                        const inputEl = document.getElementById('reg-qr-android-id');
+                        if (inputEl) inputEl.value = aid;
+                        if (txtEl) txtEl.innerText = `✅ Scanned: ${aid}`;
+                    }
+                } catch (_) {}
+            }, 2000);
+        } catch (_) {}
     } else if (action === 'att-report') {
+        if (titleEl) titleEl.innerText = '📊 3. Customized Attendance Report';
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         box.innerHTML = `
-            <h3 style="color: #9b59b6; margin-bottom: 1rem;">📊 Customized Attendance Report (attendance_v8.py Parity)</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 680px;">
                 <div>
-                    <label style="font-size: 0.8rem; color: #ccc;">Username (ALL or specific):</label>
-                    <input type="text" id="rep-username" class="form-input" value="ALL">
+                    <label style="font-size: 0.8rem; color: #ccc;">Username (All Users or specific):</label>
+                    <input type="text" id="rep-username" class="form-input" value="All Users">
                 </div>
                 <div>
-                    <label style="font-size: 0.8rem; color: #ccc;">Year-Month (for Muster Roll):</label>
+                    <label style="font-size: 0.8rem; color: #ccc;">Year-Month (YYYY-MM):</label>
                     <input type="text" id="rep-month" class="form-input" value="${yyyy}-${mm}">
                 </div>
                 <div>
-                    <label style="font-size: 0.8rem; color: #ccc;">From Date (YYYY-MM-DD):</label>
-                    <input type="text" id="rep-from-date" class="form-input" value="${yyyy}-${mm}-01">
+                    <label style="font-size: 0.8rem; color: #ccc;">From Day (1-31):</label>
+                    <input type="number" id="rep-from-date" class="form-input" value="1" min="1" max="31">
                 </div>
                 <div>
-                    <label style="font-size: 0.8rem; color: #ccc;">To Date (YYYY-MM-DD):</label>
-                    <input type="text" id="rep-to-date" class="form-input" value="${yyyy}-${mm}-31">
+                    <label style="font-size: 0.8rem; color: #ccc;">To Day (1-31):</label>
+                    <input type="number" id="rep-to-date" class="form-input" value="31" min="1" max="31">
                 </div>
                 <div>
                     <label style="font-size: 0.8rem; color: #ccc;">Office In Time (HH:MM:SS):</label>
@@ -1147,31 +1369,30 @@ async function openHrAction(action) {
                 </div>
             </div>
             <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
-                <button class="btn-primary-action" style="width: auto; background: #9b59b6; color: white;" onclick="downloadCustomizedCsvReport()">📥 Download Customized CSV Report</button>
+                <button class="btn-primary-action" style="width: auto; background: #9b59b6; color: white;" onclick="downloadCustomizedCsvReport()">📥 Download Customized CSV</button>
+                <button class="btn-primary-action" style="width: auto; background: #16a085; color: white;" onclick="downloadCustomizedXlsxReport()">📊 Download Customized Excel (.xlsx)</button>
                 <button class="btn-primary-action" style="width: auto; background: #2ecc71; color: white;" onclick="openMusterRollHtmlReport()">📄 Open Monthly Muster Roll (HTML)</button>
             </div>
         `;
     } else if (action === 'sync-local') {
-        box.innerHTML = `<h3 style="color: #e67e22;">🔄 Syncing User Data to Local SQLite...</h3><p style="margin-top:0.5rem;">Please wait...</p>`;
+        if (titleEl) titleEl.innerText = '🔄 4. Sync Users to Local Database';
+        box.innerHTML = `<p style="margin-top:0.5rem;">Syncing user data to local SQLite & FAISS index...</p>`;
         const res = await fetch('/api/v1/sync/users-to-local', { method: 'POST' });
         const data = await res.json();
-        box.innerHTML = `
-            <h3 style="color: #e67e22; margin-bottom: 0.75rem;">🔄 Sync User Data to Local</h3>
-            <pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #2ecc71;">${JSON.stringify(data, null, 2)}</pre>
-        `;
+        box.innerHTML = `<pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #2ecc71;">${JSON.stringify(data, null, 2)}</pre>`;
     } else if (action === 'verify-image') {
-        box.innerHTML = `<h3 style="color: #e74c3c; margin-bottom: 0.75rem;">🕵️ Verify Image (Check Fake Attendance)</h3><p>Loading captured attendance images...</p>`;
+        if (titleEl) titleEl.innerText = '🕵️ 5. Check Fake Attendance (Verify Image)';
+        box.innerHTML = `<p>Loading captured attendance images...</p>`;
         const res = await fetch('/api/v1/reports/verify-images');
         const data = await res.json();
         const records = data.items || (Array.isArray(data) ? data : []);
         if (!records || records.length === 0) {
-            box.innerHTML = `<h3 style="color: #e74c3c;">🕵️ Verify Image (Check Fake Attendance)</h3><p style="margin-top: 0.75rem; color: #ccc;">No attendance records found.</p>`;
+            box.innerHTML = `<p style="margin-top: 0.75rem; color: #ccc;">No attendance records found for this period.</p>`;
             return;
         }
         box.innerHTML = `
-            <h3 style="color: #e74c3c; margin-bottom: 0.75rem;">🕵️ Verify Image (Check Fake Attendance)</h3>
             <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-                <table class="attendance-table">
+                <table class="attendance-table" style="width:100%;">
                     <thead><tr><th>User</th><th>Date</th><th>In Time</th><th>Out Time</th><th>In Photo</th><th>Out Photo</th></tr></thead>
                     <tbody>
                         ${records.map(r => `
@@ -1189,40 +1410,42 @@ async function openHrAction(action) {
             </div>
         `;
     } else if (action === 'upload-model') {
+        if (titleEl) titleEl.innerText = '🧠 6. Upload AI Model (Hot-Reload ONNX)';
         box.innerHTML = `
-            <h3 style="color: #16a085; margin-bottom: 0.75rem;">📤 Upload ONNX Model (facenet512.onnx)</h3>
-            <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1rem;">Upload a custom FaceNet512 ONNX model file to hot-reload or update the biometric engine.</p>
+            <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1rem;">Upload a FaceNet512 or MTCNN ONNX model file (.onnx) to validate and hot-reload in memory.</p>
             <input type="file" id="onnx-model-file" accept=".onnx" class="form-input">
-            <button class="btn-primary-action" style="background: #16a085; color: white; max-width: 300px;" onclick="submitUploadOnnxModel()">📤 Upload Model to Server</button>
+            <button class="btn-primary-action" style="background: #16a085; color: white; max-width: 300px;" onclick="submitUploadOnnxModel()">📤 Upload &amp; Hot-Reload Model</button>
             <div id="upload-model-result" style="margin-top: 1rem;"></div>
         `;
     } else if (action === 'delete-face') {
+        if (titleEl) titleEl.innerText = '🗑️ 7. Delete Face (Reset Encodings)';
         const res = await fetch('/api/v1/face/embeddings-report');
         const report = await res.json();
         const rows = report.report || [];
         const uniqueUsers = [...new Set(rows.map(r => r.Username))];
         box.innerHTML = `
-            <h3 style="color: #c0392b; margin-bottom: 0.75rem;">🗑️ Delete Face Data</h3>
-            <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1rem;">Select a user to delete their biometric face embeddings, or reset all face profiles.</p>
+            <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1rem;">Select a user to delete their biometric face embeddings from both SQLite and RAM index, or reset all profiles.</p>
             <div style="display: flex; gap: 0.75rem; max-width: 520px; margin-bottom: 1rem;">
                 <select id="del-face-user" class="form-input" style="margin-bottom: 0;">
-                    ${uniqueUsers.map(u => `<option value="${u}">${u}</option>`).join('')}
+                    ${uniqueUsers.length > 0 ? uniqueUsers.map(u => `<option value="${u}">${u}</option>`).join('') : '<option value="">No enrolled faces</option>'}
                 </select>
                 <button class="btn-primary-action" style="width: auto; background: #e74c3c; color: white;" onclick="deleteSelectedUserFace()">🗑️ Delete User Face</button>
             </div>
+            <div id="del-face-status" style="font-size: 0.85rem; margin-bottom: 0.75rem;"></div>
             <button class="btn-primary-action" style="width: auto; background: #c0392b; color: white;" onclick="resetAllFaceProfiles()">⚠️ Reset ALL Face Profiles</button>
         `;
     } else if (action === 'embeddings-report') {
+        if (titleEl) titleEl.innerText = '🧬 8. Facial Features Report (512-D ONNX)';
         const res = await fetch('/api/v1/face/embeddings-report');
         const report = await res.json();
         const rows = report.report || [];
         box.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h3 style="color: #2980b9;">📈 ONNX 512-D Face Embeddings Report (Total Embeddings: ${report.total_records || rows.length})</h3>
-                <a href="/api/v1/face/embeddings-report.csv" target="_blank" class="badge badge-success" style="padding: 0.5rem 1rem; text-decoration: none;">📥 Download CSV</a>
+                <span style="color: #74b9ff; font-weight: 700;">Total Indexed Embeddings: ${report.total_records || rows.length}</span>
+                <a href="/api/v1/face/embeddings-report.csv" target="_blank" style="background: #00b894; color: #fff; padding: 0.4rem 0.85rem; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.85rem;">📥 Download CSV</a>
             </div>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                <table class="attendance-table">
+                <table class="attendance-table" style="width:100%;">
                     <thead><tr><th>Username</th><th>Frame</th><th>Dim</th><th>Pos / Neg</th><th>Zeros</th><th>Top 5 Highest Values</th></tr></thead>
                     <tbody>
                         ${rows.map(r => `
@@ -1240,44 +1463,53 @@ async function openHrAction(action) {
             </div>
         `;
     } else if (action === 'sync-cloud') {
-        box.innerHTML = `<h3 style="color: #8e44ad;">☁️ Syncing Local Users to Cloud Outbox...</h3>`;
+        if (titleEl) titleEl.innerText = '☁️ 9. Sync Users to Cloud Database';
+        box.innerHTML = `<p>Syncing local users to cloud outbox...</p>`;
         const res = await fetch('/api/v1/sync/users-to-cloud', { method: 'POST' });
         const data = await res.json();
-        box.innerHTML = `
-            <h3 style="color: #8e44ad; margin-bottom: 0.75rem;">☁️ Sync Local User to Cloud</h3>
-            <pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #a29bfe;">${JSON.stringify(data, null, 2)}</pre>
-        `;
+        box.innerHTML = `<pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #a29bfe;">${JSON.stringify(data, null, 2)}</pre>`;
     } else if (action === 'sync-hr-pw') {
-        box.innerHTML = `<h3 style="color: #2c3e50; color: #74b9ff;">🔑 Syncing HR Password with Cloud...</h3>`;
+        if (titleEl) titleEl.innerText = '🔑 10. Sync HR Password to Local';
+        box.innerHTML = `<p>Syncing HR password for active company...</p>`;
+        const explicitPw = (document.getElementById('hr-admin-pin')?.value || '').trim();
+        const bodyObj = {
+            company_uuid: activeCompany.company_id,
+            company_name: activeCompany.company_name
+        };
+        if (explicitPw) bodyObj.password = explicitPw;
         const res = await fetch('/api/v1/auth/sync-hr-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                company_uuid: activeCompany.company_id,
-                company_name: activeCompany.company_name,
-                password: document.getElementById('hr-admin-pin').value || 'HR@123'
-            })
+            body: JSON.stringify(bodyObj)
         });
         const data = await res.json();
-        box.innerHTML = `
-            <h3 style="color: #74b9ff; margin-bottom: 0.75rem;">🔑 Sync HR Password</h3>
-            <pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #00d2d3;">${JSON.stringify(data, null, 2)}</pre>
-        `;
+        box.innerHTML = `<pre style="background: #10101c; padding: 1rem; border-radius: 8px; color: #00d2d3;">${JSON.stringify(data, null, 2)}</pre>`;
+    }
+}
+
+async function deleteUserAccount(username) {
+    const res = await fetch(`/api/v1/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+    if (res.ok) {
+        addTerminalLog(`Deleted user ${username}`, 'HR');
+        openHrAction('users-list');
     }
 }
 
 async function captureSingleRegPose() {
-    const username = document.getElementById('reg-cam-username').value.trim();
+    const username = (document.getElementById('reg-cam-username')?.value || '').trim();
+    const msgEl = document.getElementById('reg-cam-result-msg');
     if (!username) {
-        alert('Please enter Username first before capturing poses!');
+        if (msgEl) {
+            msgEl.style.color = '#ff7675';
+            msgEl.innerText = 'Please enter Username first before capturing poses!';
+        }
         return;
     }
     if (regCurrentPoseIdx >= 20) {
-        alert('All 20 poses already captured! Click "Complete ONNX Face Registration".');
         return;
     }
     const video = document.getElementById('hr-reg-video');
-    const frameB64 = captureFrameFromVideoElement(video, `${username}_POSE_${regCurrentPoseIdx + 1}`);
+    const frameB64 = captureFrameFromVideoElement(video);
     regCapturedFrames.push(frameB64);
     regCurrentPoseIdx += 1;
 
@@ -1299,44 +1531,33 @@ async function captureSingleRegPose() {
 }
 
 async function runAuto20PoseCapture() {
-    const username = document.getElementById('reg-cam-username').value.trim();
-    if (!username) {
-        alert('Please enter Username first!');
-        return;
-    }
+    const username = (document.getElementById('reg-cam-username')?.value || '').trim();
+    if (!username) return;
     regCapturedFrames = [];
     regCurrentPoseIdx = 0;
     for (let i = 0; i < 20; i++) {
         await captureSingleRegPose();
-        await new Promise(r => setTimeout(r, 120));
+        await new Promise(r => setTimeout(r, 50));
     }
     addTerminalLog(`Captured 20 multi-angle frames for ${username}`, 'CAMERA');
 }
 
 async function submitCameraRegistration() {
-    const username = document.getElementById('reg-cam-username').value.trim();
-    const designation = document.getElementById('reg-cam-desig').value.trim();
-    const password = document.getElementById('reg-cam-password').value;
+    const username = (document.getElementById('reg-cam-username')?.value || '').trim();
+    const designation = (document.getElementById('reg-cam-desig')?.value || '').trim();
+    const password = document.getElementById('reg-cam-password')?.value || '';
+    const msgEl = document.getElementById('reg-cam-result-msg');
 
     if (!username || !designation || !password) {
-        alert('Username, Designation, and Password are required!');
+        if (msgEl) {
+            msgEl.style.color = '#ff7675';
+            msgEl.innerText = 'Username, Designation, and Password are required!';
+        }
         return;
     }
     if (regCapturedFrames.length === 0) {
         await runAuto20PoseCapture();
     }
-
-    let overwrite = false;
-    try {
-        const chk = await fetch(`/api/v1/users/check/${encodeURIComponent(username)}`);
-        const chkData = await chk.json();
-        if (chkData.exists) {
-            if (!confirm(`User "${username}" already exists (${chkData.designation}). Do you want to overwrite their face & profile?`)) {
-                return;
-            }
-            overwrite = true;
-        }
-    } catch (_) {}
 
     try {
         const res = await fetch('/api/v1/users', {
@@ -1346,116 +1567,135 @@ async function submitCameraRegistration() {
                 username,
                 designation,
                 password,
+                company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
                 images_b64: regCapturedFrames,
-                image_b64: regCapturedFrames[0],
-                overwrite_existing: overwrite
+                overwrite_existing: true
             })
         });
         const data = await res.json();
         if (res.ok && (data.success || data.id)) {
-            addTerminalLog(`User ${username} registered with ${regCapturedFrames.length} ONNX FaceNet512 poses`, 'SUCCESS');
-            alert(`✅ User "${username}" registered successfully with ${regCapturedFrames.length} ONNX 512-D face embeddings!`);
+            addTerminalLog(`User ${username} registered with ${data.enrolled_poses || regCapturedFrames.length} ONNX FaceNet512 poses`, 'SUCCESS');
             backToHrMainMenu();
         } else {
-            alert('❌ Registration failed: ' + (data.error || data.message || 'Duplicate face or user'));
+            if (msgEl) {
+                msgEl.style.color = '#ff7675';
+                msgEl.innerText = data.error || data.message || 'Registration failed';
+            }
         }
     } catch (e) {
-        alert('Error registering user: ' + e.message);
+        if (msgEl) {
+            msgEl.style.color = '#ff7675';
+            msgEl.innerText = 'Error registering user: ' + e.message;
+        }
     }
 }
 
 async function submitNoCameraRegistration() {
-    const username = document.getElementById('reg-nocam-username').value.trim();
-    const designation = document.getElementById('reg-nocam-desig').value.trim();
-    const password = document.getElementById('reg-nocam-password').value;
+    const username = (document.getElementById('reg-nocam-username')?.value || '').trim();
+    const designation = (document.getElementById('reg-nocam-desig')?.value || '').trim();
+    const password = document.getElementById('reg-nocam-password')?.value || '';
+    const stEl = document.getElementById('reg-nocam-status');
 
     if (!username || !designation || !password) {
-        alert('All fields (Username, Designation, Password) are required!');
+        if (stEl) {
+            stEl.style.color = '#ff7675';
+            stEl.innerText = 'All fields (Username, Designation, Password) are required!';
+        }
         return;
     }
-
-    let overwrite = false;
-    try {
-        const chk = await fetch(`/api/v1/users/check/${encodeURIComponent(username)}`);
-        const chkData = await chk.json();
-        if (chkData.exists) {
-            if (!confirm(`User "${username}" already exists. Overwrite existing user?`)) return;
-            overwrite = true;
-        }
-    } catch (_) {}
 
     const res = await fetch('/api/v1/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, designation, password, overwrite_existing: overwrite })
+        body: JSON.stringify({
+            username,
+            designation,
+            password,
+            company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
+            overwrite_existing: true
+        })
     });
     const data = await res.json();
     if (res.ok && (data.success || data.id)) {
-        addTerminalLog(`User ${username} registered (Without Camera - 512 zero vector)`, 'SUCCESS');
-        alert(`✅ User "${username}" registered successfully without camera!`);
+        addTerminalLog(`User ${username} registered (Without Camera)`, 'SUCCESS');
         backToHrMainMenu();
-    } else {
-        alert('❌ Failed: ' + (data.error || 'Error'));
+    } else if (stEl) {
+        stEl.style.color = '#ff7675';
+        stEl.innerText = data.error || data.message || 'Registration failed';
     }
 }
 
 async function submitQrRegistration() {
-    const username = document.getElementById('reg-qr-username').value.trim();
-    const designation = document.getElementById('reg-qr-desig').value.trim();
-    const password = document.getElementById('reg-qr-password').value;
-    const user_android_id = document.getElementById('reg-qr-android-id').value.trim();
+    const username = (document.getElementById('reg-qr-username')?.value || '').trim();
+    const designation = (document.getElementById('reg-qr-desig')?.value || '').trim();
+    const password = document.getElementById('reg-qr-password')?.value || '';
+    const user_android_id = (document.getElementById('reg-qr-android-id')?.value || '').trim();
+    const stEl = document.getElementById('reg-qr-status');
 
     if (!username || !designation || !password || !user_android_id) {
-        alert('All fields including Android Device ID are required!');
+        if (stEl) {
+            stEl.style.color = '#ff7675';
+            stEl.innerText = 'All fields including Android Device ID are required!';
+        }
         return;
     }
-
-    let overwrite = false;
-    try {
-        const devChk = await fetch(`/api/v1/users/check-device/${encodeURIComponent(user_android_id)}`);
-        const devData = await devChk.json();
-        if (devData.exists && devData.username.toLowerCase() !== username.toLowerCase()) {
-            if (!confirm(`Android Device "${user_android_id}" is already registered to "${devData.username}". Reassign to "${username}"?`)) {
-                return;
-            }
-            overwrite = true;
-        }
-    } catch (_) {}
 
     const res = await fetch('/api/v1/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, designation, password, user_android_id, overwrite_existing: overwrite })
+        body: JSON.stringify({
+            username,
+            designation,
+            password,
+            user_android_id,
+            company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
+            overwrite_existing: true
+        })
     });
     const data = await res.json();
     if (res.ok && (data.success || data.id)) {
         addTerminalLog(`User ${username} registered with QR Android ID: ${user_android_id}`, 'SUCCESS');
-        alert(`✅ User "${username}" registered with QR Code (Device: ${user_android_id})!`);
         backToHrMainMenu();
-    } else {
-        alert('❌ Failed: ' + (data.error || 'Error'));
+    } else if (stEl) {
+        stEl.style.color = '#ff7675';
+        stEl.innerText = data.error || data.message || 'Registration failed';
     }
 }
 
+function buildReportQueryString() {
+    const username = (document.getElementById('rep-username')?.value || 'All Users').trim();
+    const ym = (document.getElementById('rep-month')?.value || '2026-10').trim();
+    const parts = ym.split('-');
+    const year = parts[0] || '2026';
+    const month = parts[1] || '10';
+    const from_day = (document.getElementById('rep-from-date')?.value || '1').trim();
+    const to_day = (document.getElementById('rep-to-date')?.value || '31').trim();
+    const in_time = (document.getElementById('rep-in-time')?.value || '09:00:00').trim();
+    const out_time = (document.getElementById('rep-out-time')?.value || '17:00:00').trim();
+    return `username=${encodeURIComponent(username)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}&from_day=${encodeURIComponent(from_day)}&to_day=${encodeURIComponent(to_day)}&set_in_time=${encodeURIComponent(in_time)}&set_out_time=${encodeURIComponent(out_time)}`;
+}
+
 function downloadCustomizedCsvReport() {
-    const username = document.getElementById('rep-username').value.trim() || 'ALL';
-    const from_date = document.getElementById('rep-from-date').value.trim();
-    const to_date = document.getElementById('rep-to-date').value.trim();
-    const office_in_time = document.getElementById('rep-in-time').value.trim() || '09:00:00';
-    const office_out_time = document.getElementById('rep-out-time').value.trim() || '17:00:00';
-    const url = `/api/v1/reports/customized.csv?username=${encodeURIComponent(username)}&from_date=${encodeURIComponent(from_date)}&to_date=${encodeURIComponent(to_date)}&office_in_time=${encodeURIComponent(office_in_time)}&office_out_time=${encodeURIComponent(office_out_time)}`;
-    window.open(url, '_blank');
+    window.open(`/api/v1/reports/customized.csv?${buildReportQueryString()}`, '_blank');
+}
+
+function downloadCustomizedXlsxReport() {
+    window.open(`/api/v1/reports/customized.xlsx?${buildReportQueryString()}`, '_blank');
 }
 
 function openMusterRollHtmlReport() {
-    const month = document.getElementById('rep-month').value.trim() || '2026-10';
-    window.open(`/api/v1/reports/muster-roll?month=${encodeURIComponent(month)}`, '_blank');
+    const ym = (document.getElementById('rep-month')?.value || '2026-10').trim();
+    const parts = ym.split('-');
+    const year = parts[0] || '2026';
+    const month = parts[1] || '10';
+    window.open(`/api/v1/reports/muster-roll/html?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`, '_blank');
 }
 
 async function submitUploadOnnxModel() {
     const fileInput = document.getElementById('onnx-model-file');
+    const resEl = document.getElementById('upload-model-result');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        alert('Please select a .onnx file first!');
+        if (resEl) resEl.innerHTML = `<span style="color:#ff7675;">Please select a .onnx file first!</span>`;
         return;
     }
     const file = fileInput.files[0];
@@ -1468,26 +1708,29 @@ async function submitUploadOnnxModel() {
             body: JSON.stringify({ model_name: file.name, model_b64: base64Data })
         });
         const data = await res.json();
-        document.getElementById('upload-model-result').innerHTML = `<pre style="background:#10101c;padding:1rem;border-radius:8px;color:#2ecc71;">${JSON.stringify(data, null, 2)}</pre>`;
+        if (resEl) {
+            resEl.innerHTML = `<pre style="background:#10101c;padding:1rem;border-radius:8px;color:#2ecc71;">${JSON.stringify(data, null, 2)}</pre>`;
+        }
     };
     reader.readAsDataURL(file);
 }
 
 async function deleteSelectedUserFace() {
-    const username = document.getElementById('del-face-user').value;
+    const username = document.getElementById('del-face-user')?.value || '';
+    const stEl = document.getElementById('del-face-status');
     if (!username) return;
-    if (!confirm(`Are you sure you want to delete all face embeddings for "${username}"?`)) return;
     const res = await fetch(`/api/v1/face/profiles/${encodeURIComponent(username)}`, { method: 'DELETE' });
     const data = await res.json();
-    alert(data.message || 'Deleted');
+    if (stEl) {
+        stEl.style.color = '#00b894';
+        stEl.innerText = `Deleted face profiles for ${username} (DB: ${data.deleted_count || 0}, RAM: ${data.ram_vectors_removed || 0})`;
+    }
     openHrAction('delete-face');
 }
 
 async function resetAllFaceProfiles() {
-    if (!confirm('⚠️ WARNING: This will delete ALL enrolled face embeddings for all users! Continue?')) return;
     const res = await fetch('/api/v1/face/reset', { method: 'POST' });
-    const data = await res.json();
-    alert(data.message || 'All face profiles reset');
+    await res.json();
     openHrAction('delete-face');
 }
     "##
