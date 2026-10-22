@@ -1566,7 +1566,6 @@ async function submitCameraRegistration() {
             body: JSON.stringify({
                 username,
                 user_designation: designation,
-                designation,
                 password,
                 company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
                 images_b64: regCapturedFrames,
@@ -1611,7 +1610,6 @@ async function submitNoCameraRegistration() {
         body: JSON.stringify({
             username,
             user_designation: designation,
-            designation,
             password,
             company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
             overwrite_existing: true
@@ -1648,7 +1646,6 @@ async function submitQrRegistration() {
         body: JSON.stringify({
             username,
             user_designation: designation,
-            designation,
             password,
             user_android_id,
             company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
