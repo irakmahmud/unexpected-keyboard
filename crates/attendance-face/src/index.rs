@@ -141,7 +141,7 @@ impl FaceVectorIndex {
                 if Self::is_corrupted_constant_vector(v) {
                     continue;
                 }
-                let dist = DistanceMetrics::euclidean_l2(&query_vector, v);
+                let dist = DistanceMetrics::cosine_distance(&query_vector, v);
                 if dist < min_distance {
                     min_distance = dist;
                     best_username = Some(user.clone());
@@ -169,7 +169,7 @@ impl FaceVectorIndex {
     }
 
     /// Search with multi-tier thresholds matching Python attendance_v8.py lines 1828-1928:
-    /// EXACT_MATCH: 0.40, STRONG_MATCH: 0.50, POSSIBLE_MATCH: 0.60, REJECT: 0.70
+    /// EXACT_MATCH: 0.30, STRONG_MATCH: 0.40, POSSIBLE_MATCH: 0.50, REJECT: 0.60
     /// Enforces 40% frame ratio when user has >= 8 enrolled poses.
     pub fn search_tiered(&self, mut query_vector: Vec<f32>) -> Result<Option<TieredFaceMatchResult>> {
         let dim = { self.state.read().dimension };
@@ -183,10 +183,10 @@ impl FaceVectorIndex {
         DistanceMetrics::l2_normalize(&mut query_vector);
         let st = self.state.read();
 
-        const EXACT_THRESHOLD: f32 = 0.40;
-        const STRONG_THRESHOLD: f32 = 0.50;
-        const POSSIBLE_THRESHOLD: f32 = 0.60;
-        const REJECT_THRESHOLD: f32 = 0.70;
+        const EXACT_THRESHOLD: f32 = 0.30;
+        const STRONG_THRESHOLD: f32 = 0.40;
+        const POSSIBLE_THRESHOLD: f32 = 0.50;
+        const REJECT_THRESHOLD: f32 = 0.60;
 
         let mut best_result: Option<TieredFaceMatchResult> = None;
         let mut best_confidence = -1.0f32;
@@ -207,7 +207,7 @@ impl FaceVectorIndex {
             let mut min_dist = f32::MAX;
 
             for v in &valid_vectors {
-                let dist = DistanceMetrics::euclidean_l2(&query_vector, v);
+                let dist = DistanceMetrics::cosine_distance(&query_vector, v);
                 if dist < min_dist {
                     min_dist = dist;
                 }

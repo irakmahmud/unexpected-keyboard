@@ -47,6 +47,7 @@ pub struct HrPasswordChangePayload {
     #[serde(alias = "company_id")]
     pub company_uuid: String,
     pub company_name: Option<String>,
+    #[serde(alias = "old_password")]
     pub current_password: String,
     pub new_password: String,
 }
@@ -111,6 +112,7 @@ async fn handle_hr_verify(
     Ok(Json(serde_json::json!({
         "success": is_valid,
         "authenticated": is_valid,
+        "verified": is_valid,
         "company_uuid": payload.company_uuid
     })))
 }
