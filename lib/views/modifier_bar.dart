@@ -15,6 +15,7 @@ class ModifierBar extends StatelessWidget {
   final bool isResizeBarOpen;
   final VoidCallback? onToggleResizeBar;
   final ValueChanged<double>? onVerticalResizeDrag;
+  final VoidCallback? onSwitchKeyboard;
   final VoidCallback? onOpenSettings;
 
   const ModifierBar({
@@ -29,6 +30,7 @@ class ModifierBar extends StatelessWidget {
     this.isResizeBarOpen = false,
     this.onToggleResizeBar,
     this.onVerticalResizeDrag,
+    this.onSwitchKeyboard,
     this.onOpenSettings,
   });
 
@@ -61,6 +63,28 @@ class ModifierBar extends StatelessWidget {
               height: barButtonHeight,
             );
           }),
+          if (onSwitchKeyboard != null)
+            Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (_) => onSwitchKeyboard!(),
+              child: Container(
+                width: 34.0,
+                height: barButtonHeight,
+                decoration: BoxDecoration(
+                  color: theme.keyBackgroundColor,
+                  border: Border.all(
+                    color: theme.modifierInactiveColor.withOpacity(0.85),
+                    width: 0.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.language,
+                  size: 17.0,
+                  color: theme.accentColor,
+                ),
+              ),
+            ),
           if (onToggleResizeBar != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -69,7 +93,7 @@ class ModifierBar extends StatelessWidget {
                   ? (details) => onVerticalResizeDrag!(-details.delta.dy * 0.35)
                   : null,
               child: Container(
-                width: 36.0,
+                width: 34.0,
                 height: barButtonHeight,
                 decoration: BoxDecoration(
                   color: isResizeBarOpen ? theme.modifierActiveColor : theme.keyBackgroundColor,
@@ -87,11 +111,11 @@ class ModifierBar extends StatelessWidget {
               ),
             ),
           if (onOpenSettings != null)
-            GestureDetector(
+            Listener(
               behavior: HitTestBehavior.opaque,
-              onTap: onOpenSettings,
+              onPointerDown: (_) => onOpenSettings!(),
               child: Container(
-                width: 36.0,
+                width: 34.0,
                 height: barButtonHeight,
                 decoration: BoxDecoration(
                   color: theme.keyBackgroundColor,

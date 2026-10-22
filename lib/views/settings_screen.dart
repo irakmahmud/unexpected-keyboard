@@ -10,6 +10,8 @@ class SettingsScreen extends StatelessWidget {
   final double keyHeight;
   final ValueChanged<double> onKeyHeightChanged;
   final VoidCallback onBackToKeyboard;
+  final VoidCallback? onEnableKeyboard;
+  final VoidCallback? onSwitchKeyboard;
 
   const SettingsScreen({
     super.key,
@@ -20,6 +22,8 @@ class SettingsScreen extends StatelessWidget {
     this.keyHeight = ImeChannelService.defaultKeyHeight,
     required this.onKeyHeightChanged,
     required this.onBackToKeyboard,
+    this.onEnableKeyboard,
+    this.onSwitchKeyboard,
   });
 
   @override
@@ -41,6 +45,51 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          _buildSectionHeader('Switch / Change Default Keyboard', themeData),
+          Card(
+            color: themeData.keyBackgroundColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: onEnableKeyboard,
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      '1. Enable Keyboard in System Settings',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeData.backgroundColor,
+                      foregroundColor: themeData.accentColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: onSwitchKeyboard,
+                    icon: const Icon(Icons.language, size: 18),
+                    label: const Text(
+                      '2. Switch / Change Active Keyboard',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeData.accentColor,
+                      foregroundColor: themeData.backgroundColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tip: While typing in any app outside (WhatsApp, Browser, SMS), tap the 🌐 Globe icon on the keyboard top bar or hold Spacebar (␣) to switch keyboards anytime.',
+                    style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 32),
           _buildSectionHeader('Keyboard Height & Key Size', themeData),
           Card(
             color: themeData.keyBackgroundColor,

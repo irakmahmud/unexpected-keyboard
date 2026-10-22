@@ -3,11 +3,14 @@ package com.antigravity.keyboard
 import android.content.Context
 import android.content.Intent
 import android.inputmethodservice.InputMethodService
+import android.os.Build
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterView
 import io.flutter.embedding.engine.FlutterEngine
@@ -246,6 +249,51 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
             "hideKeyboard" -> {
                 requestHideSelf(0)
                 result.success(true)
+            }
+            "getKeyboardStatus" -> {
+                result.success(
+                    mapOf(
+                        "isEnabled" to true,
+                        "isSelected" to true
+                    )
+                )
+            }
+            "enableKeyboardInSystemSettings" -> {
+                try {
+                    val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                    requestHideSelf(0)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("SETTINGS_ERR", e.message, null)
+                }
+            }
+            "showInputMethodPicker" -> {
+                try {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.showInputMethodPicker()
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("IME_PICKER_ERR", e.message, null)
+                }
+            }
+            "switchToNextInputMethod" -> {
+                try {
+                    val switched = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                        switchToNextInputMethod(false)
+                    } else {
+                        false
+                    }
+                    if (!switched) {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        imm?.showInputMethodPicker()
+                    }
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("SWITCH_IME_ERR", e.message, null)
+                }
             }
             else -> result.notImplemented()
         }

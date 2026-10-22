@@ -335,7 +335,7 @@ class _KeyboardViewState extends State<KeyboardView> {
           children: [
             if (_isResizeBarOpen) _buildInlineResizeBar(),
 
-            // Top Terminal Modifier Bar (Termux / Hacker Keys + ↕ Resize Button + ⚙️ Settings Button)
+            // Top Terminal Modifier Bar (Termux / Hacker Keys + 🌐 Switch Keyboard + ↕ Resize + ⚙️ Settings)
             if (_showTerminalBar)
               ModifierBar(
                 theme: widget.theme,
@@ -347,6 +347,10 @@ class _KeyboardViewState extends State<KeyboardView> {
                 keyHeight: currentKeyHeight,
                 isResizeBarOpen: _isResizeBarOpen,
                 onToggleResizeBar: _toggleResizeBar,
+                onSwitchKeyboard: () {
+                  widget.imeService.triggerHaptic();
+                  widget.imeService.showInputMethodPicker();
+                },
                 onOpenSettings: () {
                   widget.imeService.triggerHaptic();
                   widget.onOpenSettings();
@@ -370,6 +374,13 @@ class _KeyboardViewState extends State<KeyboardView> {
                       theme: widget.theme,
                       onKeyPress: _handleKeyPress,
                       onCornerSwipeReplace: _handleCornerSwipeReplace,
+                      onSpaceLongPress: key.actionType == KeyActionType.space
+                          ? () {
+                              widget.imeService.sendBackspace();
+                              widget.imeService.triggerHaptic();
+                              widget.imeService.showInputMethodPicker();
+                            }
+                          : null,
                       isShiftActive: widget.imeService.isShiftActive,
                       isCtrlActive: widget.imeService.isCtrlActive,
                       isAltActive: widget.imeService.isAltActive,

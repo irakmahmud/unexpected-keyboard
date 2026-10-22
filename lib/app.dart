@@ -18,11 +18,23 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
   bool _hapticsEnabled = true;
   bool _isSettingsOpen = false;
   double _keyHeight = ImeChannelService.defaultKeyHeight;
+  bool _isKeyboardEnabled = false;
+  bool _isKeyboardSelected = false;
 
   @override
   void initState() {
     super.initState();
     _loadInitialConfig();
+    _refreshKeyboardStatus();
+
+    _imeService.onKeyboardStatusUpdatedFromNative = (isEnabled, isSelected) {
+      if (mounted) {
+        setState(() {
+          _isKeyboardEnabled = isEnabled;
+          _isKeyboardSelected = isSelected;
+        });
+      }
+    };
 
     _imeService.onHeightUpdatedFromNative = (newHeight) {
       if (mounted) {
@@ -122,6 +134,16 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
     };
   }
 
+  Future<void> _refreshKeyboardStatus() async {
+    final status = await _imeService.getKeyboardStatus();
+    if (mounted) {
+      setState(() {
+        _isKeyboardEnabled = status['isEnabled'] == true;
+        _isKeyboardSelected = status['isSelected'] == true;
+      });
+    }
+  }
+
   Future<void> _loadInitialConfig() async {
     final config = await _imeService.getKeyboardConfig();
     if (mounted) {
@@ -193,6 +215,8 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
               onHapticsChanged: _updateHaptics,
               keyHeight: _keyHeight,
               onKeyHeightChanged: _updateKeyHeight,
+              onEnableKeyboard: () => _imeService.enableKeyboardInSystemSettings(),
+              onSwitchKeyboard: () => _imeService.showInputMethodPicker(),
               onBackToKeyboard: () async {
                 final closedExternal = await _imeService.closeSettingsIfExternal();
                 if (!closedExternal && mounted) {
@@ -240,7 +264,7 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                           controller: _testTextController,
                           maxLines: null,
                           autofocus: false,
-                          readOnly: false,
+                          readOnly: true,
                           showCursor: true,
                           style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),
                           decoration: InputDecoration(
@@ -248,6 +272,37 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                             hintText: 'Tap or swipe diagonally on keys below to test corner symbols...',
                             hintStyle: TextStyle(color: themeData.cornerTextColor),
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Live External System Keyboard Status Banner
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                      decoration: BoxDecoration(
+                        color: _isKeyboardSelected
+                            ? themeData.accentColor.withOpacity(0.16)
+                            : Colors.amber.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(
+                          color: _isKeyboardSelected ? themeData.accentColor : Colors.amber,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        _isKeyboardSelected
+                            ? '✅ বাইরের সব অ্যাপে এই কীবোর্ডটি চালু আছে (🌐 বাটনে চাপলে বা Space চেপে ধরলে বাইরে থেকেই কীবোর্ড চেঞ্জ হবে)'
+                            : (!_isKeyboardEnabled
+                                ? '⚠️ বাইরের অ্যাপে চালু করতে প্রথমে নিচের "1. Enable Keyboard" বাটনে চাপুন এবং সুইচ ON করুন'
+                                : '⚠️ বাইরের অ্যাপে চালু করতে এখন "2. Switch Default Keyboard" বাটনে চেপে Unexpected Keyboard সিলেক্ট করুন'),
+                        style: TextStyle(
+                          color: _isKeyboardSelected ? themeData.accentColor : Colors.amberAccent,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

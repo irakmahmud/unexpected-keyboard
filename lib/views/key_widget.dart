@@ -13,6 +13,7 @@ class KeyWidget extends StatefulWidget {
   final KeyboardThemeData theme;
   final KeyPressCallback onKeyPress;
   final CornerSwipeReplaceCallback? onCornerSwipeReplace;
+  final VoidCallback? onSpaceLongPress;
   final bool isShiftActive;
   final bool isCtrlActive;
   final bool isAltActive;
@@ -24,6 +25,7 @@ class KeyWidget extends StatefulWidget {
     required this.theme,
     required this.onKeyPress,
     this.onCornerSwipeReplace,
+    this.onSpaceLongPress,
     this.isShiftActive = false,
     this.isCtrlActive = false,
     this.isAltActive = false,
@@ -197,6 +199,13 @@ class _KeyWidgetState extends State<KeyWidget> {
           }
         });
       });
+    } else if (widget.keyModel.actionType == KeyActionType.space && widget.onSpaceLongPress != null) {
+      // Holding Spacebar opens Android system keyboard switcher (like Ridmik / Gboard)
+      _repeatDelayTimer = Timer(const Duration(milliseconds: 450), () {
+        if (mounted && _isPressed) {
+          widget.onSpaceLongPress?.call();
+        }
+      });
     }
   }
 
@@ -335,7 +344,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                   ),
                 ),
 
-              // Top-Right Corner Symbol
+              // Top-Right Corner Symbol (or 🌐 Keyboard Switcher hint on Spacebar)
               if (key.topRight != null)
                 Positioned(
                   top: 1,
@@ -351,6 +360,18 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
                       ),
+                    ),
+                  ),
+                )
+              else if (key.actionType == KeyActionType.space)
+                Positioned(
+                  top: 2,
+                  right: 4,
+                  child: IgnorePointer(
+                    child: Icon(
+                      Icons.language,
+                      size: 10.0,
+                      color: theme.cornerTextColor,
                     ),
                   ),
                 ),

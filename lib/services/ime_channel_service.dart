@@ -23,6 +23,7 @@ class ImeChannelService {
   void Function(String themeName)? onThemeUpdatedFromNative;
   void Function(bool enabled)? onHapticsUpdatedFromNative;
   void Function()? onOpenSettingsFromNative;
+  void Function(bool isEnabled, bool isSelected)? onKeyboardStatusUpdatedFromNative;
 
   ImeChannelService() {
     _channel.setMethodCallHandler(_handleNativeCall);
@@ -33,6 +34,13 @@ class ImeChannelService {
       final raw = call.arguments;
       if (raw is num) {
         onHeightUpdatedFromNative?.call(clampKeyHeight(raw.toDouble()));
+      }
+    } else if (call.method == 'onKeyboardStatusChanged') {
+      final args = call.arguments;
+      if (args is Map) {
+        final isEnabled = args['isEnabled'] == true;
+        final isSelected = args['isSelected'] == true;
+        onKeyboardStatusUpdatedFromNative?.call(isEnabled, isSelected);
       }
     } else if (call.method == 'onConfigChanged') {
       final args = call.arguments;
@@ -166,6 +174,21 @@ class ImeChannelService {
       print('IME Channel closeSettingsIfExternal error: ${e.message}');
     } catch (_) {}
     return false;
+  }
+
+  Future<Map<String, bool>> getKeyboardStatus() async {
+    try {
+      final res = await _channel.invokeMethod<dynamic>('getKeyboardStatus');
+      if (res is Map) {
+        return {
+          'isEnabled': res['isEnabled'] == true,
+          'isSelected': res['isSelected'] == true,
+        };
+      }
+    } on PlatformException catch (e) {
+      print('IME Channel getKeyboardStatus error: ${e.message}');
+    } catch (_) {}
+    return {'isEnabled': false, 'isSelected': false};
   }
 
   Future<void> enableKeyboardInSystemSettings() async {

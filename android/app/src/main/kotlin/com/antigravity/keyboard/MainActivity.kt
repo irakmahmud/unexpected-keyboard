@@ -33,6 +33,31 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        notifyKeyboardStatus()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            notifyKeyboardStatus()
+        }
+    }
+
+    private fun notifyKeyboardStatus() {
+        try {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            val isEnabled = imm?.enabledInputMethodList?.any { it.packageName == packageName } == true
+            val currentDefault = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
+            val isSelected = currentDefault.startsWith("$packageName/")
+            methodChannel?.invokeMethod(
+                "onKeyboardStatusChanged",
+                mapOf("isEnabled" to isEnabled, "isSelected" to isSelected)
+            )
+        } catch (_: Exception) {}
+    }
+
     private fun checkOpenSettingsIntent(intent: Intent?): Boolean {
         if (intent == null) return false
         val fromExtra = intent.getBooleanExtra("open_settings", false)
@@ -96,8 +121,29 @@ class MainActivity: FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "getKeyboardStatus" -> {
+                    try {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        val isEnabled = imm?.enabledInputMethodList?.any { it.packageName == packageName } == true
+                        val currentDefault = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
+                        val isSelected = currentDefault.startsWith("$packageName/")
+                        result.success(
+                            mapOf(
+                                "isEnabled" to isEnabled,
+                                "isSelected" to isSelected
+                            )
+                        )
+                    } catch (e: Exception) {
+                        result.success(mapOf("isEnabled" to false, "isSelected" to false))
+                    }
+                }
                 "enableKeyboardInSystemSettings" -> {
                     try {
+                        android.widget.Toast.makeText(
+                            this,
+                            "তালিকা থেকে 'Unexpected Keyboard' সুইচটি চালু (ON) করুন",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
                         val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         startActivity(intent)
@@ -106,10 +152,24 @@ class MainActivity: FlutterActivity() {
                         result.error("SETTINGS_ERR", e.message, null)
                     }
                 }
-                "showInputMethodPicker" -> {
+                "showInputMethodPicker", "switchToNextInputMethod" -> {
                     try {
                         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-                        imm?.showInputMethodPicker()
+                        val isEnabled = imm?.enabledInputMethodList?.any { it.packageName == packageName } == true
+                        if (!isEnabled) {
+                            android.widget.Toast.makeText(
+                                this,
+                                "প্রথমে এখানে 'Unexpected Keyboard' চালু (ON) করুন, তারপর ২ নম্বর বাটন চাপুন!",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                        } else {
+                            window?.decorView?.post {
+                                imm?.showInputMethodPicker()
+                            } ?: imm?.showInputMethodPicker()
+                        }
                         result.success(true)
                     } catch (e: Exception) {
                         result.error("IME_PICKER_ERR", e.message, null)
