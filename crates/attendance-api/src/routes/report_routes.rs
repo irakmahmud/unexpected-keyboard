@@ -105,7 +105,7 @@ async fn get_muster_roll_html(
         generated_by: "System Admin (Pure Rust Engine)".to_string(),
     };
 
-    let days_in_month = TimeHelper::days_in_month(year, month) as usize;
+    let days_in_month = TimeHelper::days_in_month(year, month);
     let html = HtmlReportRenderer::render_muster_roll_html(&meta, &roll, days_in_month);
     Ok(Html(html))
 }
