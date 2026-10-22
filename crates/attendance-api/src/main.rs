@@ -205,6 +205,7 @@ async fn main() -> Result<()> {
         // Mount all 15 modular REST API route domains
         .nest("/api/v1", routes::configure_api_routes())
         .fallback(handle_root_fallback)
+        .layer(axum::extract::DefaultBodyLimit::max(150 * 1024 * 1024))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);

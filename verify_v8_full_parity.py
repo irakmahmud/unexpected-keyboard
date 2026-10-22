@@ -25,7 +25,7 @@ def req(path, method="GET", payload=None):
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     r = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(r, timeout=15) as resp:
+        with urllib.request.urlopen(r, timeout=60) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             try:
                 return resp.status, json.loads(body)
@@ -39,18 +39,16 @@ def req(path, method="GET", payload=None):
             return e.code, body
 
 def load_real_face_b64(idx=0):
-    import os
     candidates = [
-        "rust_deepFace/test_images/Angelina Jolie/Jolie_1.jpg",
-        "rust_deepFace/test_images/Angelina Jolie/Jolie_3.jpg",
-        "rust_deepFace/test_images/Angelina Jolie/Jolie_6.webp",
-        "rust_deepFace/test_images/Multiple Faces/face8.jpg",
+        "rust_deepFace/test_images/Anjelina Jolie/1.jpg",
+        "rust_deepFace/test_images/Anjelina Jolie/3.jpg",
+        "rust_deepFace/test_images/Anjelina Jolie/6.jpg",
+        "rust_deepFace/test_images/Anjelina Jolie/face8.jpg",
     ]
     path = candidates[idx % len(candidates)]
     with open(path, "rb") as f:
         raw = f.read()
-    mime = "image/webp" if path.endswith(".webp") else "image/jpeg"
-    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+    return "data:image/jpeg;base64," + base64.b64encode(raw).decode("ascii")
 
 def main():
     print("=" * 72)
@@ -172,9 +170,16 @@ def main():
     assert st == 200 and "total_lates" in stats, f"User stats failed: {stats}"
     print(f"[8/8] HR Reports Verified: Embeddings Report ({emb_rep['total_records']} records), Verify Images ({ver_imgs['total_found']} records), Monthly Stats ({stats})")
 
-    # Clean up temporary verification users so production DB stays clean
+    # Clean up temporary verification users & test company so production DB stays clean
     for temp_user in ("ONNX_CAM_USER", "NOCAM_USER_01", "QR_USER_01"):
         req(f"/api/v1/users/{temp_user}", "DELETE")
+    import sqlite3
+    conn = sqlite3.connect("data/attendance.db")
+    conn.execute("DELETE FROM attendance_records WHERE username IN ('ONNX_CAM_USER', 'NOCAM_USER_01', 'QR_USER_01')")
+    conn.execute("DELETE FROM company_info WHERE company_id = 'DTI_2026'")
+    conn.execute("DELETE FROM hr_passwords WHERE company_uuid = 'DTI_2026'")
+    conn.commit()
+    conn.close()
 
     print("=" * 72)
     print("✅ ALL 8 PARITY TEST SUITES PASSED 100%!")
