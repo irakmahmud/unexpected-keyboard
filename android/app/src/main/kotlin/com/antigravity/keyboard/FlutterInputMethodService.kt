@@ -61,21 +61,21 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     private fun getSavedTotalHeightDp(): Int {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP).coerceIn(190, 800)
+        return prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP).coerceIn(190, 900)
     }
 
     private fun saveKeyboardHeight(keyHeightDp: Float, totalHeightDp: Int) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_ROW_HEIGHT_DP, keyHeightDp.coerceIn(34.0f, 136.0f))
-            .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 800))
+            .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 900))
             .apply()
     }
 
     private fun applyKeyboardHeightDp(totalHeightDp: Int) {
         val view = flutterView ?: return
         val density = resources.displayMetrics.density
-        val heightPx = (density * totalHeightDp.coerceIn(190, 800)).toInt()
+        val heightPx = (density * totalHeightDp.coerceIn(190, 900)).toInt()
         val params = view.layoutParams
         if (params == null) {
             view.layoutParams = ViewGroup.LayoutParams(

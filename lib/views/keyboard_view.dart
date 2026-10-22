@@ -304,27 +304,24 @@ class _KeyboardViewState extends State<KeyboardView> {
                 },
               ),
 
-            // Keyboard Character Rows
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: rows.map((row) {
-                  return Row(
-                    children: row.map((key) {
-                      return KeyWidget(
-                        keyModel: key,
-                        theme: widget.theme,
-                        onKeyPress: _handleKeyPress,
-                        isShiftActive: widget.imeService.isShiftActive,
-                        isCtrlActive: widget.imeService.isCtrlActive,
-                        isAltActive: widget.imeService.isAltActive,
-                        height: currentKeyHeight,
-                      );
-                    }).toList(),
-                  );
-                }).toList(),
-              ),
+            // Keyboard Character Rows (Zero gaps between keys — maximum key area)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: rows.map((row) {
+                return Row(
+                  children: row.map((key) {
+                    return KeyWidget(
+                      keyModel: key,
+                      theme: widget.theme,
+                      onKeyPress: _handleKeyPress,
+                      isShiftActive: widget.imeService.isShiftActive,
+                      isCtrlActive: widget.imeService.isCtrlActive,
+                      isAltActive: widget.imeService.isAltActive,
+                      height: currentKeyHeight,
+                    );
+                  }).toList(),
+                );
+              }).toList(),
             ),
           ],
         ),

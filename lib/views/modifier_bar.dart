@@ -35,9 +35,9 @@ class ModifierBar extends StatelessWidget {
     final barButtonHeight = (keyHeight * 0.72).clamp(28.0, 68.0);
 
     return Container(
-      height: barButtonHeight + 6.0,
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      color: theme.backgroundColor.withOpacity(0.95),
+      height: barButtonHeight,
+      padding: EdgeInsets.zero,
+      color: theme.backgroundColor,
       child: Row(
         children: [
           ...keys.map((key) {
@@ -52,53 +52,49 @@ class ModifierBar extends StatelessWidget {
             );
           }),
           if (onToggleResizeBar != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 3.0),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onToggleResizeBar,
-                onVerticalDragUpdate: onVerticalResizeDrag != null
-                    ? (details) => onVerticalResizeDrag!(-details.delta.dy * 0.35)
-                    : null,
-                child: Container(
-                  width: 34.0,
-                  height: barButtonHeight,
-                  decoration: BoxDecoration(
-                    color: isResizeBarOpen ? theme.modifierActiveColor : theme.keyBackgroundColor,
-                    borderRadius: BorderRadius.circular(theme.borderRadius),
-                    border: Border.all(
-                      color: isResizeBarOpen ? theme.accentColor : Colors.transparent,
-                      width: 1.0,
-                    ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onToggleResizeBar,
+              onVerticalDragUpdate: onVerticalResizeDrag != null
+                  ? (details) => onVerticalResizeDrag!(-details.delta.dy * 0.35)
+                  : null,
+              child: Container(
+                width: 36.0,
+                height: barButtonHeight,
+                decoration: BoxDecoration(
+                  color: isResizeBarOpen ? theme.modifierActiveColor : theme.keyBackgroundColor,
+                  border: Border.all(
+                    color: isResizeBarOpen ? theme.accentColor : theme.modifierInactiveColor.withOpacity(0.85),
+                    width: 0.5,
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.unfold_more,
-                    size: 18.0,
-                    color: isResizeBarOpen ? theme.accentColor : theme.primaryTextColor,
-                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.unfold_more,
+                  size: 18.0,
+                  color: isResizeBarOpen ? theme.accentColor : theme.primaryTextColor,
                 ),
               ),
             ),
           if (onOpenSettings != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 3.0),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onOpenSettings,
-                child: Container(
-                  width: 34.0,
-                  height: barButtonHeight,
-                  decoration: BoxDecoration(
-                    color: theme.keyBackgroundColor,
-                    borderRadius: BorderRadius.circular(theme.borderRadius),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onOpenSettings,
+              child: Container(
+                width: 36.0,
+                height: barButtonHeight,
+                decoration: BoxDecoration(
+                  color: theme.keyBackgroundColor,
+                  border: Border.all(
+                    color: theme.modifierInactiveColor.withOpacity(0.85),
+                    width: 0.5,
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.settings,
-                    size: 17.0,
-                    color: theme.primaryTextColor,
-                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.settings,
+                  size: 17.0,
+                  color: theme.primaryTextColor,
                 ),
               ),
             ),

@@ -58,7 +58,7 @@ class MainActivity: FlutterActivity() {
                     val totalHeightDp = call.argument<Int>("totalHeightDp") ?: 265
                     prefs.edit()
                         .putFloat(KEY_ROW_HEIGHT_DP, keyHeight.coerceIn(34.0f, 136.0f))
-                        .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 800))
+                        .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 900))
                         .apply()
                     result.success(true)
                 }
