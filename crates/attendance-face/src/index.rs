@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn test_search_tiered_enforces_40_percent_ratio() {
-        let index = FaceVectorIndex::new(512, 0.40);
+        let index = FaceVectorIndex::new(0.40);
         let target = make_basis_vec(10, 1.0);
         let orthogonal = make_basis_vec(200, 1.0);
 
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_remove_user_clears_ram_vectors() {
-        let index = FaceVectorIndex::new(512, 0.40);
+        let index = FaceVectorIndex::new(0.40);
         let v = make_basis_vec(5, 1.0);
         index.enroll_user("ALICE", v.clone()).unwrap();
         assert_eq!(index.count_users(), 1);
