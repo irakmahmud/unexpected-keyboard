@@ -513,20 +513,20 @@ function openIdentityVerificationModal(verifyData, imgB64) {
 
     if (verifyData && verifyData.matched && verifyData.username) {
         const conf = Number(verifyData.confidence || 0).toFixed(1);
-        const dist = Number(verifyData.distance || 0).toFixed(4);
-        const ratio = Number((verifyData.match_ratio || 0) * 100).toFixed(0);
+        const dist = Number(verifyData.min_distance ?? verifyData.distance ?? 0).toFixed(4);
+        const matchedFrames = verifyData.total_matches ?? verifyData.matched_frames ?? 1;
         const quality = verifyData.match_quality || 'EXACT';
 
         confEl.innerText = `Confidence: ${conf}%`;
         confEl.style.color = conf >= 60 ? '#27ae60' : '#f39c12';
         distEl.innerText = `Cosine Distance: ${dist} (Threshold: 0.40)`;
-        qualEl.innerText = `Match Quality: ${quality} (${verifyData.embedding_dim || 512}-D ONNX)`;
+        qualEl.innerText = `Match Quality: ${quality} (512-D ONNX)`;
 
         nameEl.innerText = verifyData.username.toUpperCase();
         nameEl.style.color = '#27ae60';
         detailsEl.innerHTML = `
-            <div><strong>Designation:</strong> ${verifyData.designation || 'Employee'}</div>
-            <div><strong>Matched Frames:</strong> ${verifyData.matched_frames || 1} / ${verifyData.total_frames || 1} (${ratio}%)</div>
+            <div><strong>Login Type:</strong> ${verifyData.login_type || 'IN_TIME'}</div>
+            <div><strong>Matched Frames:</strong> ${matchedFrames} (Exact: ${verifyData.exact_matches || 0}, Strong: ${verifyData.strong_matches || 0})</div>
             <div><strong>Cosine Distance:</strong> ${dist}</div>
             <div><strong>Confidence Score:</strong> ${conf}% (${quality})</div>
         `;
@@ -951,6 +951,7 @@ async function unlockHrManagement() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                company_uuid: activeCompany.company_id,
                 company_id: activeCompany.company_id,
                 password: password
             })
@@ -988,7 +989,9 @@ async function submitChangeHrPassword() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                company_uuid: activeCompany.company_id,
                 company_id: activeCompany.company_id,
+                company_name: activeCompany.company_name,
                 current_password,
                 new_password,
                 confirm_password
@@ -1161,7 +1164,8 @@ async function openHrAction(action) {
     } else if (action === 'verify-image') {
         box.innerHTML = `<h3 style="color: #e74c3c; margin-bottom: 0.75rem;">🕵️ Verify Image (Check Fake Attendance)</h3><p>Loading captured attendance images...</p>`;
         const res = await fetch('/api/v1/reports/verify-images');
-        const records = await res.json();
+        const data = await res.json();
+        const records = data.items || (Array.isArray(data) ? data : []);
         if (!records || records.length === 0) {
             box.innerHTML = `<h3 style="color: #e74c3c;">🕵️ Verify Image (Check Fake Attendance)</h3><p style="margin-top: 0.75rem; color: #ccc;">No attendance records found.</p>`;
             return;
@@ -1174,10 +1178,10 @@ async function openHrAction(action) {
                     <tbody>
                         ${records.map(r => `
                             <tr>
-                                <td><strong>${r.username}</strong><br><small style="color:#aaa;">${r.designation || ''}</small></td>
+                                <td><strong>${r.username}</strong></td>
                                 <td>${r.date}</td>
-                                <td>${r.in_time || '---'}</td>
-                                <td>${r.out_time || '---'}</td>
+                                <td>${r.in_time || '---'} (${r.in_time_with_camera || 'N'})</td>
+                                <td>${r.out_time || '---'} (${r.out_time_with_camera || 'N'})</td>
                                 <td>${r.video_path_in ? `<a href="${r.video_path_in}" target="_blank" style="color:#2ecc71;">🖼️ View In Photo</a>` : 'No Photo'}</td>
                                 <td>${r.video_path_out ? `<a href="${r.video_path_out}" target="_blank" style="color:#3498db;">🖼️ View Out Photo</a>` : 'No Photo'}</td>
                             </tr>
@@ -1197,13 +1201,14 @@ async function openHrAction(action) {
     } else if (action === 'delete-face') {
         const res = await fetch('/api/v1/face/embeddings-report');
         const report = await res.json();
-        const users = report.users || [];
+        const rows = report.report || [];
+        const uniqueUsers = [...new Set(rows.map(r => r.Username))];
         box.innerHTML = `
             <h3 style="color: #c0392b; margin-bottom: 0.75rem;">🗑️ Delete Face Data</h3>
             <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1rem;">Select a user to delete their biometric face embeddings, or reset all face profiles.</p>
             <div style="display: flex; gap: 0.75rem; max-width: 520px; margin-bottom: 1rem;">
                 <select id="del-face-user" class="form-input" style="margin-bottom: 0;">
-                    ${users.map(u => `<option value="${u.username}">${u.username} (${u.frames_enrolled} frames, ${u.status})</option>`).join('')}
+                    ${uniqueUsers.map(u => `<option value="${u}">${u}</option>`).join('')}
                 </select>
                 <button class="btn-primary-action" style="width: auto; background: #e74c3c; color: white;" onclick="deleteSelectedUserFace()">🗑️ Delete User Face</button>
             </div>
@@ -1212,25 +1217,24 @@ async function openHrAction(action) {
     } else if (action === 'embeddings-report') {
         const res = await fetch('/api/v1/face/embeddings-report');
         const report = await res.json();
-        const users = report.users || [];
+        const rows = report.report || [];
         box.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h3 style="color: #2980b9;">📈 ONNX 512-D Face Embeddings Report (Total Users: ${report.total_users || 0})</h3>
+                <h3 style="color: #2980b9;">📈 ONNX 512-D Face Embeddings Report (Total Embeddings: ${report.total_records || rows.length})</h3>
                 <a href="/api/v1/face/embeddings-report.csv" target="_blank" class="badge badge-success" style="padding: 0.5rem 1rem; text-decoration: none;">📥 Download CSV</a>
             </div>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="attendance-table">
-                    <thead><tr><th>Username</th><th>Designation</th><th>Frames</th><th>Dim</th><th>L2 Norm</th><th>Status</th><th>Sample [0..3]</th></tr></thead>
+                    <thead><tr><th>Username</th><th>Frame</th><th>Dim</th><th>Pos / Neg</th><th>Zeros</th><th>Top 5 Highest Values</th></tr></thead>
                     <tbody>
-                        ${users.map(u => `
+                        ${rows.map(r => `
                             <tr>
-                                <td><strong>${u.username}</strong></td>
-                                <td>${u.designation || ''}</td>
-                                <td>${u.frames_enrolled}</td>
-                                <td>${u.embedding_dim}-D</td>
-                                <td>${Number(u.l2_norm || 0).toFixed(4)}</td>
-                                <td><span class="badge ${u.status === 'ENROLLED' ? 'badge-success' : 'badge-warning'}">${u.status}</span></td>
-                                <td style="font-family: monospace; font-size: 0.78rem;">[${(u.sample_values || []).map(v => Number(v).toFixed(3)).join(', ')}]</td>
+                                <td><strong>${r.Username}</strong></td>
+                                <td>${r.Image_Name}</td>
+                                <td>${r.Number_of_Embeddings_Generated}-D</td>
+                                <td>+${r.Number_of_Positive_Values} / -${r.Number_of_Negative_Values}</td>
+                                <td>${r.Number_of_Zero_Values}</td>
+                                <td style="font-family: monospace; font-size: 0.78rem;">${r.Top_5_Highest_Values}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -1247,7 +1251,15 @@ async function openHrAction(action) {
         `;
     } else if (action === 'sync-hr-pw') {
         box.innerHTML = `<h3 style="color: #2c3e50; color: #74b9ff;">🔑 Syncing HR Password with Cloud...</h3>`;
-        const res = await fetch('/api/v1/auth/sync-hr-password', { method: 'POST' });
+        const res = await fetch('/api/v1/auth/sync-hr-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                company_uuid: activeCompany.company_id,
+                company_name: activeCompany.company_name,
+                password: document.getElementById('hr-admin-pin').value || 'HR@123'
+            })
+        });
         const data = await res.json();
         box.innerHTML = `
             <h3 style="color: #74b9ff; margin-bottom: 0.75rem;">🔑 Sync HR Password</h3>
@@ -1342,7 +1354,7 @@ async function submitCameraRegistration() {
             })
         });
         const data = await res.json();
-        if (res.ok && data.id) {
+        if (res.ok && (data.success || data.id)) {
             addTerminalLog(`User ${username} registered with ${regCapturedFrames.length} ONNX FaceNet512 poses`, 'SUCCESS');
             alert(`✅ User "${username}" registered successfully with ${regCapturedFrames.length} ONNX 512-D face embeddings!`);
             backToHrMainMenu();
@@ -1380,7 +1392,7 @@ async function submitNoCameraRegistration() {
         body: JSON.stringify({ username, designation, password, overwrite_existing: overwrite })
     });
     const data = await res.json();
-    if (res.ok && data.id) {
+    if (res.ok && (data.success || data.id)) {
         addTerminalLog(`User ${username} registered (Without Camera - 512 zero vector)`, 'SUCCESS');
         alert(`✅ User "${username}" registered successfully without camera!`);
         backToHrMainMenu();
@@ -1418,7 +1430,7 @@ async function submitQrRegistration() {
         body: JSON.stringify({ username, designation, password, user_android_id, overwrite_existing: overwrite })
     });
     const data = await res.json();
-    if (res.ok && data.id) {
+    if (res.ok && (data.success || data.id)) {
         addTerminalLog(`User ${username} registered with QR Android ID: ${user_android_id}`, 'SUCCESS');
         alert(`✅ User "${username}" registered with QR Code (Device: ${user_android_id})!`);
         backToHrMainMenu();
@@ -1455,7 +1467,7 @@ async function submitUploadOnnxModel() {
         const res = await fetch('/api/v1/face/upload-model', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, data_b64: base64Data })
+            body: JSON.stringify({ model_name: file.name, model_b64: base64Data })
         });
         const data = await res.json();
         document.getElementById('upload-model-result').innerHTML = `<pre style="background:#10101c;padding:1rem;border-radius:8px;color:#2ecc71;">${JSON.stringify(data, null, 2)}</pre>`;

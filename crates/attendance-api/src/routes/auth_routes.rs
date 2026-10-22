@@ -25,19 +25,31 @@ pub struct LoginResponse {
 
 #[derive(Deserialize)]
 pub struct HrVerifyPayload {
+    #[serde(alias = "company_id")]
     pub company_uuid: String,
     pub password: String,
 }
 
 #[derive(Deserialize)]
 pub struct HrPasswordSetPayload {
+    #[serde(alias = "company_id", default = "default_company_uuid")]
     pub company_uuid: String,
     pub company_name: Option<String>,
+    #[serde(default = "default_hr_pw")]
     pub password: String,
+}
+
+fn default_company_uuid() -> String {
+    "HQ_001".to_string()
+}
+
+fn default_hr_pw() -> String {
+    "HR@123".to_string()
 }
 
 #[derive(Deserialize)]
 pub struct HrPasswordChangePayload {
+    #[serde(alias = "company_id")]
     pub company_uuid: String,
     pub company_name: Option<String>,
     pub current_password: String,
