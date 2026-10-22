@@ -237,6 +237,14 @@ impl UserRepo {
             "DELETE FROM face_profiles WHERE UPPER(username) = ?",
             params![upper],
         );
+        let _ = conn.execute(
+            "DELETE FROM attendance_records WHERE UPPER(username) = ? OR company_user_uuid IN (SELECT company_user_uuid FROM users WHERE UPPER(username) = ?)",
+            params![upper, upper],
+        );
+        let _ = conn.execute(
+            "DELETE FROM employees WHERE UPPER(employee_code) = ? OR user_uuid IN (SELECT user_uuid FROM users WHERE UPPER(username) = ?)",
+            params![upper, upper],
+        );
         let rows = conn.execute(
             "DELETE FROM users WHERE UPPER(username) = ?",
             params![upper],

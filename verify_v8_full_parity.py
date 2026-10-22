@@ -172,10 +172,10 @@ def main():
 
     # Clean up temporary verification users & test company so production DB stays clean
     for temp_user in ("ONNX_CAM_USER", "NOCAM_USER_01", "QR_USER_01"):
-        req(f"/api/v1/users/{temp_user}", "DELETE")
+        st_del, del_res = req(f"/api/v1/users/{temp_user}", "DELETE")
+        assert st_del == 200 and del_res.get("success") is True, f"Delete user {temp_user} failed: {del_res}"
     import sqlite3
     conn = sqlite3.connect("data/attendance.db")
-    conn.execute("DELETE FROM attendance_records WHERE username IN ('ONNX_CAM_USER', 'NOCAM_USER_01', 'QR_USER_01')")
     conn.execute("DELETE FROM company_info WHERE company_id = 'DTI_2026'")
     conn.execute("DELETE FROM hr_passwords WHERE company_uuid = 'DTI_2026'")
     conn.commit()
