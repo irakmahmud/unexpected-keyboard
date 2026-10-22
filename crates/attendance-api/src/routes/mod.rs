@@ -36,6 +36,7 @@ pub fn configure_api_routes() -> Router<AppState> {
         .nest("/system", system_routes::system_router())
         .route("/receive_android_id", axum::routing::post(device_routes::receive_android_id))
         .route("/session/:id", axum::routing::get(device_routes::get_device_session))
+        .route("/captures/:filename", axum::routing::get(attendance_routes::serve_capture_image))
         .route("/verify", axum::routing::post(face_routes::handle_verify_json))
         .route("/verify_multipart", axum::routing::post(face_routes::handle_verify_multipart))
         .route("/health", axum::routing::get(system_routes::get_health_status))

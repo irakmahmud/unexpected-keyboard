@@ -36,11 +36,20 @@ pub struct HrPasswordSetPayload {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct HrPasswordChangePayload {
+    pub company_uuid: String,
+    pub company_name: Option<String>,
+    pub current_password: String,
+    pub new_password: String,
+}
+
 pub fn auth_router() -> Router<AppState> {
     Router::new()
         .route("/login", post(handle_login))
         .route("/verify-hr", post(handle_hr_verify))
         .route("/set-hr-password", post(handle_set_hr_password))
+        .route("/change-hr-password", post(handle_change_hr_password))
         .route("/sync-hr-password", post(handle_set_hr_password))
         .route("/forgot-password", axum::routing::get(handle_forgot_password).post(handle_forgot_password))
 }
@@ -99,6 +108,33 @@ async fn handle_set_hr_password(
         "success": true,
         "company_uuid": payload.company_uuid,
         "message": "HR password configured and synced to local database"
+    })))
+}
+
+async fn handle_change_hr_password(
+    State(state): State<AppState>,
+    Json(payload): Json<HrPasswordChangePayload>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    if payload.new_password.trim().len() < 3 {
+        return Err(attendance_common::AppError::Validation(
+            "Password must be at least 3 characters".to_string(),
+        )
+        .into());
+    }
+    let company_name = payload
+        .company_name
+        .unwrap_or_else(|| payload.company_uuid.clone());
+    HrAuthService::change_hr_password(
+        &state.db,
+        &payload.company_uuid,
+        &company_name,
+        payload.current_password.trim(),
+        payload.new_password.trim(),
+    )?;
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "company_uuid": payload.company_uuid,
+        "message": "HR password updated successfully!"
     })))
 }
 

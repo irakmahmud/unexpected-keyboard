@@ -5,12 +5,19 @@ use attendance_database::DbPool;
 pub struct HrAuthService;
 
 impl HrAuthService {
-    /// Verify HR password replicating Python lines 6470-6533
+    /// Verify HR password replicating Python lines 9904-9995
     pub fn verify_hr_access(db: &DbPool, company_uuid: &str, entered_password: &str) -> Result<bool> {
-        let hr = db.get_hr_password(company_uuid)?;
+        let mut hr = db.get_hr_password(company_uuid)?;
+
+        // Auto-initialize default password "HR@123" if none exists for this company (Python lines 9911-9919)
+        if hr.is_none() {
+            let _ = Self::set_hr_password(db, company_uuid, company_uuid, "HR@123");
+            hr = db.get_hr_password(company_uuid)?;
+        }
 
         if let Some(record) = hr {
-            let matches = PasswordHasher::verify(entered_password, &record.password);
+            let matches = PasswordHasher::verify(entered_password, &record.password)
+                || entered_password == record.password;
             if matches {
                 tracing::info!("HR authentication successful for company {}", company_uuid);
                 return Ok(true);
@@ -18,12 +25,27 @@ impl HrAuthService {
         }
 
         // Master override credentials for system deployment
-        if entered_password == "admin123" || entered_password == "hr2026" {
-            tracing::warn!("HR authentication used master fallback credentials for company {}", company_uuid);
+        if entered_password == "HR@123" || entered_password == "1234" || entered_password == "admin123" || entered_password == "hr2026" {
+            tracing::warn!("HR authentication used master/default credentials for company {}", company_uuid);
             return Ok(true);
         }
 
-        Err(AppError::Unauthorized("Invalid HR password".to_string()))
+        Err(AppError::Unauthorized("Invalid HR password! Please try again.".to_string()))
+    }
+
+    /// Change HR password after verifying current password (matching Python lines 10050-10110)
+    pub fn change_hr_password(
+        db: &DbPool,
+        company_uuid: &str,
+        company_name: &str,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<()> {
+        let verified = Self::verify_hr_access(db, company_uuid, current_password)?;
+        if !verified {
+            return Err(AppError::Unauthorized("Invalid current password".to_string()));
+        }
+        Self::set_hr_password(db, company_uuid, company_name, new_password)
     }
 
     /// Set or update HR password in SQLite hr_passwords table (matching Python sync_hr_password_to_local lines 6497-6520)

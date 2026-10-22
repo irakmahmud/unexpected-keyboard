@@ -1,5 +1,5 @@
 pub fn get_global_css() -> &'static str {
-    r#"
+    r##"
 :root {
     --bg-main: #171721;
     --bg-darker: #10101c;
@@ -675,5 +675,26 @@ body {
 .btn-python-capture:active {
     transform: translateY(1px);
 }
-    "#
+
+.hr-menu-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.hr-menu-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+    "##
 }

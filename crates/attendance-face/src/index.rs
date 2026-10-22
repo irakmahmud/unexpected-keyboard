@@ -172,28 +172,20 @@ impl FaceVectorIndex {
                 continue;
             }
 
-            let (tier, conf) = if vectors.len() >= 8 {
-                // Continuous multi-frame capture rule from Python lines 1908-1921
-                if exact_count >= 8 && min_dist <= EXACT_THRESHOLD {
-                    ("EXACT", 95.0 + (exact_count as f32 / 10.0) * 5.0)
-                } else if (exact_count + strong_count) >= 7 && min_dist <= STRONG_THRESHOLD {
-                    ("STRONG", 80.0 + (total_matches as f32 / 10.0) * 15.0)
-                } else if (exact_count + strong_count + possible_count) >= 6 && min_dist <= POSSIBLE_THRESHOLD {
-                    ("POSSIBLE", 60.0 + (total_matches as f32 / 10.0) * 20.0)
-                } else {
-                    ("REJECT", 0.0)
-                }
+            let (tier, conf) = if vectors.len() >= 8 && exact_count >= 8 && min_dist <= EXACT_THRESHOLD {
+                ("EXACT", 95.0 + (exact_count as f32 / 10.0) * 5.0)
+            } else if vectors.len() >= 8 && (exact_count + strong_count) >= 7 && min_dist <= STRONG_THRESHOLD {
+                ("STRONG", 80.0 + (total_matches as f32 / 10.0) * 15.0)
+            } else if vectors.len() >= 8 && (exact_count + strong_count + possible_count) >= 6 && min_dist <= POSSIBLE_THRESHOLD {
+                ("POSSIBLE", 60.0 + (total_matches as f32 / 10.0) * 20.0)
+            } else if min_dist <= EXACT_THRESHOLD {
+                ("EXACT", 95.0 + ((EXACT_THRESHOLD - min_dist) / EXACT_THRESHOLD) * 4.9)
+            } else if min_dist <= STRONG_THRESHOLD {
+                ("STRONG", 80.0 + ((STRONG_THRESHOLD - min_dist) / (STRONG_THRESHOLD - EXACT_THRESHOLD)) * 14.9)
+            } else if min_dist <= POSSIBLE_THRESHOLD {
+                ("POSSIBLE", 60.0 + ((POSSIBLE_THRESHOLD - min_dist) / (POSSIBLE_THRESHOLD - STRONG_THRESHOLD)) * 19.9)
             } else {
-                // Standard single/few frame rule
-                if min_dist <= EXACT_THRESHOLD {
-                    ("EXACT", 95.0 + ((EXACT_THRESHOLD - min_dist) / EXACT_THRESHOLD) * 4.9)
-                } else if min_dist <= STRONG_THRESHOLD {
-                    ("STRONG", 80.0 + ((STRONG_THRESHOLD - min_dist) / (STRONG_THRESHOLD - EXACT_THRESHOLD)) * 14.9)
-                } else if min_dist <= POSSIBLE_THRESHOLD {
-                    ("POSSIBLE", 60.0 + ((POSSIBLE_THRESHOLD - min_dist) / (POSSIBLE_THRESHOLD - STRONG_THRESHOLD)) * 19.9)
-                } else {
-                    ("REJECT", 0.0)
-                }
+                ("REJECT", 0.0)
             };
 
             if conf > best_confidence {

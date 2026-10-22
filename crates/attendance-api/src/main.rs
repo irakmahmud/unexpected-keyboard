@@ -200,6 +200,32 @@ async fn handle_root_fallback(
 }
 
 fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
+    if db.list_companies()?.is_empty() {
+        let now = TimeHelper::now_utc_sqlite_string();
+        let default_comp = CompanyInfo {
+            company_id: "HQ_001".to_string(),
+            company_name: "Smart Attendance HQ".to_string(),
+            password: "admin123".to_string(),
+            address_road: Some("100 Motijheel C/A".to_string()),
+            address_city: Some("Dhaka".to_string()),
+            contact_person_name: Some("HR Admin".to_string()),
+            contact_person_designation: Some("Head of HR".to_string()),
+            contact_person_number: Some("01700000000".to_string()),
+            website: Some("https://attendance.local".to_string()),
+            email: Some("hr@attendance.local".to_string()),
+            tax_id: None,
+            created_at: Some(now.clone()),
+            last_updated: Some(now),
+        };
+        let _ = db.save_company(&default_comp);
+        let _ = attendance_auth::HrAuthService::set_hr_password(
+            db,
+            "HQ_001",
+            "Smart Attendance HQ",
+            "HR@123",
+        );
+    }
+
     let users = db.get_all_users()?;
     if users.is_empty() {
         tracing::info!("Seeding initial users and sample face vectors...");
@@ -269,8 +295,18 @@ fn seed_if_empty(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
 }
 
 fn bootstrap_face_index(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()> {
-    let users = db.get_all_users()?;
     let mut loaded = 0;
+    if let Ok(profiles) = db.get_all_face_profiles() {
+        for p in profiles {
+            if !p.embedding_vector.is_empty() && p.embedding_vector.iter().any(|&v| v != 0.0) {
+                if face_index.enroll_user(&p.username, p.embedding_vector).is_ok() {
+                    loaded += 1;
+                }
+            }
+        }
+    }
+
+    let users = db.get_all_users()?;
     for u in users {
         if let Some(enc_str) = &u.face_encoding {
             if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {

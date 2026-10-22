@@ -27,6 +27,9 @@ pub struct FaceIndexStatusResponse {
 pub fn face_router() -> Router<AppState> {
     Router::new()
         .route("/enroll", post(handle_enroll))
+        .route("/enroll-batch", post(handle_enroll_batch))
+        .route("/extract-frame", post(handle_extract_frame))
+        .route("/verify-identity", post(handle_verify_identity))
         .route("/match", post(handle_match))
         .route("/identify", post(handle_identify))
         .route("/profiles/:username", get(get_user_profiles).delete(delete_user_profiles))
@@ -486,5 +489,149 @@ async fn handle_upload_ai_model(
         "success": true,
         "target_path": target_path,
         "message": "AI Model file copied successfully to required locations! Please restart the application."
+    })))
+}
+
+#[derive(Deserialize)]
+pub struct SingleImagePayload {
+    pub image_b64: String,
+}
+
+#[derive(Deserialize)]
+pub struct EnrollBatchPayload {
+    pub username: String,
+    pub embeddings: Vec<Vec<f32>>,
+}
+
+fn decode_data_uri(b64: &str) -> std::result::Result<Vec<u8>, attendance_common::AppError> {
+    use base64::{engine::general_purpose, Engine as _};
+    let clean = b64
+        .trim()
+        .split_once(',')
+        .map(|(_, data)| data)
+        .unwrap_or_else(|| b64.trim());
+    general_purpose::STANDARD
+        .decode(clean)
+        .map_err(|e| attendance_common::AppError::Validation(format!("Invalid base64 image data: {}", e)))
+}
+
+/// Extract 512-D FaceNet512 embedding from a single camera frame (Python verify_face_detection lines 1397-1415)
+async fn handle_extract_frame(
+    State(state): State<AppState>,
+    Json(payload): Json<SingleImagePayload>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let df_state = state.deepface_state.as_ref().ok_or_else(|| {
+        attendance_common::AppError::Validation(
+            "DeepFace ONNX models not loaded in ./models/".to_string(),
+        )
+    })?;
+    let bytes = decode_data_uri(&payload.image_b64)?;
+    let emb = attendance_face::extract_face_embedding_vec(df_state, &bytes)
+        .map_err(|e| attendance_common::AppError::Validation(format!("Face detection/extraction failed: {}", e)))?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "face_detected": true,
+        "dimension": emb.len(),
+        "model": "Facenet512",
+        "detector": "MTCNN",
+        "embedding": emb
+    })))
+}
+
+/// Enroll 20 multi-angle FaceNet512 embeddings for a user (Python _complete_new_user_registration lines 851-947)
+async fn handle_enroll_batch(
+    State(state): State<AppState>,
+    Json(payload): Json<EnrollBatchPayload>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let upper = payload.username.trim().to_uppercase();
+    if payload.embeddings.is_empty() {
+        return Err(attendance_common::AppError::Validation("No embeddings provided".to_string()).into());
+    }
+
+    // Check duplicate face against other users (cosine distance < 0.40)
+    for emb in &payload.embeddings {
+        if let Some((dup_user, dist)) = state.face_index.find_duplicate_user(emb, Some(&upper)) {
+            return Err(attendance_common::AppError::Validation(format!(
+                "Duplicate face detected: already registered to '{}' (distance {:.4} < 0.40)",
+                dup_user, dist
+            ))
+            .into());
+        }
+    }
+
+    let _ = state.db.delete_face_profiles(&upper);
+    let mut enrolled = 0usize;
+    for (idx, mut emb) in payload.embeddings.into_iter().enumerate() {
+        DistanceMetrics::l2_normalize(&mut emb);
+        let pose = format!("POSE_{}", idx + 1);
+        let _ = state.db.save_face_profile(&upper, Some(&upper), &emb, 1.0, &pose);
+        if state.face_index.enroll_user(&upper, emb.clone()).is_ok() {
+            enrolled += 1;
+        }
+        if idx == 0 {
+            if let Ok(Some(mut user)) = state.db.get_user_by_username(&upper) {
+                user.face_encoding = serde_json::to_string(&emb).ok();
+                let _ = state.db.insert_or_update_user(&user);
+            }
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "username": upper,
+        "embeddings_enrolled": enrolled,
+        "message": format!("Enrolled {} L2-normalized FaceNet512 embeddings into FAISS/RAM index & SQLite", enrolled)
+    })))
+}
+
+/// Verify identity from camera frame and return full Match Analysis (Python verify_identity lines 1617-2436)
+async fn handle_verify_identity(
+    State(state): State<AppState>,
+    Json(payload): Json<SingleImagePayload>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let df_state = state.deepface_state.as_ref().ok_or_else(|| {
+        attendance_common::AppError::Validation(
+            "DeepFace ONNX models not loaded in ./models/".to_string(),
+        )
+    })?;
+    let bytes = decode_data_uri(&payload.image_b64)?;
+    let emb = attendance_face::extract_face_embedding_vec(df_state, &bytes)
+        .map_err(|e| attendance_common::AppError::Validation(format!("No face detected: {}", e)))?;
+
+    let tiered_opt = state.face_index.search_tiered(emb.clone())?;
+    if let Some(tiered) = tiered_opt {
+        if tiered.is_match {
+            let today = attendance_common::TimeHelper::current_date_dhaka();
+            let now_time = attendance_common::TimeHelper::current_time_dhaka();
+            let login_type = state
+                .engine
+                .determine_login_type(&tiered.username, &today)
+                .unwrap_or_else(|_| "IN_TIME".to_string());
+
+            return Ok(Json(serde_json::json!({
+                "success": true,
+                "matched": true,
+                "username": tiered.username,
+                "login_type": login_type,
+                "date": today,
+                "time": attendance_common::TimeHelper::format_12hour(&now_time),
+                "match_quality": tiered.match_tier,
+                "confidence": tiered.confidence_percent,
+                "min_distance": tiered.min_distance,
+                "exact_matches": tiered.exact_matches,
+                "strong_matches": tiered.strong_matches,
+                "possible_matches": tiered.possible_matches,
+                "total_matches": tiered.total_matches,
+                "embedding": emb
+            })));
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "success": false,
+        "matched": false,
+        "error": "No confident match found in face database",
+        "embedding": emb
     })))
 }

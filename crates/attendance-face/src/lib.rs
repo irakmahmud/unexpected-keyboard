@@ -19,9 +19,9 @@ pub mod quality;
 // Re-exports from rust_deepFace
 pub use errors::AppError as DeepFaceAppError;
 pub use pipeline::{
-    deepface_router, extract_face_embedding, run_pipeline, verify_json_handler,
-    verify_multipart_handler, AppState, AppState as DeepFaceAppState, VerifyRequest,
-    VerifyResponse, COSINE_THRESHOLD as DEEPFACE_COSINE_THRESHOLD,
+    deepface_router, extract_face_embedding, extract_face_embedding_vec, run_pipeline,
+    verify_json_handler, verify_multipart_handler, AppState, AppState as DeepFaceAppState,
+    VerifyRequest, VerifyResponse, COSINE_THRESHOLD as DEEPFACE_COSINE_THRESHOLD,
 };
 
 pub use clustering::FaceClustering;

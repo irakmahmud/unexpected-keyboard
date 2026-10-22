@@ -55,6 +55,9 @@ pub struct CreateUserRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub face_embedding: Option<Vec<f32>>,
+    pub image_b64: Option<String>,
+    pub images_b64: Option<Vec<String>>,
+    pub overwrite_existing: Option<bool>,
     pub role: Option<String>,
 }
 
@@ -159,6 +162,7 @@ pub struct AssignShiftRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanySetupRequest {
+    pub company_id: Option<String>,
     pub company_name: String,
     pub password: String,
     pub address_road: Option<String>,
@@ -166,6 +170,9 @@ pub struct CompanySetupRequest {
     pub address_state: Option<String>,
     pub address_postal_code: Option<String>,
     pub address_country: Option<String>,
+    pub contact_person_name: Option<String>,
+    pub contact_person_designation: Option<String>,
+    pub contact_person_number: Option<String>,
     pub phone: Option<String>,
     pub email: Option<String>,
     pub website: Option<String>,
