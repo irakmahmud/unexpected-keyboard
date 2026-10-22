@@ -38,47 +38,53 @@ void main() {
       expect(key.resolveOutput(GestureDirection.center, isShifted: true), 'A');
     });
 
-    test('Layout structure matches 8-key rows in all 3 letter rows (q..i, a..k, z..o), bottom row (, . Space p l ⌫ ↵), and top bar (⇧ and ?123)', () {
+    test('Layout structure matches 6-key rows in all 4 letter rows (q..y, a..h, z..n, u i j k m o), 5th bottom row (, . Space p l ⌫ ↵), and top bar (⇧ and ?123)', () {
       final qwerty = KeyboardLayout.qwertyLayout;
-      expect(qwerty.length, 5); // row0 (numbers) + 4 main rows
+      expect(qwerty.length, 6); // row0 (numbers) + 4 letter rows + 5th bottom row
 
       // Row 0: Persistent number row (1..9, 0) directly beneath terminal modifier bar
       expect(qwerty[0].length, 10);
       expect(qwerty[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
       expect(qwerty[0].every((k) => k.flex == 1.0), true);
 
-      // Row 1: 8 keys (q..i), equal width flex 1.0
-      expect(qwerty[1].length, 8);
-      expect(qwerty[1].map((k) => k.primary).toList(), ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i']);
+      // First row: 6 keys (q..y), equal width flex 1.0
+      expect(qwerty[1].length, 6);
+      expect(qwerty[1].map((k) => k.primary).toList(), ['q', 'w', 'e', 'r', 't', 'y']);
       expect(qwerty[1].every((k) => k.flex == 1.0), true);
 
-      // Row 2: 8 keys (a..k), equal width flex 1.0
-      expect(qwerty[2].length, 8);
-      expect(qwerty[2].map((k) => k.primary).toList(), ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k']);
+      // Second row: 6 keys (a..h), equal width flex 1.0
+      expect(qwerty[2].length, 6);
+      expect(qwerty[2].map((k) => k.primary).toList(), ['a', 's', 'd', 'f', 'g', 'h']);
       expect(qwerty[2].every((k) => k.flex == 1.0), true);
 
-      // Row 3: 8 keys (z x c v b n m o), all equal horizontal width (flex 1.0)
-      expect(qwerty[3].length, 8);
-      expect(qwerty[3].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'o']);
+      // Third row: 6 keys (z..n), all equal horizontal width (flex 1.0)
+      expect(qwerty[3].length, 6);
+      expect(qwerty[3].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n']);
       expect(qwerty[3].every((k) => k.flex == 1.0), true);
 
-      // Row 4: Cross/Backspace (⌫) moved to left of Enter (↵): [ , | . | Space | p | l | ⌫ | ↵ ]
-      expect(qwerty[4].map((k) => k.primary).toList(), [',', '.', ' ', 'p', 'l', '⌫', '↵']);
-      expect(qwerty[4][5].actionType, KeyActionType.backspace);
-      expect(qwerty[4][6].actionType, KeyActionType.enter);
-      expect(qwerty[4].any((k) => k.actionType == KeyActionType.shift), false);
-      expect(qwerty[4].any((k) => k.actionType == KeyActionType.switchLayout), false);
-      expect(qwerty[4].any((k) => k.actionType == KeyActionType.openSettings), false);
+      // Fourth row: 6 keys (u i j k m o), all equal horizontal width (flex 1.0)
+      expect(qwerty[4].length, 6);
+      expect(qwerty[4].map((k) => k.primary).toList(), ['u', 'i', 'j', 'k', 'm', 'o']);
+      expect(qwerty[4].every((k) => k.flex == 1.0), true);
 
-      // Symbol layout keeps row0 as number row, 8 keys in rows 1-3, and ⌫ left of ↵ in row 4
+      // Fifth row (Bottom row unchanged): [ , | . | Space | p | l | ⌫ | ↵ ]
+      expect(qwerty[5].map((k) => k.primary).toList(), [',', '.', ' ', 'p', 'l', '⌫', '↵']);
+      expect(qwerty[5][5].actionType, KeyActionType.backspace);
+      expect(qwerty[5][6].actionType, KeyActionType.enter);
+      expect(qwerty[5].any((k) => k.actionType == KeyActionType.shift), false);
+      expect(qwerty[5].any((k) => k.actionType == KeyActionType.switchLayout), false);
+      expect(qwerty[5].any((k) => k.actionType == KeyActionType.openSettings), false);
+
+      // Symbol layout keeps row0 as number row, 6 keys in rows 1-4, and ⌫ left of ↵ in row 5
       final symbols = KeyboardLayout.symbolLayout;
-      expect(symbols.length, 5);
+      expect(symbols.length, 6);
       expect(symbols[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
-      expect(symbols[1].length, 8);
-      expect(symbols[2].length, 8);
-      expect(symbols[3].length, 8);
-      expect(symbols[4][5].actionType, KeyActionType.backspace);
-      expect(symbols[4][6].actionType, KeyActionType.enter);
+      expect(symbols[1].length, 6);
+      expect(symbols[2].length, 6);
+      expect(symbols[3].length, 6);
+      expect(symbols[4].length, 6);
+      expect(symbols[5][5].actionType, KeyActionType.backspace);
+      expect(symbols[5][6].actionType, KeyActionType.enter);
 
       // Top bar: TAB and META hidden and replaced by Shift (⇧) and ?123
       final terminalKeys = KeyboardLayout.terminalBarKeys;

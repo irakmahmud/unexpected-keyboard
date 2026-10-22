@@ -82,10 +82,10 @@ class MainActivity: FlutterActivity() {
                 }
                 "setKeyboardHeight" -> {
                     val keyHeight = call.argument<Double>("keyHeight")?.toFloat() ?: 46.0f
-                    val totalHeightDp = call.argument<Int>("totalHeightDp") ?: 265
+                    val totalHeightDp = call.argument<Int>("totalHeightDp") ?: 313
                     prefs.edit()
                         .putFloat(KEY_ROW_HEIGHT_DP, keyHeight.coerceIn(34.0f, 136.0f))
-                        .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 900))
+                        .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(220, 960))
                         .apply()
                     result.success(true)
                 }

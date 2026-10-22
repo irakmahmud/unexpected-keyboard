@@ -32,7 +32,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val DEFAULT_KEY_HEIGHT_DP = 46.0f
-        private const val DEFAULT_TOTAL_HEIGHT_DP = 265
+        private const val DEFAULT_TOTAL_HEIGHT_DP = 313
     }
 
     override fun onCreate() {
@@ -63,22 +63,26 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
     }
 
     private fun getSavedTotalHeightDp(): Int {
+        val keyH = getSavedKeyHeightDp()
+        val modifierH = (keyH * 0.72f).coerceIn(28.0f, 68.0f)
+        val minForSixRows = (6.0f * keyH + modifierH + 4.0f).toInt()
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP).coerceIn(190, 900)
+        val saved = prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP)
+        return maxOf(saved, minForSixRows).coerceIn(220, 960)
     }
 
     private fun saveKeyboardHeight(keyHeightDp: Float, totalHeightDp: Int) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_ROW_HEIGHT_DP, keyHeightDp.coerceIn(34.0f, 136.0f))
-            .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(190, 900))
+            .putInt(KEY_TOTAL_HEIGHT_DP, totalHeightDp.coerceIn(220, 960))
             .apply()
     }
 
     private fun applyKeyboardHeightDp(totalHeightDp: Int) {
         val view = flutterView ?: return
         val density = resources.displayMetrics.density
-        val heightPx = (density * totalHeightDp.coerceIn(190, 900)).toInt()
+        val heightPx = (density * totalHeightDp.coerceIn(220, 960)).toInt()
         val params = view.layoutParams
         if (params == null) {
             view.layoutParams = ViewGroup.LayoutParams(
