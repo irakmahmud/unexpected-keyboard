@@ -59,7 +59,7 @@ class KeyboardLayout {
       KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.0),
       KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.0),
     ],
-    // Row 3 (z to m + o + ⌫, equal width flex 1.0): z x c v b n m o ⌫
+    // Row 3 (8 keys, z to m + o, equal width flex 1.0): z x c v b n m o
     const [
       KeyModel(primary: 'z', topLeft: '*', topRight: '/', bottomLeft: '\\', bottomRight: '|', swipeUp: '*', flex: 1.0),
       KeyModel(primary: 'x', topLeft: '"', topRight: "'", bottomLeft: '`', bottomRight: '~', swipeUp: '"', flex: 1.0),
@@ -69,16 +69,16 @@ class KeyboardLayout {
       KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.0),
       KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.0),
       KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.0),
-      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
     ],
-    // Row 4 (Bottom row left-to-right: comma, dot, space, p, l, enter)
+    // Row 4 (Bottom row left-to-right: comma, dot, space, p, l, backspace, enter)
     const [
       KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: '[', bottomRight: '{', flex: 1.0),
       KeyModel(primary: '.', topLeft: ':', topRight: '>', bottomLeft: '}', bottomRight: ']', flex: 1.0),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 3.0),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.0),
       KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.0),
       KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.0),
-      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.4, androidKeyCode: 66),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
     ],
   ];
 
@@ -114,15 +114,15 @@ class KeyboardLayout {
       KeyModel(primary: ':', topLeft: ';', topRight: '.', flex: 1.0),
       KeyModel(primary: ';', topLeft: ':', topRight: ',', flex: 1.0),
       KeyModel(primary: '"', topLeft: "'", topRight: '`', flex: 1.0),
-      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
     ],
     const [
       KeyModel(primary: ',', topLeft: '<', flex: 1.0),
       KeyModel(primary: '.', topLeft: '>', flex: 1.0),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 3.0),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.0),
       KeyModel(primary: '(', flex: 1.0),
       KeyModel(primary: ')', flex: 1.0),
-      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.4, androidKeyCode: 66),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
     ],
   ];
 }

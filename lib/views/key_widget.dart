@@ -254,18 +254,38 @@ class _KeyWidgetState extends State<KeyWidget> {
             ),
           ),
           child: Stack(
+            alignment: Alignment.center,
+            fit: StackFit.expand,
             children: [
+              // Primary Center Character / Icon (5x font size 90.0 scaled via FittedBox & strictly middle-aligned)
+              Positioned.fill(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
+                    child: _buildMiddleAlignedPrimaryContent(
+                      key: key,
+                      displayPrimary: displayPrimary,
+                      theme: theme,
+                      isActiveModifier: isActiveModifier,
+                    ),
+                  ),
+                ),
+              ),
+
               // Top-Left Corner Symbol
               if (key.topLeft != null)
                 Positioned(
-                  top: 2,
-                  left: 4,
-                  child: Text(
-                    key.topLeft!,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeDirection == GestureDirection.topLeft ? FontWeight.bold : FontWeight.w500,
-                      color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : theme.cornerTextColor,
+                  top: 1,
+                  left: 3,
+                  child: IgnorePointer(
+                    child: Text(
+                      key.topLeft!,
+                      style: TextStyle(
+                        fontSize: 9.0,
+                        height: 1.0,
+                        fontWeight: _activeDirection == GestureDirection.topLeft ? FontWeight.bold : FontWeight.w500,
+                        color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : theme.cornerTextColor,
+                      ),
                     ),
                   ),
                 ),
@@ -273,14 +293,17 @@ class _KeyWidgetState extends State<KeyWidget> {
               // Top-Right Corner Symbol
               if (key.topRight != null)
                 Positioned(
-                  top: 2,
-                  right: 4,
-                  child: Text(
-                    key.topRight!,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeDirection == GestureDirection.topRight ? FontWeight.bold : FontWeight.w500,
-                      color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
+                  top: 1,
+                  right: 3,
+                  child: IgnorePointer(
+                    child: Text(
+                      key.topRight!,
+                      style: TextStyle(
+                        fontSize: 9.0,
+                        height: 1.0,
+                        fontWeight: _activeDirection == GestureDirection.topRight ? FontWeight.bold : FontWeight.w500,
+                        color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
+                      ),
                     ),
                   ),
                 ),
@@ -288,14 +311,17 @@ class _KeyWidgetState extends State<KeyWidget> {
               // Bottom-Left Corner Symbol
               if (key.bottomLeft != null)
                 Positioned(
-                  bottom: 2,
-                  left: 4,
-                  child: Text(
-                    key.bottomLeft!,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeDirection == GestureDirection.bottomLeft ? FontWeight.bold : FontWeight.w500,
-                      color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : theme.cornerTextColor,
+                  bottom: 1,
+                  left: 3,
+                  child: IgnorePointer(
+                    child: Text(
+                      key.bottomLeft!,
+                      style: TextStyle(
+                        fontSize: 9.0,
+                        height: 1.0,
+                        fontWeight: _activeDirection == GestureDirection.bottomLeft ? FontWeight.bold : FontWeight.w500,
+                        color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : theme.cornerTextColor,
+                      ),
                     ),
                   ),
                 ),
@@ -303,39 +329,99 @@ class _KeyWidgetState extends State<KeyWidget> {
               // Bottom-Right Corner Symbol
               if (key.bottomRight != null)
                 Positioned(
-                  bottom: 2,
-                  right: 4,
-                  child: Text(
-                    key.bottomRight!,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeDirection == GestureDirection.bottomRight ? FontWeight.bold : FontWeight.w500,
-                      color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : theme.cornerTextColor,
+                  bottom: 1,
+                  right: 3,
+                  child: IgnorePointer(
+                    child: Text(
+                      key.bottomRight!,
+                      style: TextStyle(
+                        fontSize: 9.0,
+                        height: 1.0,
+                        fontWeight: _activeDirection == GestureDirection.bottomRight ? FontWeight.bold : FontWeight.w500,
+                        color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : theme.cornerTextColor,
+                      ),
                     ),
                   ),
                 ),
-
-              // Primary Center Character / Icon
-              Center(
-                child: key.actionType == KeyActionType.openSettings
-                    ? Icon(
-                        Icons.settings,
-                        size: 19.0,
-                        color: theme.primaryTextColor,
-                      )
-                    : Text(
-                        displayPrimary,
-                        style: TextStyle(
-                          fontSize: displayPrimary.length > 2 ? 11.5 : 18.0,
-                          fontWeight: FontWeight.w600,
-                          color: isActiveModifier ? Colors.white : theme.primaryTextColor,
-                        ),
-                      ),
-              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMiddleAlignedPrimaryContent({
+    required KeyModel key,
+    required String displayPrimary,
+    required KeyboardThemeData theme,
+    required bool isActiveModifier,
+  }) {
+    final Color fgColor = isActiveModifier ? Colors.white : theme.primaryTextColor;
+
+    if (key.actionType == KeyActionType.openSettings) {
+      return FittedBox(
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.settings,
+          size: 48.0,
+          color: fgColor,
+        ),
+      );
+    }
+
+    if (key.actionType == KeyActionType.space) {
+      return FittedBox(
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+        child: Text(
+          '␣',
+          textAlign: TextAlign.center,
+          textHeightBehavior: const TextHeightBehavior(
+            applyHeightToFirstAscent: false,
+            applyHeightToLastDescent: false,
+          ),
+          style: TextStyle(
+            fontSize: 90.0, // 5x size increase (18.0 * 5 = 90.0)
+            height: 1.0,
+            fontWeight: FontWeight.w700,
+            color: fgColor,
+          ),
+        ),
+      );
+    }
+
+    // 5x letter size increase (18.0 * 5 = 90.0 for single letters/symbols, 57.5 for multi-char labels)
+    final double targetFontSize = displayPrimary.length > 1 ? 57.5 : 90.0;
+    final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
+
+    Widget textWidget = Text(
+      displayPrimary,
+      textAlign: TextAlign.center,
+      textHeightBehavior: const TextHeightBehavior(
+        applyHeightToFirstAscent: false,
+        applyHeightToLastDescent: false,
+      ),
+      style: TextStyle(
+        fontSize: targetFontSize,
+        height: 1.0,
+        fontWeight: FontWeight.w700,
+        color: fgColor,
+      ),
+    );
+
+    if (isLowPunctuation) {
+      // Shift comma and dot upward so the glyph sits in the exact visual middle of the button
+      textWidget = Transform.translate(
+        offset: const Offset(0, -18.0),
+        child: textWidget,
+      );
+    }
+
+    return FittedBox(
+      fit: BoxFit.contain,
+      alignment: Alignment.center,
+      child: textWidget,
     );
   }
 }

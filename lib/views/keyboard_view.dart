@@ -305,11 +305,14 @@ class _KeyboardViewState extends State<KeyboardView> {
                 },
               ),
 
-            // Keyboard Character Rows (Zero gaps between keys — maximum key area)
+            // Keyboard Character Rows (Zero gaps between keys — maximum key area, middle-aligned)
             Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: rows.map((row) {
                 return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: row.map((key) {
                     return KeyWidget(
                       keyModel: key,
