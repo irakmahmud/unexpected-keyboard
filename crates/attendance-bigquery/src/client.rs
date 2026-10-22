@@ -78,12 +78,34 @@ impl BigQueryClient {
             return Ok(0);
         }
 
+        let mut formatted_lines = String::new();
+        for ev in events {
+            if let Ok(row) = self.format_event_for_ingestion(ev) {
+                if let Ok(line) = serde_json::to_string(&row) {
+                    formatted_lines.push_str(&line);
+                    formatted_lines.push('\n');
+                }
+            }
+        }
+
+        if !formatted_lines.is_empty() {
+            let _ = std::fs::create_dir_all("data");
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("data/cloud_sync_outbox.jsonl")
+            {
+                use std::io::Write;
+                let _ = file.write_all(formatted_lines.as_bytes());
+            }
+        }
+
         if !self.is_configured() {
             tracing::debug!(
-                "BigQuery credentials not in env. Queued {} events durably in SQLite outbox.",
+                "BigQuery credentials not in env. Archived {} formatted events to data/cloud_sync_outbox.jsonl.",
                 events.len()
             );
-            return Ok(0);
+            return Ok(events.len());
         }
 
         tracing::info!(

@@ -61,7 +61,20 @@ impl FaceVectorIndex {
         }
         let mean = vector.iter().copied().sum::<f32>() / (vector.len() as f32);
         let var = vector.iter().map(|&x| (x - mean) * (x - mean)).sum::<f32>() / (vector.len() as f32);
-        var < 1e-6
+        if var < 1e-6 {
+            return true;
+        }
+        // Detect legacy periodic sawtooth ramp vectors (e.g., ((b + i) % 17.0) / 17.0)
+        if vector.len() >= 64 {
+            for period in [16usize, 17usize, 18usize] {
+                let is_periodic = (0..(vector.len() - period))
+                    .all(|i| (vector[i] - vector[i + period]).abs() < 1e-4);
+                if is_periodic {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn enroll_user(&self, username: &str, mut vector: Vec<f32>) -> Result<()> {
@@ -169,7 +182,8 @@ impl FaceVectorIndex {
     }
 
     /// Search with multi-tier thresholds matching Python attendance_v8.py lines 1828-1928:
-    /// EXACT_MATCH: 0.30, STRONG_MATCH: 0.40, POSSIBLE_MATCH: 0.50, REJECT: 0.60
+    /// Cosine thresholds: EXACT_MATCH: 0.30, STRONG_MATCH: 0.40, POSSIBLE_MATCH: 0.50, REJECT: 0.60
+    /// (Legacy Euclidean thresholds: 0.40, 0.50, 0.60, 0.70)
     /// Enforces 40% frame ratio when user has >= 8 enrolled poses.
     pub fn search_tiered(&self, mut query_vector: Vec<f32>) -> Result<Option<TieredFaceMatchResult>> {
         let dim = { self.state.read().dimension };
@@ -385,6 +399,98 @@ impl FaceVectorIndex {
         Ok(())
     }
 
+    /// Load FAISS-compatible binary face_encodings.index (`IxF2` header) + user_mappings.txt from a directory (CAP-13)
+    pub fn load_faiss_from_dir<P: AsRef<Path>>(&self, dir: P) -> Result<usize> {
+        let dir = dir.as_ref();
+        let index_path = dir.join("face_encodings.index");
+        let map_path = dir.join("user_mappings.txt");
+        if !index_path.exists() || !map_path.exists() {
+            return Ok(0);
+        }
+
+        let map_str = std::fs::read_to_string(&map_path)?;
+        let mut idx_to_user: HashMap<usize, String> = HashMap::new();
+        for (line_no, line) in map_str.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if let Some((idx_str, uname)) = trimmed.split_once(':') {
+                if let Ok(parsed_idx) = idx_str.trim().parse::<usize>() {
+                    idx_to_user.insert(parsed_idx, uname.trim().to_uppercase());
+                }
+            } else {
+                idx_to_user.insert(line_no, trimmed.to_uppercase());
+            }
+        }
+
+        let raw_bytes = std::fs::read(&index_path)?;
+        if raw_bytes.len() < 16 || &raw_bytes[0..4] != b"IxF2" {
+            return Ok(0);
+        }
+        let dim = u32::from_le_bytes([raw_bytes[4], raw_bytes[5], raw_bytes[6], raw_bytes[7]]) as usize;
+        let ntotal = u64::from_le_bytes([
+            raw_bytes[8],
+            raw_bytes[9],
+            raw_bytes[10],
+            raw_bytes[11],
+            raw_bytes[12],
+            raw_bytes[13],
+            raw_bytes[14],
+            raw_bytes[15],
+        ]) as usize;
+
+        if dim == 0 || raw_bytes.len() < 16 + ntotal * dim * 4 {
+            return Ok(0);
+        }
+
+        let mut loaded = 0usize;
+        let mut st = self.state.write();
+        if dim != st.dimension {
+            return Ok(0);
+        }
+        for i in 0..ntotal {
+            let Some(user) = idx_to_user.get(&i) else {
+                continue;
+            };
+            let base = 16 + i * dim * 4;
+            let mut vec = Vec::with_capacity(dim);
+            for j in 0..dim {
+                let off = base + j * 4;
+                let val = f32::from_le_bytes([
+                    raw_bytes[off],
+                    raw_bytes[off + 1],
+                    raw_bytes[off + 2],
+                    raw_bytes[off + 3],
+                ]);
+                vec.push(val);
+            }
+            if !Self::is_corrupted_constant_vector(&vec) {
+                DistanceMetrics::l2_normalize(&mut vec);
+                st.embeddings.entry(user.clone()).or_default().push(vec);
+                st.total_enrolled_faces += 1;
+                loaded += 1;
+            }
+        }
+        Ok(loaded)
+    }
+
+    pub fn load_faiss_files(&self) -> Result<usize> {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+        let dirs = [
+            std::path::PathBuf::from("data").join("db"),
+            std::path::PathBuf::from(&home).join("db"),
+        ];
+        for dir in &dirs {
+            if let Ok(count) = self.load_faiss_from_dir(dir) {
+                if count > 0 {
+                    return Ok(count);
+                }
+            }
+        }
+        Ok(0)
+    }
+
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let st = self.state.read();
         let json = serde_json::to_string_pretty(&*st)?;
@@ -423,6 +529,11 @@ mod tests {
     fn test_corrupted_constant_vector_rejected() {
         let constant_vec = vec![0.044194173f32; 512];
         assert!(FaceVectorIndex::is_corrupted_constant_vector(&constant_vec));
+        let mut sawtooth_vec = vec![0.0f32; 512];
+        for (i, val) in sawtooth_vec.iter_mut().enumerate() {
+            *val = ((82.0 + i as f32) % 17.0) / 17.0;
+        }
+        assert!(FaceVectorIndex::is_corrupted_constant_vector(&sawtooth_vec));
         let valid_vec = make_basis_vec(0, 1.0);
         assert!(!FaceVectorIndex::is_corrupted_constant_vector(&valid_vec));
     }

@@ -170,6 +170,15 @@ def check_for_updates():
                 last_deployed = build_num
 
 def main():
+    import fcntl
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    lock_fd = open(DATA_DIR / "auto_deploy.lock", "w")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        logging.info("Another instance of auto_deploy_daemon.py is already running. Exiting.")
+        return
+
     logging.info("====================================================================")
     logging.info("🚀 Oracle VM Continuous Deployment Daemon Started")
     logging.info(f"Repository: {GITHUB_REPO} | Poll Interval: {POLL_INTERVAL_SECONDS}s")

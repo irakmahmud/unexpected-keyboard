@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
+#!/run/user/1000/veo3_pw_env/bin/python
 """
 Comprehensive Staging End-to-End Verification Suite (Port 8090)
 Tests:
 1. Biometric ONNX FaceNet512 + MTCNN verification & detection enforcement (0-face, 1-face, 2-face)
-2. 20-pose / multi-angle user enrollment, duplicate face prevention, biometric punch, FAISS file sync, and RAM+DB profile deletion
-3. Security hardening (HR password backdoor elimination, sync-hr-password safety, company password verification, path traversal prevention)
+2. 20-pose / multi-angle user enrollment, duplicate face prevention, duplicate Android ID prevention, biometric punch, FAISS file sync, and RAM+DB profile deletion + non-resurrection
+3. Security hardening (HR password backdoor elimination, set/sync-hr-password overwrite protection, forgot-password bypass protection, path traversal & invalid ONNX upload prevention)
 4. Database dual-format compatibility (YYYY-MM-DD + DD_Mon_YYYY dates, 8-char + 19-char UTC timestamps, ~/.last_attendance, ~/.attendance_time_check)
 5. Reporting endpoints (CSV, real OpenXML .xlsx ZIP, HTML Muster Roll, Embeddings CSV)
 6. Headless Chromium / Playwright UI E2E verification across all modals and HR workspace buttons (0 pageerror exceptions)
@@ -20,6 +20,9 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+
+if os.path.isdir("/run/user/1000/veo3_pw_libs"):
+    os.environ["LD_LIBRARY_PATH"] = "/run/user/1000/veo3_pw_libs:" + os.environ.get("LD_LIBRARY_PATH", "")
 
 STAGING_PORT = 8090
 BASE_URL = f"http://127.0.0.1:{STAGING_PORT}"
@@ -148,7 +151,7 @@ def run_playwright_tests(record):
         page.goto(f"{BASE_URL}/", wait_until="domcontentloaded", timeout=15000)
         page.wait_for_timeout(500)
         title = page.title()
-        hdr_company = page.locator("#hdr-company-name").inner_text()
+        hdr_company = page.locator("#header-company-name").inner_text()
         record("Frontend", "Portal initial render & active company header badge", "Face Recognition" in title and len(hdr_company) > 0, f"title='{title}', badge='{hdr_company}'")
 
         # 2. Company Select / Create / Edit Modal
@@ -198,6 +201,15 @@ def run_playwright_tests(record):
             ws_vis = page.locator("#hr-action-workspace").is_visible()
             body_html = page.locator("#hr-workspace-body").inner_html()
             record("Frontend", label, ws_vis and len(body_html) > 10, f"action='{act_key}', rendered={len(body_html)} chars")
+            if act_key == "reg-camera":
+                jolie_b64 = b64_img("Jolie_1.jpg")
+                page.evaluate(f"window.__TEST_FACE_B64 = 'data:image/jpeg;base64,{jolie_b64}';")
+                page.fill("#reg-cam-username", "POSE_TEST_USER")
+                pose_ok = page.evaluate("captureSingleRegPose()")
+                page.wait_for_timeout(200)
+                pose_status = page.locator("#reg-pose-status").inner_text()
+                page.evaluate("window.__TEST_FACE_B64 = null;")
+                record("Frontend", "Live Single-Pose Camera Validation via /api/v1/face/extract-frame", bool(pose_ok) and "1 / 20" in pose_status, f"status='{pose_status}'")
             if act_key == "reg-no-camera":
                 page.fill("#reg-nocam-username", "UI_TEST_USER")
                 page.fill("#reg-nocam-desig", "QA Engineer")
@@ -259,15 +271,15 @@ def run_playwright_tests(record):
 
         page.evaluate("openQrLogin()")
         page.wait_for_timeout(250)
-        qr_vis = page.locator("#modal-qr-login").is_visible()
+        qr_vis = page.locator("#modal-qr").is_visible()
         page.evaluate("closeQrLogin()")
-        record("Frontend", "QR Code Login Modal", qr_vis, f"visible={qr_vis}")
+        record("Frontend", "QR Code Login Modal (#modal-qr)", qr_vis, f"visible={qr_vis}")
 
         page.evaluate("openSevenDayHistory()")
         page.wait_for_timeout(350)
-        hist_vis = page.locator("#modal-history").is_visible()
+        hist_vis = page.locator("#modal-seven-days").is_visible()
         page.evaluate("closeSevenDayHistory()")
-        record("Frontend", "7-Day Attendance History Modal (#modal-history)", hist_vis, f"visible={hist_vis}")
+        record("Frontend", "7-Day Attendance History Modal (#modal-seven-days)", hist_vis, f"visible={hist_vis}")
 
         page.evaluate("forceSync()")
         page.wait_for_timeout(350)
@@ -393,6 +405,16 @@ def main():
         ok = (code == 400 and "Duplicate face detected" in json.dumps(body))
         record("Security", "Duplicate face enrollment blocked (JOLIE_CLONE)", ok, f"HTTP {code}, {body}")
 
+        # Duplicate Android Device ID registration prevention across users
+        code, body = http_req("POST", "/api/v1/users", {
+            "username": "JOLIE_DUP_DEV",
+            "user_designation": "Tester",
+            "user_android_id": "ANDR_JOLIE_01",
+            "overwrite_existing": True,
+        })
+        ok = (code == 400 and "already registered to user" in json.dumps(body))
+        record("Security", "Duplicate Android Device ID blocked across users (JOLIE_DUP_DEV)", ok, f"HTTP {code}, {body}")
+
         # Verify identity endpoint with unseen photo Jolie_6.webp
         code, body = http_req("POST", "/api/v1/face/verify-identity", {"image_b64": b64_img("Jolie_6.webp")})
         ok = (code == 200 and isinstance(body, dict) and body.get("matched") is True and body.get("username") == "JOLIE_TEST")
@@ -412,13 +434,26 @@ def main():
         la_ok = os.path.exists(la_path) and "JOLIE_TEST" in open(la_path).read()
         record("Attendance", "Cooldown file (~/.last_attendance) updated", la_ok, la_path)
 
-        # Delete face profile and verify RAM + SQLite purge
+        # Delete face profile and verify RAM + SQLite purge + sync/rebuild non-resurrection
         code, body = http_req("DELETE", "/api/v1/face/profiles/JOLIE_TEST")
         record("Biometric", "Delete face profile (DELETE /api/v1/face/profiles/JOLIE_TEST)", code == 200, f"HTTP {code}, {body}")
 
+        code, u_body = http_req("GET", "/api/v1/users/JOLIE_TEST")
+        db_purged = (
+            code == 200
+            and isinstance(u_body, dict)
+            and u_body.get("face_encoding") is None
+            and u_body.get("register_with_camera") == "N"
+        )
+        record("Security", "Deleted face profile cleared users.face_encoding=NULL & register_with_camera='N'", db_purged, f"HTTP {code}, face_encoding={u_body.get('face_encoding') if isinstance(u_body, dict) else u_body}, reg_cam={u_body.get('register_with_camera') if isinstance(u_body, dict) else u_body}")
+
+        # Trigger users-to-local sync and index rebuild to verify deleted face CANNOT resurrect
+        http_req("POST", "/api/v1/sync/users-to-local", {})
+        http_req("POST", "/api/v1/face/index/rebuild", {})
+
         code, body = http_req("POST", "/api/v1/face/verify-identity", {"image_b64": b64_img("Jolie_6.webp")})
         ok = (code == 200 and isinstance(body, dict) and body.get("matched") is False)
-        record("Security", "Deleted face profile purged from RAM index immediately", ok, f"HTTP {code}, matched={body.get('matched') if isinstance(body, dict) else body}")
+        record("Security", "Deleted face profile stays purged after sync/users-to-local & index/rebuild", ok, f"HTTP {code}, matched={body.get('matched') if isinstance(body, dict) else body}")
 
         # 3. Security & Authentication Hardening Tests
         code, body = http_req("POST", "/api/v1/auth/change-hr-password", {
@@ -433,8 +468,8 @@ def main():
                 "company_id": "HQ_001",
                 "password": backdoor,
             })
-            rejected = (code != 200) or (isinstance(body, dict) and body.get("verified") is False)
-            record("Security", f"Reject hardcoded HR backdoor '{backdoor}'", rejected, f"HTTP {code}, {body}")
+            rejected = (code == 401)
+            record("Security", f"Reject hardcoded HR backdoor '{backdoor}' with HTTP 401", rejected, f"HTTP {code}, {body}")
 
         code, body = http_req("POST", "/api/v1/auth/verify-hr", {
             "company_id": "HQ_001",
@@ -442,13 +477,28 @@ def main():
         })
         record("Security", "Accept legitimate custom HR password 'CustomHR#2026'", code == 200 and body.get("verified") is True, f"HTTP {code}, {body}")
 
-        # Ensure sync-hr-password does NOT overwrite CustomHR#2026
+        # Ensure unauthenticated set-hr-password and sync-hr-password cannot overwrite CustomHR#2026
+        code_set, body_set = http_req("POST", "/api/v1/auth/set-hr-password", {"company_id": "HQ_001", "password": "HijackPassword"})
+        code_sync, body_sync = http_req("POST", "/api/v1/auth/sync-hr-password", {"company_id": "HQ_001", "password": "HijackPassword"})
         code, body = http_req("POST", "/api/v1/auth/sync-hr-password", {"company_id": "HQ_001"})
         code2, body2 = http_req("POST", "/api/v1/auth/verify-hr", {
             "company_id": "HQ_001",
             "password": "CustomHR#2026",
         })
-        record("Security", "sync-hr-password preserves custom HR password", code2 == 200 and body2.get("verified") is True, f"sync={body}, verify={body2}")
+        record(
+            "Security",
+            "Block unauthenticated HR password overwrite & preserve CustomHR#2026",
+            code_set == 401 and code_sync == 401 and code2 == 200 and body2.get("verified") is True,
+            f"set_code={code_set}, sync_explicit_code={code_sync}, verify={body2}",
+        )
+
+        # Ensure forgot-password rejects public designation string
+        code_fp, body_fp = http_req("POST", "/api/v1/auth/forgot-password", {
+            "username": "JOLIE_TEST",
+            "verification": "Lead Engineer",
+            "new_password": "hacked_password",
+        })
+        record("Security", "Reject public designation in forgot-password verification", code_fp == 401, f"HTTP {code_fp}, {body_fp}")
 
         # Path traversal rejection
         code, body = http_req("POST", "/api/v1/face/upload-model", {
@@ -456,6 +506,21 @@ def main():
             "model_b64": base64.b64encode(b"x" * 100).decode("ascii"),
         })
         record("Security", "Path traversal blocked on /api/v1/face/upload-model", code == 400, f"HTTP {code}, {body}")
+
+        # Invalid ONNX payload rejection BEFORE overwriting models/facenet512.onnx
+        facenet_path = os.path.join(WORKSPACE, "models", "facenet512.onnx")
+        size_before = os.path.getsize(facenet_path)
+        code, body = http_req("POST", "/api/v1/face/upload-model", {
+            "model_name": "facenet512.onnx",
+            "model_b64": base64.b64encode(b"CORRUPTED_NON_ONNX_PAYLOAD_" * 10).decode("ascii"),
+        })
+        size_after = os.path.getsize(facenet_path)
+        record(
+            "Security",
+            "Corrupted ONNX upload rejected with HTTP 400 before disk write",
+            code == 400 and size_before == size_after == 94176340,
+            f"HTTP {code}, size_before={size_before}, size_after={size_after}, body={body}",
+        )
 
         # 4. Database Dual-Format Compatibility Tests
         conn = sqlite3.connect(STAGING_DB)
@@ -489,6 +554,28 @@ def main():
 
         # 6. Headless Chromium / Playwright UI E2E Verification
         run_playwright_tests(record)
+
+        # Verify UI registration saved user_designation and register_with_camera properly
+        code_ui, body_ui = http_req("GET", "/api/v1/users/UI_TEST_USER")
+        ui_desig_ok = (
+            code_ui == 200
+            and isinstance(body_ui, dict)
+            and body_ui.get("user_designation") == "QA Engineer"
+            and body_ui.get("register_with_camera") == "N"
+        )
+        record("Frontend", "UI registration persisted user_designation='QA Engineer' & register_with_camera='N'", ui_desig_ok, f"HTTP {code_ui}, {body_ui}")
+
+        # Verify Cloud Outbox Sync flushes pending events to COMPLETED
+        code_tr, body_tr = http_req("POST", "/api/v1/sync/trigger")
+        code_st, body_st = http_req("GET", "/api/v1/sync/status")
+        outbox_ok = (
+            code_tr == 200
+            and code_st == 200
+            and isinstance(body_st, dict)
+            and body_st.get("pending_count") == 0
+            and os.path.exists(os.path.join(WORKSPACE, "data", "cloud_sync_outbox.jsonl"))
+        )
+        record("Database", "Cloud Sync Outbox flush marks events COMPLETED & archives JSONL", outbox_ok, f"trigger={body_tr}, status={body_st}")
 
     finally:
         proc.terminate()

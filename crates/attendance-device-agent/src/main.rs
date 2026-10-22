@@ -184,8 +184,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let username = parts[1].to_uppercase();
                 println!("Simulating 512-dim facial landmark extraction for {}...", username);
                 let mut emb = vec![0.0f32; 512];
+                let seed: u32 = username.bytes().fold(1337u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32));
+                let mut norm_sq = 0.0f32;
                 for (i, val) in emb.iter_mut().enumerate() {
-                    *val = ((username.as_bytes()[0] as f32 + i as f32) % 17.0) / 17.0;
+                    let v = (((seed.wrapping_mul(37).wrapping_add(i as u32 * 101)) % 1000) as f32 / 1000.0) - 0.5;
+                    *val = v;
+                    norm_sq += v * v;
+                }
+                let norm = norm_sq.sqrt().max(1e-9);
+                for val in &mut emb {
+                    *val /= norm;
                 }
 
                 let req_payload = serde_json::json!({

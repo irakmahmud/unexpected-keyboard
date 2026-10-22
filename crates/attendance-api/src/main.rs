@@ -260,7 +260,7 @@ async fn handle_root_fallback(
 }
 
 fn seed_if_empty(db: &DbPool, _face_index: &FaceVectorIndex) -> Result<()> {
-    if db.list_companies()?.is_empty() {
+    if db.get_company("HQ_001")?.is_none() {
         let now = TimeHelper::now_utc_sqlite_string();
         let default_comp = CompanyInfo {
             company_id: "HQ_001".to_string(),
@@ -278,12 +278,25 @@ fn seed_if_empty(db: &DbPool, _face_index: &FaceVectorIndex) -> Result<()> {
             last_updated: Some(now),
         };
         let _ = db.save_company(&default_comp);
-        let _ = attendance_auth::HrAuthService::set_hr_password(
-            db,
-            "HQ_001",
-            "Smart Attendance HQ",
-            "HR@123",
-        );
+        if db.get_hr_password("HQ_001")?.is_none() {
+            let _ = attendance_auth::HrAuthService::set_hr_password(
+                db,
+                "HQ_001",
+                "Smart Attendance HQ",
+                "HR@123",
+            );
+        }
+    }
+
+    if let Ok(companies) = db.list_companies() {
+        for mut comp in companies {
+            let is_sha256_hex = comp.password.len() == 64
+                && comp.password.chars().all(|c| c.is_ascii_hexdigit());
+            if !comp.password.is_empty() && !is_sha256_hex {
+                comp.password = AuthService::hash_password(&comp.password);
+                let _ = db.save_company(&comp);
+            }
+        }
     }
 
     let users = db.get_all_users()?;
@@ -378,14 +391,20 @@ fn bootstrap_face_index(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()>
         }
         if let Some(enc_str) = &u.face_encoding {
             if let Ok(vec) = serde_json::from_str::<Vec<f32>>(enc_str) {
-                if !vec.is_empty() && !FaceVectorIndex::is_corrupted_constant_vector(&vec) {
+                let is_zero_placeholder = !vec.is_empty()
+                    && vec.iter().all(|&x| x == 0.0)
+                    && u.register_with_camera.as_deref() == Some("N");
+                if is_zero_placeholder {
+                    // CAP-17: Preserve 512-zero placeholder for non-camera users without enrolling into biometric index
+                    continue;
+                } else if !vec.is_empty() && !FaceVectorIndex::is_corrupted_constant_vector(&vec) {
                     if let Ok(()) = face_index.enroll_user(&u.username, vec) {
                         loaded += 1;
                     }
                 } else {
                     let conn = db.get_connection();
                     let _ = conn.execute(
-                        "UPDATE users SET face_encoding = NULL WHERE UPPER(username) = ?1",
+                        "UPDATE users SET face_encoding = NULL, register_with_camera = 'N' WHERE UPPER(username) = ?1",
                         rusqlite::params![u.username.to_uppercase()],
                     );
                 }

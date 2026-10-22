@@ -34,14 +34,15 @@ impl OutboxWorker {
             return Ok(0);
         }
 
-        let total = events.len();
+        let mut synced = 0usize;
         match self.bq.stream_batch(&events).await {
             Ok(synced_count) => {
-                if synced_count > 0 {
-                    for ev in &events[..synced_count] {
+                synced = synced_count.min(events.len());
+                if synced > 0 {
+                    for ev in &events[..synced] {
                         let _ = self.db.mark_outbox_event_completed(&ev.event_id);
                     }
-                    tracing::info!("Synced {} events to cloud outbox", synced_count);
+                    tracing::info!("Synced {} events to cloud outbox", synced);
                 }
             }
             Err(e) => {
@@ -53,7 +54,7 @@ impl OutboxWorker {
             }
         }
 
-        Ok(total)
+        Ok(synced)
     }
 
     pub fn start(self: Arc<Self>) {

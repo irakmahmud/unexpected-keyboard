@@ -18,7 +18,7 @@ impl SeedCommand {
         let company = CompanyInfo {
             company_id: "TECHFIRM_01".to_string(),
             company_name: "TechFirm Global Limited".to_string(),
-            password: "SecurePassword123".to_string(),
+            password: PasswordHasher::hash_sha256("SecurePassword123"),
             address_road: Some("Gulshan-2, Road 11".to_string()),
             address_city: Some("Dhaka 1212, Bangladesh".to_string()),
             contact_person_name: Some("Managing Director".to_string()),
@@ -195,12 +195,8 @@ impl SeedCommand {
                 updated_at: Some(now.clone()),
             };
             db.save_employee(&emp)?;
-
-            // Seed biometric profile (512-D embedding)
-            let dummy_embedding = vec![0.044f32; 512];
-            db.save_face_profile(&emp.full_name, Some(code), &dummy_embedding, 95.0, "FRONT")?;
         }
-        println!("      ✓ 10 employees and 512-D biometrics seeded.");
+        println!("      ✓ 10 employees seeded (ready for real camera enrollment).");
 
         // 6. Seed Edge Turnstile Devices
         println!("[6/6] Seeding physical turnstile and gate hardware records...");

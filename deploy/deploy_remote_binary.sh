@@ -66,7 +66,7 @@ verify_artifact() {
         local base_name
         base_name=$(basename "${binary_file}")
         local expected_sum
-        expected_sum=$(grep "${base_name}" "${checksum_file}" | awk '{print $1}')
+        expected_sum=$(grep -w "${base_name}" "${checksum_file}" | head -n 1 | awk '{print $1}')
         if [ -n "${expected_sum}" ]; then
             local actual_sum
             actual_sum=$(sha256sum "${binary_file}" | awk '{print $1}')
@@ -121,6 +121,8 @@ rotate_backups() {
 # ------------------------------------------------------------------------------
 atomic_deploy() {
     local staged_binary="$1"
+    local staged_dir
+    staged_dir=$(dirname "${staged_binary}")
     local target_binary="${TARGET_DIR}/attendance-api"
     local timestamp
     timestamp=$(date '+%Y%m%d_%H%M%S')
@@ -138,6 +140,14 @@ atomic_deploy() {
     cp "${staged_binary}" "${target_binary}.tmp"
     chmod +x "${target_binary}.tmp"
     mv -f "${target_binary}.tmp" "${target_binary}"
+    for aux_bin in attendance-cli attendance-device-agent; do
+        if [ -f "${staged_dir}/${aux_bin}" ]; then
+            cp "${staged_dir}/${aux_bin}" "${TARGET_DIR}/${aux_bin}.tmp"
+            chmod +x "${TARGET_DIR}/${aux_bin}.tmp"
+            mv -f "${TARGET_DIR}/${aux_bin}.tmp" "${TARGET_DIR}/${aux_bin}"
+            log "Updated auxiliary binary: ${TARGET_DIR}/${aux_bin}"
+        fi
+    done
     log "Atomic file swap completed."
 
     # Service Restart

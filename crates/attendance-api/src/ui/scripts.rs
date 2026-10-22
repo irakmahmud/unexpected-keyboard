@@ -1495,7 +1495,7 @@ async function deleteUserAccount(username) {
     }
 }
 
-async function captureSingleRegPose() {
+async function captureSingleRegPose(skipRemoteExtract = false) {
     const username = (document.getElementById('reg-cam-username')?.value || '').trim();
     const msgEl = document.getElementById('reg-cam-result-msg');
     if (!username) {
@@ -1503,13 +1503,39 @@ async function captureSingleRegPose() {
             msgEl.style.color = '#ff7675';
             msgEl.innerText = 'Please enter Username first before capturing poses!';
         }
-        return;
+        return false;
     }
     if (regCurrentPoseIdx >= 20) {
-        return;
+        return true;
     }
     const video = document.getElementById('hr-reg-video');
     const frameB64 = captureFrameFromVideoElement(video);
+    const hasLiveOrTestFrame = Boolean(window.__TEST_FACE_B64 || (video && video.srcObject && video.readyState >= 2));
+
+    if (!skipRemoteExtract && hasLiveOrTestFrame) {
+        try {
+            const extRes = await fetch('/api/v1/face/extract-frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_b64: frameB64 })
+            });
+            const extData = await extRes.json();
+            if (!extRes.ok || !extData.success) {
+                if (msgEl) {
+                    msgEl.style.color = '#ff7675';
+                    msgEl.innerText = extData.error || extData.message || 'Face detection failed on captured pose — please align your face clearly.';
+                }
+                return false;
+            }
+        } catch (err) {
+            if (msgEl) {
+                msgEl.style.color = '#ff7675';
+                msgEl.innerText = 'Face extraction error: ' + err.message;
+            }
+            return false;
+        }
+    }
+
     regCapturedFrames.push(frameB64);
     regCurrentPoseIdx += 1;
 
@@ -1528,6 +1554,7 @@ async function captureSingleRegPose() {
         if (enEl) enEl.innerText = '✅ All 20/20 Poses Captured! Ready to Save.';
         if (bnEl) bnEl.innerText = '✅ ২০/২০টি পোজ সম্পন্ন হয়েছে! এখন রেজিস্ট্রেশন সম্পন্ন করুন।';
     }
+    return true;
 }
 
 async function runAuto20PoseCapture() {
@@ -1536,8 +1563,9 @@ async function runAuto20PoseCapture() {
     regCapturedFrames = [];
     regCurrentPoseIdx = 0;
     for (let i = 0; i < 20; i++) {
-        await captureSingleRegPose();
-        await new Promise(r => setTimeout(r, 50));
+        const ok = await captureSingleRegPose(i > 0 && Boolean(window.__TEST_FACE_B64));
+        if (!ok) return;
+        await new Promise(r => setTimeout(r, 30));
     }
     addTerminalLog(`Captured 20 multi-angle frames for ${username}`, 'CAMERA');
 }

@@ -38,35 +38,19 @@ def req(path, method="GET", payload=None):
         except Exception:
             return e.code, body
 
-def make_synthetic_face_b64(seed=0):
-    w, h = 160, 160
-    raw_rows = bytearray()
-    for y in range(h):
-        raw_rows.append(0)  # PNG filter type 0
-        for x in range(w):
-            dx = x - 80 + (seed % 5) - 2
-            dy = y - 80 + ((seed // 5) % 5) - 2
-            if dx * dx + dy * dy < 3200:
-                # Face circle with distinct features
-                r = (220 + (x + seed) % 30) & 0xFF
-                g = (180 + (y + seed) % 40) & 0xFF
-                b = (140 + (x ^ y) % 50) & 0xFF
-            else:
-                r, g, b = 35, 45, 65
-            raw_rows.extend((r, g, b))
-
-    def png_chunk(chunk_type, data):
-        c = chunk_type + data
-        return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
-
-    ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
-    png_bytes = (
-        b"\x89PNG\r\n\x1a\n"
-        + png_chunk(b"IHDR", ihdr)
-        + png_chunk(b"IDAT", zlib.compress(bytes(raw_rows), 6))
-        + png_chunk(b"IEND", b"")
-    )
-    return "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
+def load_real_face_b64(idx=0):
+    import os
+    candidates = [
+        "rust_deepFace/test_images/Angelina Jolie/Jolie_1.jpg",
+        "rust_deepFace/test_images/Angelina Jolie/Jolie_3.jpg",
+        "rust_deepFace/test_images/Angelina Jolie/Jolie_6.webp",
+        "rust_deepFace/test_images/Multiple Faces/face8.jpg",
+    ]
+    path = candidates[idx % len(candidates)]
+    with open(path, "rb") as f:
+        raw = f.read()
+    mime = "image/webp" if path.endswith(".webp") else "image/jpeg"
+    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
 
 def main():
     print("=" * 72)
@@ -76,7 +60,8 @@ def main():
     # 1. Company Management
     st, profile = req("/api/v1/companies/profile")
     assert st == 200, f"Expected 200, got {st}: {profile}"
-    print(f"[1/8] Active Company Profile: {profile.get('company_name')} ({profile.get('company_id')})")
+    initial_company_id = profile.get("company_id", "HQ_001")
+    print(f"[1/8] Active Company Profile: {profile.get('company_name')} ({initial_company_id})")
 
     st, comp_list = req("/api/v1/companies/list")
     assert st == 200 and isinstance(comp_list, list), f"Company list failed: {comp_list}"
@@ -111,7 +96,7 @@ def main():
     print(f"[2/8] HR Default Password ('HR@123') Verified: {hr_auth}")
 
     # 3. ONNX FaceNet512 Single Frame Extraction & 20-Pose Registration
-    frames_20 = [make_synthetic_face_b64(i) for i in range(20)]
+    frames_20 = [load_real_face_b64(i) for i in range(20)]
     st, ext_frame = req("/api/v1/face/extract-frame", "POST", {"image_b64": frames_20[0]})
     assert st == 200 and ext_frame.get("dimension") == 512, f"Extract frame failed: {ext_frame}"
     l2_norm = sum(x * x for x in ext_frame["embedding"]) ** 0.5
@@ -129,7 +114,7 @@ def main():
     print(f"[4/8] 20-Pose ONNX Camera User Registered: {reg_cam}")
 
     # 4. Identity Verification Split-Screen Endpoint & Camera Punch
-    st, id_ver = req("/api/v1/face/verify-identity", "POST", {"image_b64": frames_20[0]})
+    st, id_ver = req("/api/v1/face/verify-identity", "POST", {"image_b64": frames_20[1]})
     assert st == 200 and id_ver.get("matched") is True, f"Identity verification failed: {id_ver}"
     print(f"[5/8] Identity Verification Split-Window Match: user={id_ver['username']}, min_distance={id_ver['min_distance']:.4f}, confidence={id_ver['confidence']:.1f}%, tier={id_ver['match_quality']}")
 
@@ -137,7 +122,7 @@ def main():
         "username": id_ver["username"],
         "method": "CAMERA",
         "device_id": "KIOSK-CAM-01",
-        "image_b64": frames_20[0],
+        "image_b64": frames_20[1],
         "remarks": "Verified via ONNX FaceNet512"
     })
     assert st == 200 and cam_punch.get("success") is True, f"Camera punch failed: {cam_punch}"
@@ -187,7 +172,10 @@ def main():
     assert st == 200 and "total_lates" in stats, f"User stats failed: {stats}"
     print(f"[8/8] HR Reports Verified: Embeddings Report ({emb_rep['total_records']} records), Verify Images ({ver_imgs['total_found']} records), Monthly Stats ({stats})")
 
-    # Switch back default company or keep active
+    # Clean up temporary verification users so production DB stays clean
+    for temp_user in ("ONNX_CAM_USER", "NOCAM_USER_01", "QR_USER_01"):
+        req(f"/api/v1/users/{temp_user}", "DELETE")
+
     print("=" * 72)
     print("✅ ALL 8 PARITY TEST SUITES PASSED 100%!")
     print("=" * 72)
