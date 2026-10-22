@@ -75,7 +75,7 @@ void main() {
       expect(qwerty[5].any((k) => k.actionType == KeyActionType.switchLayout), false);
       expect(qwerty[5].any((k) => k.actionType == KeyActionType.openSettings), false);
 
-      // Symbol layout keeps row0 as number row, 6 keys in rows 1-4, and ⌫ left of ↵ in row 5
+      // Symbol layout keeps row0 as number row, 6 keys in rows 1-4, and ABC + ⌫ left of ↵ in row 5
       final symbols = KeyboardLayout.symbolLayout;
       expect(symbols.length, 6);
       expect(symbols[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
@@ -83,6 +83,7 @@ void main() {
       expect(symbols[2].length, 6);
       expect(symbols[3].length, 6);
       expect(symbols[4].length, 6);
+      expect(symbols[5].any((k) => k.primary == 'ABC' && k.actionType == KeyActionType.switchLayout), true);
       expect(symbols[5][5].actionType, KeyActionType.backspace);
       expect(symbols[5][6].actionType, KeyActionType.enter);
 

@@ -92,7 +92,20 @@ class _KeyWidgetState extends State<KeyWidget> {
   }
 
   void _showOrUpdatePopup() {
+    if (widget.keyModel.actionType != KeyActionType.inputChar) {
+      return;
+    }
     _hideTimer?.cancel();
+    // Safety auto-hide if pointer leaves IME window bounds without PointerUp
+    _hideTimer = Timer(const Duration(milliseconds: 800), () {
+      _removePopupEntry();
+      if (mounted && _isPressed) {
+        setState(() {
+          _isPressed = false;
+          _activeDirection = GestureDirection.center;
+        });
+      }
+    });
     if (_popupEntry != null) {
       _popupEntry!.markNeedsBuild();
       return;
@@ -272,11 +285,12 @@ class _KeyWidgetState extends State<KeyWidget> {
     final key = widget.keyModel;
     final theme = widget.theme;
 
-    // Check if modifier key is in active state
+    // Check if modifier or layout switch key is in active state
     bool isActiveModifier = false;
     if (key.actionType == KeyActionType.shift && widget.isShiftActive) isActiveModifier = true;
     if (key.actionType == KeyActionType.ctrl && widget.isCtrlActive) isActiveModifier = true;
     if (key.actionType == KeyActionType.alt && widget.isAltActive) isActiveModifier = true;
+    if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
 
     final Color bgColor = isActiveModifier
         ? theme.modifierActiveColor
@@ -467,7 +481,8 @@ class _KeyWidgetState extends State<KeyWidget> {
     }
 
     // 5x letter size increase (18.0 * 5 = 90.0) with ultra-thin hairline stroke (FontWeight.w100 / sans-serif-thin)
-    final double targetFontSize = displayPrimary.length > 1 ? 57.5 : 90.0;
+    final bool isMultiCharLabel = displayPrimary.length > 1;
+    final double targetFontSize = isMultiCharLabel ? 57.5 : 90.0;
     final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
 
     Widget textWidget = Text(
@@ -478,11 +493,11 @@ class _KeyWidgetState extends State<KeyWidget> {
         applyHeightToLastDescent: false,
       ),
       style: TextStyle(
-        fontFamily: 'sans-serif-thin',
+        fontFamily: isMultiCharLabel ? 'sans-serif' : 'sans-serif-thin',
         fontSize: targetFontSize,
         height: 1.0,
-        fontWeight: FontWeight.w100,
-        fontVariations: const [FontVariation('wght', 100.0)],
+        fontWeight: isMultiCharLabel ? FontWeight.w400 : FontWeight.w100,
+        fontVariations: isMultiCharLabel ? null : const [FontVariation('wght', 100.0)],
         color: fgColor,
       ),
     );

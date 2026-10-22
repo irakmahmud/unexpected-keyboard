@@ -32,6 +32,7 @@ class _KeyboardViewState extends State<KeyboardView> {
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
   late double _localKeyHeight;
+  DateTime? _lastLayoutSwitchTime;
 
   double get _effectiveKeyHeight =>
       ImeChannelService.clampKeyHeight(widget.keyHeight ?? _localKeyHeight);
@@ -215,6 +216,12 @@ class _KeyboardViewState extends State<KeyboardView> {
         break;
 
       case KeyActionType.switchLayout:
+        final now = DateTime.now();
+        if (_lastLayoutSwitchTime != null &&
+            now.difference(_lastLayoutSwitchTime!).inMilliseconds < 120) {
+          break;
+        }
+        _lastLayoutSwitchTime = now;
         widget.imeService.triggerHaptic();
         setState(() {
           _currentLayout = (_currentLayout == LayoutType.qwerty)

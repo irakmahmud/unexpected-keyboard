@@ -121,11 +121,11 @@ class KeyboardLayout {
       KeyModel(primary: '"', topLeft: "'", topRight: '`', flex: 1.0),
     ],
     const [
+      KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 1.0),
       KeyModel(primary: ',', topLeft: '<', flex: 1.0),
       KeyModel(primary: '.', topLeft: '>', flex: 1.0),
       KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.0),
-      KeyModel(primary: '(', flex: 1.0),
-      KeyModel(primary: ')', flex: 1.0),
+      KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 1.0),
       KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
       KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
     ],
