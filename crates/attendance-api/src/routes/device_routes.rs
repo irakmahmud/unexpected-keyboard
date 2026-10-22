@@ -114,13 +114,17 @@ pub async fn receive_android_id(
         })));
     }
 
-    // 1. Update session status if session_id is provided
+    // 1. Update or create session status if session_id is provided
     if let Some(sid) = &payload.session_id {
-        if let Some(mut session) = state.db.get_device_session(sid)? {
-            session.registered_android_id = Some(aid.to_string());
-            session.status = "CONNECTED".to_string();
-            state.db.save_device_session(&session)?;
-        }
+        let mut session = state.db.get_device_session(sid)?.unwrap_or_else(|| DeviceSession {
+            session_id: sid.clone(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            registered_android_id: None,
+            status: "PENDING".to_string(),
+        });
+        session.registered_android_id = Some(aid.to_string());
+        session.status = "CONNECTED".to_string();
+        state.db.save_device_session(&session)?;
     }
 
     // 2. Check if user already exists with this Android ID for QR Attendance punch (matching Python handle_android_id)

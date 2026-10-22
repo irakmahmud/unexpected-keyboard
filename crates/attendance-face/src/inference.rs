@@ -65,3 +65,13 @@ pub fn get_embedding(
 
     Ok(embedding)
 }
+
+/// Validate that raw uploaded bytes parse as a valid ONNX protobuf graph via `tract-onnx`
+/// BEFORE writing them to disk, preventing corrupted/malicious uploads from overwriting models.
+pub fn validate_onnx_model_bytes(bytes: &[u8]) -> Result<(), AppError> {
+    let mut cursor = std::io::Cursor::new(bytes);
+    tract_onnx::onnx()
+        .model_for_read(&mut cursor)
+        .map(|_| ())
+        .map_err(|e| AppError::OnnxError(format!("Invalid ONNX protobuf graph: {e}")))
+}

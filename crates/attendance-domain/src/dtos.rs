@@ -49,7 +49,9 @@ pub struct CreateUserRequest {
     pub username: String,
     pub company_name: Option<String>,
     pub company_uuid: Option<String>,
+    #[serde(alias = "designation")]
     pub user_designation: Option<String>,
+    #[serde(alias = "android_id", alias = "device_id")]
     pub user_android_id: Option<String>,
     pub password: Option<String>,
     pub email: Option<String>,
@@ -63,7 +65,9 @@ pub struct CreateUserRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserRequest {
+    #[serde(alias = "designation")]
     pub user_designation: Option<String>,
+    #[serde(alias = "android_id", alias = "device_id")]
     pub user_android_id: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,

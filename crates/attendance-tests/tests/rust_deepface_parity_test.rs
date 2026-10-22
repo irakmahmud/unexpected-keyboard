@@ -99,3 +99,13 @@ fn test_deepface_app_error_display() {
     let err3 = AppError::ImageDecode("bad png".to_string());
     assert_eq!(err3.to_string(), "Image decode failed: bad png");
 }
+
+#[test]
+fn test_validate_onnx_model_bytes_rejects_corrupted_payload() {
+    let garbage = vec![0x42u8; 256];
+    let res = attendance_face::validate_onnx_model_bytes(&garbage);
+    assert!(
+        res.is_err(),
+        "Arbitrary non-ONNX bytes must be rejected by validate_onnx_model_bytes before disk write"
+    );
+}

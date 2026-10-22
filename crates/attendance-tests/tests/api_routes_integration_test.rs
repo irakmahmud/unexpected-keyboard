@@ -124,3 +124,17 @@ fn test_api_batch_punch_serialization() {
     assert_eq!(parsed_batch.punches.len(), 10);
     assert_eq!(parsed_batch.device_id, "TURNSTILE_01");
 }
+
+#[test]
+fn test_create_user_request_designation_and_android_id_aliases() {
+    let raw_ui_json = r#"{
+        "username": "UI_TEST_USER",
+        "designation": "QA Engineer",
+        "android_id": "ANDR_UI_999",
+        "password": "secret"
+    }"#;
+    let parsed: CreateUserRequest = serde_json::from_str(raw_ui_json).expect("Must parse UI payload");
+    assert_eq!(parsed.username, "UI_TEST_USER");
+    assert_eq!(parsed.user_designation.as_deref(), Some("QA Engineer"));
+    assert_eq!(parsed.user_android_id.as_deref(), Some("ANDR_UI_999"));
+}

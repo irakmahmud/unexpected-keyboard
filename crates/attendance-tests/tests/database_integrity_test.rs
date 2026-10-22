@@ -84,3 +84,46 @@ fn test_security_audit_log_recording_and_query() {
     assert_eq!(logs[0].actor_username.as_deref(), Some("admin"));
     assert_eq!(logs[0].event_type, "ADMIN_LOGIN");
 }
+
+#[test]
+fn test_biometric_revocation_clears_users_face_encoding_and_register_with_camera() {
+    let db = TestFixtures::setup_in_memory_db().expect("DB setup failed");
+    let emb = TestFixtures::generate_synthetic_embedding(42);
+    let emb_json = serde_json::to_string(&emb).expect("Serialize embedding");
+
+    let mut user = User::new("EMP_FACE_01", "CU_FACE_01");
+    user.user_designation = Some("Biometric Engineer".to_string());
+    user.face_encoding = Some(emb_json);
+    user.register_with_camera = Some("Y".to_string());
+    db.insert_or_update_user(&user).expect("Upsert user failed");
+    db.save_face_profile("EMP_FACE_01", Some("EMP_FACE_01"), &emb, 0.99, "ANGLE_1")
+        .expect("Save face profile failed");
+
+    let saved = db
+        .get_user_by_username("EMP_FACE_01")
+        .expect("Get user")
+        .expect("User exists");
+    assert!(saved.face_encoding.is_some());
+    assert_eq!(saved.register_with_camera.as_deref(), Some("Y"));
+
+    // Delete profiles for EMP_FACE_01 and verify both face_profiles AND users.face_encoding are cleared
+    let deleted = db
+        .delete_face_profiles("EMP_FACE_01")
+        .expect("Delete face profiles failed");
+    assert!(deleted >= 2);
+    assert!(db.get_face_profiles("EMP_FACE_01").expect("Get profiles").is_empty());
+
+    let after_del = db
+        .get_user_by_username("EMP_FACE_01")
+        .expect("Get user after delete")
+        .expect("User still exists");
+    assert!(
+        after_del.face_encoding.is_none(),
+        "users.face_encoding MUST be NULL after delete_face_profiles"
+    );
+    assert_eq!(
+        after_del.register_with_camera.as_deref(),
+        Some("N"),
+        "users.register_with_camera MUST be 'N' after delete_face_profiles"
+    );
+}

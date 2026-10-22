@@ -1565,6 +1565,7 @@ async function submitCameraRegistration() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 username,
+                user_designation: designation,
                 designation,
                 password,
                 company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
@@ -1609,6 +1610,7 @@ async function submitNoCameraRegistration() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             username,
+            user_designation: designation,
             designation,
             password,
             company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
@@ -1645,6 +1647,7 @@ async function submitQrRegistration() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             username,
+            user_designation: designation,
             designation,
             password,
             user_android_id,

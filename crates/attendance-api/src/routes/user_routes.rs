@@ -178,6 +178,22 @@ async fn create_user(
         (Some(json_str), false)
     };
 
+    // Enforce duplicate Android Device ID check across other users (matching Python attendance_v8.py)
+    if let Some(ref aid) = payload.user_android_id {
+        let trimmed_aid = aid.trim();
+        if !trimmed_aid.is_empty() {
+            if let Ok(Some(existing_owner)) = state.db.get_user_by_android_id(trimmed_aid) {
+                if !existing_owner.username.eq_ignore_ascii_case(&upper_username) {
+                    return Err(attendance_common::AppError::Validation(format!(
+                        "Device Android ID '{}' is already registered to user '{}'",
+                        trimmed_aid, existing_owner.username
+                    ))
+                    .into());
+                }
+            }
+        }
+    }
+
     let existing_user = state.db.get_user_by_username(&upper_username).ok().flatten();
     let company_user_uuid = existing_user
         .as_ref()
@@ -212,6 +228,7 @@ async fn create_user(
         user_designation: payload.user_designation.clone(),
         user_android_id: payload.user_android_id.clone(),
         face_encoding: face_encoding_str,
+        register_with_camera: Some(if has_camera_face { "Y" } else { "N" }.to_string()),
         password: Some(hashed_pw),
         role,
         status: UserStatus::Active,
@@ -314,6 +331,18 @@ async fn update_user(
         user.user_designation = Some(d);
     }
     if let Some(aid) = payload.user_android_id {
+        let trimmed_aid = aid.trim();
+        if !trimmed_aid.is_empty() {
+            if let Ok(Some(existing_owner)) = state.db.get_user_by_android_id(trimmed_aid) {
+                if !existing_owner.username.eq_ignore_ascii_case(&user.username) {
+                    return Err(attendance_common::AppError::Validation(format!(
+                        "Device Android ID '{}' is already registered to user '{}'",
+                        trimmed_aid, existing_owner.username
+                    ))
+                    .into());
+                }
+            }
+        }
         user.user_android_id = Some(aid);
     }
     if let Some(em) = payload.email {

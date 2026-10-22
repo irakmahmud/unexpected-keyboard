@@ -23,7 +23,14 @@ impl BiometricsRepo {
         )
         .map_err(|e| AppError::Database(format!("Failed to save face profile: {}", e)))?;
 
-        Ok(conn.last_insert_rowid())
+        let row_id = conn.last_insert_rowid();
+        let upper = username.trim().to_uppercase();
+        let _ = conn.execute(
+            "UPDATE users SET face_encoding = COALESCE(face_encoding, ?1), register_with_camera = 'Y' WHERE UPPER(username) = ?2",
+            params![embedding_json, upper],
+        );
+
+        Ok(row_id)
     }
 
     pub fn get_profiles_by_username(conn: &Connection, username: &str) -> Result<Vec<FaceProfile>> {
@@ -111,7 +118,7 @@ impl BiometricsRepo {
                 "UPDATE users SET face_encoding = NULL, register_with_camera = 'N' WHERE UPPER(username) = ?1",
                 params![upper],
             )
-            .unwrap_or(0);
+            .map_err(|e| AppError::Database(format!("Failed to clear user face_encoding: {}", e)))?;
         Ok(rows + user_rows)
     }
 
@@ -119,10 +126,11 @@ impl BiometricsRepo {
         let rows = conn
             .execute("DELETE FROM face_profiles", [])
             .map_err(|e| AppError::Database(format!("Failed to reset face profiles: {}", e)))?;
-        let _ = conn.execute(
+        conn.execute(
             "UPDATE users SET face_encoding = NULL, register_with_camera = 'N'",
             [],
-        );
+        )
+        .map_err(|e| AppError::Database(format!("Failed to clear users face_encoding: {}", e)))?;
         Ok(rows)
     }
 

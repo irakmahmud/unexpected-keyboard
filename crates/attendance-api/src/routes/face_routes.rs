@@ -484,7 +484,9 @@ pub async fn handle_verify_multipart(
 
 #[derive(Deserialize)]
 pub struct UploadModelPayload {
+    #[serde(alias = "filename")]
     pub model_name: Option<String>,
+    #[serde(alias = "model_base64")]
     pub model_b64: Option<String>,
 }
 
@@ -519,6 +521,20 @@ async fn handle_upload_ai_model(
             )
             .into());
         }
+        if safe_name.ends_with(".onnx") {
+            attendance_face::validate_onnx_model_bytes(&bytes).map_err(|e| {
+                attendance_common::AppError::Validation(format!(
+                    "Invalid ONNX model rejected before writing to disk: {}",
+                    e
+                ))
+            })?;
+        } else if safe_name.ends_with(".h5") && !bytes.starts_with(b"\x89HDF\r\n\x1a\n") {
+            return Err(attendance_common::AppError::Validation(
+                "Invalid HDF5 (.h5) model header rejected before writing to disk".to_string(),
+            )
+            .into());
+        }
+
         std::fs::write(&validated_path, &bytes)
             .map_err(|e| attendance_common::AppError::Internal(format!("Failed to write model file: {}", e)))?;
 

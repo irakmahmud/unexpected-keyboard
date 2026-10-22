@@ -42,6 +42,8 @@ pub struct User {
     pub user_designation: Option<String>,
     pub user_android_id: Option<String>,
     pub face_encoding: Option<String>, // JSON-encoded or base64 512-dim float vector
+    #[serde(default)]
+    pub register_with_camera: Option<String>,
     pub password: Option<String>,
     pub role: UserRole,
     pub status: UserStatus,
@@ -62,6 +64,7 @@ impl User {
             user_designation: None,
             user_android_id: None,
             face_encoding: None,
+            register_with_camera: Some("N".to_string()),
             password: None,
             role: UserRole::Employee,
             status: UserStatus::Active,

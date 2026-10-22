@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_designation TEXT,
     user_android_id TEXT,
     face_encoding TEXT,
+    register_with_camera TEXT DEFAULT 'N',
     password TEXT,
     role TEXT NOT NULL DEFAULT 'Employee',
     status TEXT NOT NULL DEFAULT 'Active',
@@ -336,6 +337,7 @@ pub fn apply_column_migrations(conn: &Connection) {
         ("users", "status", "TEXT NOT NULL DEFAULT 'Active'"),
         ("users", "email", "TEXT"),
         ("users", "phone", "TEXT"),
+        ("users", "register_with_camera", "TEXT DEFAULT 'N'"),
         ("attendance_records", "status", "TEXT NOT NULL DEFAULT 'PRESENT'"),
         ("attendance_records", "work_hours", "REAL DEFAULT 0.0"),
         ("attendance_records", "overtime_hours", "REAL DEFAULT 0.0"),
@@ -349,6 +351,11 @@ pub fn apply_column_migrations(conn: &Connection) {
 
     for (table, col, col_def) in migrations {
         let sql = format!("ALTER TABLE {} ADD COLUMN {} {}", table, col, col_def);
-        let _ = conn.execute(&sql, []);
+        if conn.execute(&sql, []).is_ok() && table == "users" && col == "register_with_camera" {
+            let _ = conn.execute(
+                "UPDATE users SET register_with_camera = 'Y' WHERE face_encoding IS NOT NULL AND face_encoding != '' AND face_encoding NOT LIKE '[0.0,0.0,%'",
+                [],
+            );
+        }
     }
 }

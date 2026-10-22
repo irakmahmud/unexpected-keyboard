@@ -18,6 +18,7 @@ pub mod quality;
 
 // Re-exports from rust_deepFace
 pub use errors::{AppError as DeepFaceAppError, AppError as FaceError};
+pub use inference::validate_onnx_model_bytes;
 pub use mtcnn::{detect_face, detect_faces, FaceDetection};
 pub use pipeline::{
     deepface_router, extract_face_embedding, extract_face_embedding_vec,

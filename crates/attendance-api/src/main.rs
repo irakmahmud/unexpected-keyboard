@@ -265,7 +265,7 @@ fn seed_if_empty(db: &DbPool, _face_index: &FaceVectorIndex) -> Result<()> {
         let default_comp = CompanyInfo {
             company_id: "HQ_001".to_string(),
             company_name: "Smart Attendance HQ".to_string(),
-            password: "admin123".to_string(),
+            password: AuthService::hash_password("admin123"),
             address_road: Some("100 Motijheel C/A".to_string()),
             address_city: Some("Dhaka".to_string()),
             contact_person_name: Some("HR Admin".to_string()),
@@ -307,6 +307,7 @@ fn seed_if_empty(db: &DbPool, _face_index: &FaceVectorIndex) -> Result<()> {
                 user_designation: Some(role.to_string()),
                 user_android_id: Some(format!("ANDR_{}", emp_id)),
                 face_encoding: None,
+                register_with_camera: Some("N".to_string()),
                 password: Some(AuthService::hash_password("admin123")),
                 role: if name == "ADMIN" { UserRole::SuperAdmin } else { UserRole::Employee },
                 status: UserStatus::Active,

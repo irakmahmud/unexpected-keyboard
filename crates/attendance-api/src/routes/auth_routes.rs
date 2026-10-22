@@ -36,6 +36,7 @@ pub struct HrPasswordSetPayload {
     pub company_uuid: String,
     pub company_name: Option<String>,
     pub password: Option<String>,
+    pub current_password: Option<String>,
 }
 
 fn default_company_uuid() -> String {
@@ -125,6 +126,16 @@ async fn handle_set_hr_password(
         .company_name
         .unwrap_or_else(|| payload.company_uuid.clone());
     let pw = payload.password.as_deref().unwrap_or("HR@123");
+
+    // If a non-default HR password is already configured for this company, require current_password verification
+    if let Some(existing) = state.db.get_hr_password(&payload.company_uuid)? {
+        let is_still_default = AuthService::verify_password("HR@123", &existing.password);
+        if !is_still_default {
+            let cur = payload.current_password.as_deref().unwrap_or("");
+            HrAuthService::verify_hr_access(&state.db, &payload.company_uuid, cur)?;
+        }
+    }
+
     HrAuthService::set_hr_password(&state.db, &payload.company_uuid, &company_name, pw)?;
     Ok(Json(serde_json::json!({
         "success": true,
@@ -142,6 +153,13 @@ async fn handle_sync_hr_password(
         .unwrap_or_else(|| payload.company_uuid.clone());
     if let Some(ref explicit_pw) = payload.password {
         if !explicit_pw.trim().is_empty() {
+            if let Some(existing) = state.db.get_hr_password(&payload.company_uuid)? {
+                let is_still_default = AuthService::verify_password("HR@123", &existing.password);
+                if !is_still_default {
+                    let cur = payload.current_password.as_deref().unwrap_or("");
+                    HrAuthService::verify_hr_access(&state.db, &payload.company_uuid, cur)?;
+                }
+            }
             HrAuthService::set_hr_password(&state.db, &payload.company_uuid, &company_name, explicit_pw.trim())?;
         }
     } else if state.db.get_hr_password(&payload.company_uuid)?.is_none() {
@@ -221,18 +239,12 @@ async fn handle_forgot_password_post(
                 && user
                     .user_android_id
                     .as_deref()
-                    .map(|aid| aid.eq_ignore_ascii_case(ver))
-                    .unwrap_or(false);
-            let verified_by_desig = !ver.is_empty()
-                && user
-                    .user_designation
-                    .as_deref()
-                    .map(|d| d.eq_ignore_ascii_case(ver))
+                    .map(|aid| !aid.trim().is_empty() && aid.eq_ignore_ascii_case(ver))
                     .unwrap_or(false);
 
-            if !verified_by_hr && !verified_by_aid && !verified_by_desig {
+            if !verified_by_hr && !verified_by_aid {
                 return Err(attendance_common::AppError::Unauthorized(
-                    "Verification failed: provide valid HR password, registered Android ID, or designation".to_string(),
+                    "Verification failed: provide valid HR password or registered Android ID".to_string(),
                 )
                 .into());
             }

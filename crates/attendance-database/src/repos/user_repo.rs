@@ -9,7 +9,8 @@ impl UserRepo {
         let upper = username.to_uppercase();
         let mut stmt = conn.prepare(
             "SELECT company_user_uuid, company_name, company_uuid, username, user_uuid,
-                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated
+                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated,
+                    COALESCE(NULLIF(register_with_camera, ''), CASE WHEN face_encoding IS NOT NULL AND face_encoding != '' THEN 'Y' ELSE 'N' END)
              FROM users WHERE UPPER(username) = ?"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -44,6 +45,7 @@ impl UserRepo {
                 user_designation: row.get(5)?,
                 user_android_id: row.get(6)?,
                 face_encoding: row.get(7)?,
+                register_with_camera: row.get(15).ok(),
                 password: row.get(8)?,
                 role,
                 status,
@@ -60,7 +62,8 @@ impl UserRepo {
     pub fn get_by_android_id(conn: &Connection, android_id: &str) -> Result<Option<User>> {
         let mut stmt = conn.prepare(
             "SELECT company_user_uuid, company_name, company_uuid, username, user_uuid,
-                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated
+                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated,
+                    COALESCE(NULLIF(register_with_camera, ''), CASE WHEN face_encoding IS NOT NULL AND face_encoding != '' THEN 'Y' ELSE 'N' END)
              FROM users WHERE user_android_id = ?"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -95,6 +98,7 @@ impl UserRepo {
                 user_designation: row.get(5)?,
                 user_android_id: row.get(6)?,
                 face_encoding: row.get(7)?,
+                register_with_camera: row.get(15).ok(),
                 password: row.get(8)?,
                 role,
                 status,
@@ -111,7 +115,8 @@ impl UserRepo {
     pub fn get_all(conn: &Connection) -> Result<Vec<User>> {
         let mut stmt = conn.prepare(
             "SELECT company_user_uuid, company_name, company_uuid, username, user_uuid,
-                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated
+                    user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated,
+                    COALESCE(NULLIF(register_with_camera, ''), CASE WHEN face_encoding IS NOT NULL AND face_encoding != '' THEN 'Y' ELSE 'N' END)
              FROM users ORDER BY username ASC"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -140,6 +145,7 @@ impl UserRepo {
                 user_designation: row.get(5)?,
                 user_android_id: row.get(6)?,
                 face_encoding: row.get(7)?,
+                register_with_camera: row.get(15).ok(),
                 password: row.get(8)?,
                 role,
                 status,
@@ -161,19 +167,32 @@ impl UserRepo {
         let now = TimeHelper::now_utc_sqlite_string();
         let role_str = format!("{:?}", user.role);
         let status_str = format!("{:?}", user.status);
+        let reg_cam = user.register_with_camera.clone().unwrap_or_else(|| {
+            if user
+                .face_encoding
+                .as_deref()
+                .map(|s| !s.is_empty() && !s.starts_with("[0.0,0.0,"))
+                .unwrap_or(false)
+            {
+                "Y".to_string()
+            } else {
+                "N".to_string()
+            }
+        });
 
         conn.execute(
             "INSERT INTO users (
                 company_user_uuid, company_name, company_uuid, username, user_uuid,
-                user_designation, user_android_id, face_encoding, password, role, status, email, phone, created_at, last_updated
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+                user_designation, user_android_id, face_encoding, register_with_camera, password, role, status, email, phone, created_at, last_updated
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
             ON CONFLICT(company_user_uuid) DO UPDATE SET
                 company_name = excluded.company_name,
                 company_uuid = excluded.company_uuid,
                 username = excluded.username,
-                user_designation = excluded.user_designation,
-                user_android_id = excluded.user_android_id,
+                user_designation = COALESCE(excluded.user_designation, users.user_designation),
+                user_android_id = COALESCE(excluded.user_android_id, users.user_android_id),
                 face_encoding = COALESCE(excluded.face_encoding, users.face_encoding),
+                register_with_camera = COALESCE(excluded.register_with_camera, users.register_with_camera, 'N'),
                 password = COALESCE(excluded.password, users.password),
                 role = excluded.role,
                 status = excluded.status,
@@ -189,6 +208,7 @@ impl UserRepo {
                 user.user_designation,
                 user.user_android_id,
                 user.face_encoding,
+                reg_cam,
                 user.password,
                 role_str,
                 status_str,
@@ -212,9 +232,14 @@ impl UserRepo {
     }
 
     pub fn delete_by_username(conn: &Connection, username: &str) -> Result<bool> {
+        let upper = username.trim().to_uppercase();
+        let _ = conn.execute(
+            "DELETE FROM face_profiles WHERE UPPER(username) = ?",
+            params![upper],
+        );
         let rows = conn.execute(
             "DELETE FROM users WHERE UPPER(username) = ?",
-            params![username.to_uppercase()],
+            params![upper],
         ).map_err(|e| AppError::Database(e.to_string()))?;
         Ok(rows > 0)
     }

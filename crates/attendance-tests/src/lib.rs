@@ -176,6 +176,7 @@ impl TestFixtures {
             user_designation: Some("Software Engineer".to_string()),
             user_android_id: None,
             face_encoding: None,
+            register_with_camera: Some("N".to_string()),
             password: None,
             role: UserRole::Employee,
             status: UserStatus::Active,

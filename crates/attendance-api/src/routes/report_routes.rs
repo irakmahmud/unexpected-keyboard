@@ -57,19 +57,32 @@ async fn get_daily_summary(
     Ok(Json(serde_json::to_value(summary).unwrap()))
 }
 
+fn resolve_active_company(state: &AppState) -> (String, String) {
+    if let Ok(mut companies) = state.db.list_companies() {
+        companies.sort_by(|a, b| b.last_updated.cmp(&a.last_updated));
+        if let Some(c) = companies.into_iter().next() {
+            return (c.company_id, c.company_name);
+        }
+    }
+    ("HQ_001".to_string(), "Smart Attendance HQ".to_string())
+}
+
 async fn get_muster_roll(
     State(state): State<AppState>,
     Query(query): Query<ReportQuery>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let year = query.year.unwrap_or(2026);
     let month = query.month.unwrap_or(10);
+    let (comp_id, comp_name) = resolve_active_company(&state);
     let generator = MusterRollGenerator::new(state.db.clone());
 
-    let roll = generator.generate_monthly_muster_roll(year, month, "TECHFIRM_01")?;
+    let roll = generator.generate_monthly_muster_roll(year, month, &comp_id)?;
 
     Ok(Json(serde_json::json!({
         "year": year,
         "month": month,
+        "company_id": comp_id,
+        "company_name": comp_name,
         "rows": roll
     })))
 }
@@ -80,18 +93,20 @@ async fn get_muster_roll_html(
 ) -> std::result::Result<Html<String>, ApiError> {
     let year = query.year.unwrap_or(2026);
     let month = query.month.unwrap_or(10);
+    let (comp_id, comp_name) = resolve_active_company(&state);
     let generator = MusterRollGenerator::new(state.db.clone());
-    let roll = generator.generate_monthly_muster_roll(year, month, "TECHFIRM_01")?;
+    let roll = generator.generate_monthly_muster_roll(year, month, &comp_id)?;
 
     let meta = ReportMetadata {
-        company_name: "TECHFIRM BANGLADESH LTD.".to_string(),
+        company_name: comp_name,
         title: "MONTHLY MUSTER ROLL & ATTENDANCE REGISTER".to_string(),
         month_year: format!("{:04}-{:02}", year, month),
         generated_at: TimeHelper::current_datetime_dhaka(),
         generated_by: "System Admin (Pure Rust Engine)".to_string(),
     };
 
-    let html = HtmlReportRenderer::render_muster_roll_html(&meta, &roll, 31);
+    let days_in_month = TimeHelper::days_in_month(year, month) as usize;
+    let html = HtmlReportRenderer::render_muster_roll_html(&meta, &roll, days_in_month);
     Ok(Html(html))
 }
 
