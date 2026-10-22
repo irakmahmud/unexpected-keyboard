@@ -68,6 +68,25 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
       );
     };
 
+    _imeService.onLocalReplaceLastText = (text) {
+      final val = _testTextController.text;
+      final sel = _testTextController.selection;
+      if (val.isEmpty) {
+        _testTextController.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+        return;
+      }
+      final cursor = sel.start <= 0 ? val.length : sel.start;
+      final replaceStart = cursor > 0 ? cursor - 1 : 0;
+      final newText = val.replaceRange(replaceStart, cursor, text);
+      _testTextController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: replaceStart + text.length),
+      );
+    };
+
     _imeService.onLocalBackspace = () {
       final val = _testTextController.text;
       final sel = _testTextController.selection;
@@ -203,99 +222,87 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                   ),
                 ],
               ),
-              body: LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalKbHeight = ImeChannelService.calculateTotalKeyboardHeightDp(_keyHeight).toDouble();
-                  final topAreaHeight = (constraints.maxHeight - totalKbHeight - 44.0).clamp(56.0, 400.0);
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Test Input Field for in-app typing & gesture preview
-                          SizedBox(
-                            height: topAreaHeight,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: themeData.keyBackgroundColor.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  border: Border.all(color: themeData.modifierInactiveColor),
-                                ),
-                                padding: const EdgeInsets.all(12.0),
-                                child: TextField(
-                                  controller: _testTextController,
-                                  maxLines: null,
-                                  autofocus: false,
-                                  readOnly: false,
-                                  showCursor: true,
-                                  style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),
-                                  decoration: InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: 'Tap or swipe diagonally on keys below to test corner symbols...',
-                                    hintStyle: TextStyle(color: themeData.cornerTextColor),
-                                  ),
-                                ),
-                              ),
-                            ),
+              body: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Test Input Field for in-app typing & gesture preview (Expanded, no competing SingleChildScrollView)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: themeData.keyBackgroundColor.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(color: themeData.modifierInactiveColor),
+                        ),
+                        padding: const EdgeInsets.all(12.0),
+                        child: TextField(
+                          controller: _testTextController,
+                          maxLines: null,
+                          autofocus: false,
+                          readOnly: false,
+                          showCursor: true,
+                          style: TextStyle(color: themeData.primaryTextColor, fontSize: 16.0, fontFamily: 'monospace'),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Tap or swipe diagonally on keys below to test corner symbols...',
+                            hintStyle: TextStyle(color: themeData.cornerTextColor),
                           ),
-
-                          // Quick 1-Tap Setup & Switch Default Keyboard Buttons + Clear
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              runSpacing: 6.0,
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () => _imeService.enableKeyboardInSystemSettings(),
-                                  icon: const Icon(Icons.check_circle_outline, size: 16),
-                                  label: const Text('1. Enable Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: themeData.keyBackgroundColor,
-                                    foregroundColor: themeData.accentColor,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  ),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: () => _imeService.showInputMethodPicker(),
-                                  icon: const Icon(Icons.keyboard, size: 16),
-                                  label: const Text('2. Switch Default Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: themeData.accentColor,
-                                    foregroundColor: themeData.backgroundColor,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () => _testTextController.clear(),
-                                  icon: const Icon(Icons.clear_all, size: 16),
-                                  label: const Text('Clear', style: TextStyle(fontSize: 12)),
-                                  style: TextButton.styleFrom(foregroundColor: themeData.accentColor),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // The Interactive Keyboard View
-                          KeyboardView(
-                            imeService: _imeService,
-                            theme: themeData,
-                            keyHeight: _keyHeight,
-                            onKeyHeightChanged: _updateKeyHeight,
-                            onOpenSettings: () {
-                              setState(() => _isSettingsOpen = true);
-                            },
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  );
-                },
+                  ),
+
+                  // Quick 1-Tap Setup & Switch Default Keyboard Buttons + Clear
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 6.0,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _imeService.enableKeyboardInSystemSettings(),
+                          icon: const Icon(Icons.check_circle_outline, size: 16),
+                          label: const Text('1. Enable Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeData.keyBackgroundColor,
+                            foregroundColor: themeData.accentColor,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _imeService.showInputMethodPicker(),
+                          icon: const Icon(Icons.keyboard, size: 16),
+                          label: const Text('2. Switch Default Keyboard', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeData.accentColor,
+                            foregroundColor: themeData.backgroundColor,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _testTextController.clear(),
+                          icon: const Icon(Icons.clear_all, size: 16),
+                          label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                          style: TextButton.styleFrom(foregroundColor: themeData.accentColor),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // The Interactive Keyboard View
+                  KeyboardView(
+                    imeService: _imeService,
+                    theme: themeData,
+                    keyHeight: _keyHeight,
+                    onKeyHeightChanged: _updateKeyHeight,
+                    onOpenSettings: () {
+                      setState(() => _isSettingsOpen = true);
+                    },
+                  ),
+                ],
               ),
             ),
     );

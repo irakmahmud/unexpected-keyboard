@@ -115,7 +115,7 @@ class MainActivity: FlutterActivity() {
                         result.error("IME_PICKER_ERR", e.message, null)
                     }
                 }
-                "commitText", "sendKeyEvent", "deleteSurroundingText", "sendEnterAction", "sendTextWithModifiers", "hideKeyboard" -> {
+                "commitText", "replaceLastText", "sendKeyEvent", "deleteSurroundingText", "sendEnterAction", "sendTextWithModifiers", "hideKeyboard" -> {
                     result.success(true)
                 }
                 else -> result.notImplemented()

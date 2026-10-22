@@ -79,45 +79,75 @@ class _KeyboardViewState extends State<KeyboardView> {
     );
   }
 
-  void _handleKeyPress(KeyModel key, GestureDirection direction) {
+  void _handleCornerSwipeReplace(String replacementText) {
+    widget.imeService.replaceLastText(replacementText);
     widget.imeService.triggerHaptic();
+  }
+
+  void _handleKeyPress(KeyModel key, GestureDirection direction) {
+    final bool hadSingleUseModifier =
+        (widget.imeService.isShiftActive && !widget.imeService.isCapsLock) ||
+            widget.imeService.isCtrlActive ||
+            widget.imeService.isAltActive ||
+            widget.imeService.isMetaActive;
 
     switch (key.actionType) {
       case KeyActionType.inputChar:
         if (direction == GestureDirection.longPress && key.topLeft == '⚙️') {
+          widget.imeService.triggerHaptic();
           widget.onOpenSettings();
           return;
         }
         final text = key.resolveOutput(direction, isShifted: widget.imeService.isShiftActive);
         if (text == '⚙️') {
+          widget.imeService.triggerHaptic();
           widget.onOpenSettings();
           return;
         }
+        // Dispatch text FIRST for 0.0ms latency, then haptic
         widget.imeService.sendText(text);
-        setState(() {});
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.backspace:
         widget.imeService.sendBackspace();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.enter:
         widget.imeService.sendEnter();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.space:
         widget.imeService.sendText(' ');
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.tab:
         widget.imeService.sendKeyCode(61); // KEYCODE_TAB
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.escape:
         widget.imeService.sendKeyCode(111); // KEYCODE_ESCAPE
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.shift:
+        widget.imeService.triggerHaptic();
         setState(() {
           if (!widget.imeService.isShiftActive) {
             widget.imeService.isShiftActive = true;
@@ -132,18 +162,21 @@ class _KeyboardViewState extends State<KeyboardView> {
         break;
 
       case KeyActionType.ctrl:
+        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isCtrlActive = !widget.imeService.isCtrlActive;
         });
         break;
 
       case KeyActionType.alt:
+        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isAltActive = !widget.imeService.isAltActive;
         });
         break;
 
       case KeyActionType.meta:
+        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isMetaActive = !widget.imeService.isMetaActive;
         });
@@ -151,21 +184,38 @@ class _KeyboardViewState extends State<KeyboardView> {
 
       case KeyActionType.arrowLeft:
         widget.imeService.sendKeyCode(21); // KEYCODE_DPAD_LEFT
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.arrowRight:
         widget.imeService.sendKeyCode(22); // KEYCODE_DPAD_RIGHT
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.arrowUp:
         widget.imeService.sendKeyCode(19); // KEYCODE_DPAD_UP
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.arrowDown:
         widget.imeService.sendKeyCode(20); // KEYCODE_DPAD_DOWN
+        widget.imeService.triggerHaptic();
+        if (hadSingleUseModifier) {
+          setState(() {});
+        }
         break;
 
       case KeyActionType.switchLayout:
+        widget.imeService.triggerHaptic();
         setState(() {
           _currentLayout = (_currentLayout == LayoutType.qwerty)
               ? LayoutType.symbols
@@ -174,6 +224,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         break;
 
       case KeyActionType.openSettings:
+        widget.imeService.triggerHaptic();
         widget.onOpenSettings();
         break;
     }
@@ -318,6 +369,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                       keyModel: key,
                       theme: widget.theme,
                       onKeyPress: _handleKeyPress,
+                      onCornerSwipeReplace: _handleCornerSwipeReplace,
                       isShiftActive: widget.imeService.isShiftActive,
                       isCtrlActive: widget.imeService.isCtrlActive,
                       isAltActive: widget.imeService.isAltActive,

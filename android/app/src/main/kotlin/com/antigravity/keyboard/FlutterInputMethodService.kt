@@ -180,6 +180,16 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
                 ic?.commitText(text, 1)
                 result.success(true)
             }
+            "replaceLastText" -> {
+                val text = call.argument<String>("text") ?: ""
+                if (ic != null) {
+                    ic.beginBatchEdit()
+                    ic.deleteSurroundingText(1, 0)
+                    ic.commitText(text, 1)
+                    ic.endBatchEdit()
+                }
+                result.success(true)
+            }
             "sendKeyEvent" -> {
                 val keyCode = call.argument<Int>("keyCode") ?: KeyEvent.KEYCODE_UNKNOWN
                 val metaState = call.argument<Int>("metaState") ?: 0

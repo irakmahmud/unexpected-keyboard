@@ -16,6 +16,7 @@ class ImeChannelService {
 
   /// Callbacks for in-app preview typing & dynamic config updates
   void Function(String text)? onLocalTextInput;
+  void Function(String text)? onLocalReplaceLastText;
   void Function()? onLocalBackspace;
   void Function()? onLocalEnter;
   void Function(double keyHeight)? onHeightUpdatedFromNative;
@@ -193,30 +194,40 @@ class ImeChannelService {
   }
 
   Future<void> sendText(String text) async {
-    // Notify local listener if registered (for in-app typing preview)
+    // Notify local listener immediately (0ms latency for in-app preview)
     onLocalTextInput?.call(text);
 
+    final bool useModifiers = isCtrlActive || isAltActive;
+    final int metaState = useModifiers ? calculateMetaState() : 0;
+
+    // Reset single-use modifiers synchronously BEFORE platform channel invoke
+    if (isShiftActive && !isCapsLock) {
+      isShiftActive = false;
+    }
+    isCtrlActive = false;
+    isAltActive = false;
+    isMetaActive = false;
+
     try {
-      if (isCtrlActive || isAltActive) {
-        // If modifier is held, send as key event with meta state
+      if (useModifiers) {
         await _channel.invokeMethod('sendTextWithModifiers', {
           'text': text,
-          'metaState': calculateMetaState(),
+          'metaState': metaState,
         });
       } else {
         await _channel.invokeMethod('commitText', {'text': text});
       }
-
-      // Reset single-use shift if not caps locked
-      if (isShiftActive && !isCapsLock) {
-        isShiftActive = false;
-      }
-      // Reset single-use ctrl / alt / meta after key press
-      isCtrlActive = false;
-      isAltActive = false;
-      isMetaActive = false;
     } on PlatformException catch (e) {
       print('IME Channel sendText error: ${e.message}');
+    }
+  }
+
+  Future<void> replaceLastText(String text) async {
+    onLocalReplaceLastText?.call(text);
+    try {
+      await _channel.invokeMethod('replaceLastText', {'text': text});
+    } on PlatformException catch (e) {
+      print('IME Channel replaceLastText error: ${e.message}');
     }
   }
 
@@ -227,15 +238,17 @@ class ImeChannelService {
       onLocalEnter?.call();
     }
 
+    final int metaState = calculateMetaState();
+    if (isShiftActive && !isCapsLock) isShiftActive = false;
+    isCtrlActive = false;
+    isAltActive = false;
+    isMetaActive = false;
+
     try {
       await _channel.invokeMethod('sendKeyEvent', {
         'keyCode': keyCode,
-        'metaState': calculateMetaState(),
+        'metaState': metaState,
       });
-      if (isShiftActive && !isCapsLock) isShiftActive = false;
-      isCtrlActive = false;
-      isAltActive = false;
-      isMetaActive = false;
     } on PlatformException catch (e) {
       print('IME Channel sendKeyCode error: ${e.message}');
     }
