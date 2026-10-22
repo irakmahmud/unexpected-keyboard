@@ -27,33 +27,21 @@ impl MusterRollGenerator {
 
     /// Generate monthly muster roll matrix
     pub fn generate_monthly_muster_roll(&self, year: i32, month: u32, company_id: &str) -> Result<Vec<EmployeeMusterRow>> {
-        let mut employees = self.db.list_employees(company_id)?;
+        let employees = self.db.list_employees(company_id)?;
+        let mut emp_entries: Vec<(String, String, Option<i64>)> = employees
+            .into_iter()
+            .map(|e| (e.employee_code, e.full_name, e.department_id))
+            .collect();
+
         if let Ok(users) = self.db.get_all_users() {
-            let existing_codes: std::collections::HashSet<String> = employees
+            let existing_codes: std::collections::HashSet<String> = emp_entries
                 .iter()
-                .map(|e| e.employee_code.to_uppercase())
+                .map(|(code, _, _)| code.to_uppercase())
                 .collect();
             for u in users {
                 let code = u.username.trim().to_uppercase();
                 if !existing_codes.contains(&code) {
-                    employees.push(attendance_domain::Employee {
-                        id: None,
-                        user_uuid: u.company_user_uuid.clone(),
-                        employee_code: code.clone(),
-                        full_name: u.username.clone(),
-                        email: None,
-                        phone: None,
-                        department_id: None,
-                        shift_id: None,
-                        designation: Some("Employee".to_string()),
-                        joining_date: None,
-                        is_active: true,
-                        pin_code: None,
-                        rfid_uid: None,
-                        company_id: company_id.to_string(),
-                        created_at: None,
-                        updated_at: None,
-                    });
+                    emp_entries.push((code, u.username, None));
                 }
             }
         }
@@ -65,8 +53,7 @@ impl MusterRollGenerator {
             _ => 31,
         };
 
-        for emp in employees {
-
+        for (emp_code, emp_full_name, emp_dept_id) in emp_entries {
             let mut days_map = HashMap::new();
             let mut total_present = 0;
             let mut total_late = 0;
@@ -89,14 +76,14 @@ impl MusterRollGenerator {
                 }
 
                 // 3. Check leave
-                if self.db.is_on_leave_today(&emp.employee_code, &date_str).unwrap_or(false) {
+                if self.db.is_on_leave_today(&emp_code, &date_str).unwrap_or(false) {
                     days_map.insert(day, "LV".to_string());
                     total_leaves += 1;
                     continue;
                 }
 
                 // 4. Check attendance record
-                let rec = self.db.get_attendance_record(&emp.employee_code, &date_str)?;
+                let rec = self.db.get_attendance_record(&emp_code, &date_str)?;
                 if let Some(r) = rec {
                     if r.late_minutes > 0 {
                         days_map.insert(day, "L".to_string());
@@ -115,7 +102,7 @@ impl MusterRollGenerator {
                 }
             }
 
-            let dept_name = if let Some(d_id) = emp.department_id {
+            let dept_name = if let Some(d_id) = emp_dept_id {
                 let depts = self.db.list_departments(company_id).unwrap_or_default();
                 depts
                     .into_iter()
@@ -127,8 +114,8 @@ impl MusterRollGenerator {
             };
 
             rows.push(EmployeeMusterRow {
-                employee_code: emp.employee_code,
-                employee_name: emp.full_name,
+                employee_code: emp_code,
+                employee_name: emp_full_name,
                 department: dept_name,
                 days: days_map,
                 total_present,
@@ -140,4 +127,5 @@ impl MusterRollGenerator {
 
         Ok(rows)
     }
+
 }
