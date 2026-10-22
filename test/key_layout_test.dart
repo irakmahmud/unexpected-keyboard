@@ -38,7 +38,7 @@ void main() {
       expect(key.resolveOutput(GestureDirection.center, isShifted: true), 'A');
     });
 
-    test('Layout structure contains persistent number row at row0, 9 equal-width keys in rows 1-3, and Shift/Settings in row 4', () {
+    test('Layout structure matches custom 8-key rows (q..i, a..k), row3 (z..m o ⌫), bottom row (, . Space p l ↵), and top bar (⇧ and ?123 replacing TAB and META)', () {
       final qwerty = KeyboardLayout.qwertyLayout;
       expect(qwerty.length, 5); // row0 (numbers) + 4 main rows
 
@@ -47,43 +47,41 @@ void main() {
       expect(qwerty[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
       expect(qwerty[0].every((k) => k.flex == 1.0), true);
 
-      // Row 1: 9 keys (q..o), p moved to Row 3
-      expect(qwerty[1].length, 9);
-      expect(qwerty[1].map((k) => k.primary).toList(), ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o']);
+      // Row 1: 8 keys (q..i), equal width flex 1.0
+      expect(qwerty[1].length, 8);
+      expect(qwerty[1].map((k) => k.primary).toList(), ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i']);
       expect(qwerty[1].every((k) => k.flex == 1.0), true);
 
-      // Row 2: 9 keys (a..l), unchanged
-      expect(qwerty[2].length, 9);
-      expect(qwerty[2].map((k) => k.primary).toList(), ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l']);
+      // Row 2: 8 keys (a..k), equal width flex 1.0
+      expect(qwerty[2].length, 8);
+      expect(qwerty[2].map((k) => k.primary).toList(), ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k']);
       expect(qwerty[2].every((k) => k.flex == 1.0), true);
 
-      // Row 3: 9 keys (z x c v b n m p ⌫), all equal horizontal width (flex 1.0)
+      // Row 3: 9 keys (z x c v b n m o ⌫), all equal horizontal width (flex 1.0)
       expect(qwerty[3].length, 9);
-      expect(qwerty[3].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'p', '⌫']);
+      expect(qwerty[3].map((k) => k.primary).toList(), ['z', 'x', 'c', 'v', 'b', 'n', 'm', 'o', '⌫']);
       expect(qwerty[3].every((k) => k.flex == 1.0), true);
 
-      // Row 4: Shift (⇧) moved to left of ?123, Settings (⚙️) key present, comma has ⚙️ corner, Space width reduced
-      expect(qwerty[4][0].primary, '⇧');
-      expect(qwerty[4][0].actionType, KeyActionType.shift);
-      expect(qwerty[4][1].primary, '?123');
-      expect(qwerty[4][2].primary, '⚙️');
-      expect(qwerty[4][2].actionType, KeyActionType.openSettings);
-      expect(qwerty[4][3].primary, ',');
-      expect(qwerty[4][3].topLeft, '⚙️');
-      final spaceKey = qwerty[4].firstWhere((k) => k.actionType == KeyActionType.space);
-      expect(spaceKey.flex < 4.0, true);
+      // Row 4: Shift, ?123, and Settings removed from bottom row; left-to-right: comma, dot, space, p, l, enter
+      expect(qwerty[4].map((k) => k.primary).toList(), [',', '.', ' ', 'p', 'l', '↵']);
+      expect(qwerty[4].any((k) => k.actionType == KeyActionType.shift), false);
+      expect(qwerty[4].any((k) => k.actionType == KeyActionType.switchLayout), false);
+      expect(qwerty[4].any((k) => k.actionType == KeyActionType.openSettings), false);
 
-      // Symbol layout also keeps row0 as number row and Row 4 contains Settings (⚙️) key
+      // Symbol layout keeps row0 as number row
       final symbols = KeyboardLayout.symbolLayout;
       expect(symbols.length, 5);
       expect(symbols[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
-      expect(symbols[4].any((k) => k.actionType == KeyActionType.openSettings), true);
 
+      // Top bar: TAB and META hidden and replaced by Shift (⇧) and ?123
       final terminalKeys = KeyboardLayout.terminalBarKeys;
       expect(terminalKeys.any((k) => k.primary == 'ESC'), true);
+      expect(terminalKeys.any((k) => k.primary == '⇧' && k.actionType == KeyActionType.shift), true);
       expect(terminalKeys.any((k) => k.primary == 'CTRL'), true);
       expect(terminalKeys.any((k) => k.primary == 'ALT'), true);
-      expect(terminalKeys.any((k) => k.primary == 'TAB'), true);
+      expect(terminalKeys.any((k) => k.primary == '?123' && k.actionType == KeyActionType.switchLayout), true);
+      expect(terminalKeys.any((k) => k.primary == 'TAB'), false);
+      expect(terminalKeys.any((k) => k.primary == 'META'), false);
     });
 
     test('Keyboard height clamping and double-height calculation work accurately', () {

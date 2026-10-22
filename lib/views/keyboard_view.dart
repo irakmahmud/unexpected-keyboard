@@ -292,6 +292,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                 isShiftActive: widget.imeService.isShiftActive,
                 isCtrlActive: widget.imeService.isCtrlActive,
                 isAltActive: widget.imeService.isAltActive,
+                isSymbolLayout: _currentLayout == LayoutType.symbols,
                 keyHeight: currentKeyHeight,
                 isResizeBarOpen: _isResizeBarOpen,
                 onToggleResizeBar: _toggleResizeBar,

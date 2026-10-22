@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/key_model.dart';
 import '../models/keyboard_layout.dart';
 import '../themes/keyboard_theme.dart';
 import 'key_widget.dart';
@@ -9,6 +10,7 @@ class ModifierBar extends StatelessWidget {
   final bool isShiftActive;
   final bool isCtrlActive;
   final bool isAltActive;
+  final bool isSymbolLayout;
   final double keyHeight;
   final bool isResizeBarOpen;
   final VoidCallback? onToggleResizeBar;
@@ -22,6 +24,7 @@ class ModifierBar extends StatelessWidget {
     required this.isShiftActive,
     required this.isCtrlActive,
     required this.isAltActive,
+    this.isSymbolLayout = false,
     this.keyHeight = 46.0,
     this.isResizeBarOpen = false,
     this.onToggleResizeBar,
@@ -41,8 +44,15 @@ class ModifierBar extends StatelessWidget {
       child: Row(
         children: [
           ...keys.map((key) {
+            final effectiveKey = (key.actionType == KeyActionType.switchLayout && isSymbolLayout)
+                ? KeyModel(
+                    primary: 'ABC',
+                    actionType: KeyActionType.switchLayout,
+                    flex: key.flex,
+                  )
+                : key;
             return KeyWidget(
-              keyModel: key,
+              keyModel: effectiveKey,
               theme: theme,
               onKeyPress: onKeyPress,
               isShiftActive: isShiftActive,

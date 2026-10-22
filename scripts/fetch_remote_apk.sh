@@ -90,6 +90,27 @@ fetch_from_github_actions() {
     echo "✅ Successfully updated APKs in ${TARGET_DIR}:"
     ls -lh "${TARGET_DIR}"
     sha256sum "${TARGET_DIR}"/*
+    upload_to_tmpfiles
+}
+
+upload_to_tmpfiles() {
+    echo "===================================================================="
+    echo "⚡ Uploading APKs to tmpfiles.org Fast Download Server..."
+    echo "===================================================================="
+    for apk_name in "unexpected-keyboard-arm64.apk" "unexpected-keyboard-release.apk" "unexpected-keyboard-arm32.apk"; do
+        local apk_path="${TARGET_DIR}/${apk_name}"
+        if [ -f "${apk_path}" ]; then
+            local resp page_url direct_url
+            resp=$(curl -fsSL -F "file=@${apk_path}" https://tmpfiles.org/api/v1/upload 2>/dev/null || true)
+            page_url=$(echo "${resp}" | jq -r '.data.url // empty' | sed 's|^http://|https://|')
+            if [ -n "${page_url}" ]; then
+                direct_url=$(curl -fsSL "${page_url}" 2>/dev/null | grep -oE 'https://tmpfiles\.org/dl/[^"]+' | head -n1 || true)
+                echo "📦 ${apk_name}:"
+                echo "   - Fast Direct Download URL: ${direct_url}"
+                echo "   - Download Page URL:        ${page_url}"
+            fi
+        fi
+    done
 }
 
 fetch_from_circleci() {
@@ -115,6 +136,7 @@ fetch_from_circleci() {
     echo "✅ Successfully updated APKs from CircleCI in ${TARGET_DIR}:"
     ls -lh "${TARGET_DIR}"
     sha256sum "${TARGET_DIR}"/*
+    upload_to_tmpfiles
 }
 
 case "${1:-status}" in
@@ -127,12 +149,15 @@ case "${1:-status}" in
     gh_latest)
         fetch_from_github_actions "${2:-irakmahmud/unexpected-keyboard}"
         ;;
+    tmpfiles)
+        upload_to_tmpfiles
+        ;;
     status)
         echo "Existing Artifacts on Oracle VM:"
         ls -lh "${TARGET_DIR}" 2>/dev/null || echo "No local artifacts stored yet."
         ;;
     *)
-        echo "Usage: $0 {fetch <URL> [SHA256]|circleci_latest [OWNER/REPO]|gh_latest [OWNER/REPO]|status}"
+        echo "Usage: $0 {fetch <URL> [SHA256]|circleci_latest [OWNER/REPO]|gh_latest [OWNER/REPO]|tmpfiles|status}"
         exit 1
         ;;
 esac
