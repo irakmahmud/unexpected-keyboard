@@ -259,6 +259,10 @@ impl FaceVectorIndex {
                 ("REJECT", 0.0)
             };
 
+            if tier == "REJECT" {
+                continue;
+            }
+
             if conf > best_confidence {
                 best_confidence = conf;
                 best_result = Some(TieredFaceMatchResult {
