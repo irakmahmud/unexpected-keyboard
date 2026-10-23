@@ -97,13 +97,13 @@ async fn handle_match(
     if candidate_trimmed.is_empty() {
         // 1-to-N search across all enrolled faces when candidate_username is omitted
         if let Ok(Some(tiered)) = state.face_index.search_tiered(query_emb.clone()) {
-            let euclidean_dist = (2.0 * tiered.cosine_distance).max(0.0).sqrt();
+            let euclidean_dist = (2.0f32 * tiered.min_distance).max(0.0f32).sqrt();
             return Ok(Json(FaceMatchResponse {
                 matched: tiered.is_match,
                 username: tiered.username,
                 distance: euclidean_dist,
                 threshold: 0.60,
-                confidence: tiered.confidence_pct,
+                confidence: tiered.confidence_percent,
             }));
         }
         return Ok(Json(FaceMatchResponse {
