@@ -581,7 +581,7 @@ def main():
         code_bio_mismatch, body_bio_mismatch = http_req(
             "POST",
             "/api/v1/attendance/punch",
-            {"username": "JOLIE_TEST", "method": "CAMERA", "image_b64": einstein_b64},
+            {"username": "JOLIE_TEST", "method": "CAMERA", "image_b64": b64_img("Einstein_1.jpg")},
         )
         record(
             "Security",
@@ -602,10 +602,21 @@ def main():
             f"HTTP {code_pin_missing}, {body_pin_missing}",
         )
 
+        # Trigger two consecutive PIN punches for a fresh user to verify HTTP 409 Cooldown
+        http_req(
+            "POST",
+            "/api/v1/users",
+            {"username": "CD_TEST_USER", "user_designation": "Engineer", "password": "CdPass#123"},
+        )
+        http_req(
+            "POST",
+            "/api/v1/attendance/punch",
+            {"username": "CD_TEST_USER", "method": "PIN", "pin": "CdPass#123"},
+        )
         code_cd, body_cd = http_req(
             "POST",
             "/api/v1/attendance/punch",
-            {"username": "UI_TEST_USER", "method": "PIN", "pin": "UiPass#456"},
+            {"username": "CD_TEST_USER", "method": "PIN", "pin": "CdPass#123"},
         )
         record(
             "Security",
@@ -628,20 +639,32 @@ def main():
         )
 
         http_req(
-            "PUT",
-            "/api/v1/companies/TECHFIRM_01",
-            {"company_id": "TECHFIRM_01", "company_name": "TechFirm Solutions Ltd.", "password": "admin"},
+            "POST",
+            "/api/v1/companies",
+            {
+                "company_id": "COMP_PRESERVE_01",
+                "company_name": "Preserve Initial Ltd",
+                "password": "admin",
+                "website": "https://preserve.example.com",
+                "email": "info@preserve.example.com",
+            },
         )
-        code_comp, body_comp = http_req("GET", "/api/v1/companies/TECHFIRM_01")
+        http_req(
+            "PUT",
+            "/api/v1/companies/COMP_PRESERVE_01",
+            {"company_id": "COMP_PRESERVE_01", "company_name": "Preserve Updated Ltd", "password": "admin"},
+        )
+        code_comp, body_comp = http_req("GET", "/api/v1/companies/COMP_PRESERVE_01")
         comp_preserved = (
             code_comp == 200
             and isinstance(body_comp, dict)
-            and body_comp.get("website") is not None
-            and body_comp.get("email") is not None
+            and body_comp.get("company_name") == "Preserve Updated Ltd"
+            and body_comp.get("website") == "https://preserve.example.com"
+            and body_comp.get("email") == "info@preserve.example.com"
         )
         record(
             "Database",
-            "CompanyRepo::upsert_company preserves optional fields (website, email, tax_id) on update",
+            "CompanyRepo::upsert_company preserves optional fields (website, email) on update",
             comp_preserved,
             f"HTTP {code_comp}, website={body_comp.get('website') if isinstance(body_comp, dict) else None}",
         )
