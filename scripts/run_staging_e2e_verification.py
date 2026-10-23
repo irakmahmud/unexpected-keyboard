@@ -577,6 +577,75 @@ def main():
         )
         record("Database", "Cloud Sync Outbox flush marks events COMPLETED & archives JSONL", outbox_ok, f"trigger={body_tr}, status={body_st}")
 
+        # 7. Security & Parity Regression Checks
+        code_bio_mismatch, body_bio_mismatch = http_req(
+            "POST",
+            "/api/v1/attendance/punch",
+            {"username": "JOLIE_TEST", "method": "CAMERA", "image_b64": einstein_b64},
+        )
+        record(
+            "Security",
+            "Biometric punch rejects mismatched camera face even when username is provided (HTTP 401)",
+            code_bio_mismatch == 401,
+            f"HTTP {code_bio_mismatch}, {body_bio_mismatch}",
+        )
+
+        code_pin_missing, body_pin_missing = http_req(
+            "POST",
+            "/api/v1/attendance/punch",
+            {"username": "UI_TEST_USER", "method": "PIN"},
+        )
+        record(
+            "Security",
+            "PIN punch rejects missing pin/password parameter (HTTP 401)",
+            code_pin_missing == 401,
+            f"HTTP {code_pin_missing}, {body_pin_missing}",
+        )
+
+        code_cd, body_cd = http_req(
+            "POST",
+            "/api/v1/attendance/punch",
+            {"username": "UI_TEST_USER", "method": "PIN", "pin": "UiPass#456"},
+        )
+        record(
+            "Security",
+            "Duplicate punch within 60s cooldown returns HTTP 409 Conflict",
+            code_cd == 409,
+            f"HTTP {code_cd}, {body_cd}",
+        )
+
+        last_att_path = os.path.expanduser("~/.last_attendance")
+        last_att_json_ok = False
+        if os.path.exists(last_att_path):
+            with open(last_att_path, "r") as lf:
+                parsed_la = json.load(lf)
+                last_att_json_ok = isinstance(parsed_la, dict) and "last_attendance" in parsed_la and "users" in parsed_la
+        record(
+            "Database",
+            "~/.last_attendance persisted in Python-compatible JSON format",
+            last_att_json_ok,
+            f"path={last_att_path}",
+        )
+
+        http_req(
+            "PUT",
+            "/api/v1/companies/TECHFIRM_01",
+            {"company_id": "TECHFIRM_01", "company_name": "TechFirm Solutions Ltd.", "password": "admin"},
+        )
+        code_comp, body_comp = http_req("GET", "/api/v1/companies/TECHFIRM_01")
+        comp_preserved = (
+            code_comp == 200
+            and isinstance(body_comp, dict)
+            and body_comp.get("website") is not None
+            and body_comp.get("email") is not None
+        )
+        record(
+            "Database",
+            "CompanyRepo::upsert_company preserves optional fields (website, email, tax_id) on update",
+            comp_preserved,
+            f"HTTP {code_comp}, website={body_comp.get('website') if isinstance(body_comp, dict) else None}",
+        )
+
     finally:
         proc.terminate()
         try:

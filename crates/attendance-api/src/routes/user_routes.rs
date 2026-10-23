@@ -204,18 +204,44 @@ async fn create_user(
         .and_then(|u| u.user_uuid.clone())
         .unwrap_or_else(CryptoHelper::new_uuid);
 
-    // Resolve active company if not explicitly provided
-    let (resolved_comp_name, resolved_comp_uuid) = if payload.company_name.is_some() || payload.company_uuid.is_some() {
-        (payload.company_name, payload.company_uuid)
-    } else if let Ok(mut companies) = state.db.list_companies() {
-        companies.sort_by(|a, b| b.last_updated.cmp(&a.last_updated));
-        if let Some(c) = companies.into_iter().next() {
-            (Some(c.company_name), Some(c.company_id))
-        } else {
-            (Some("Smart Attendance HQ".to_string()), Some("HQ_001".to_string()))
+    // Resolve active company if not explicitly provided, or fill in the missing half (company_name / company_uuid)
+    let (resolved_comp_name, resolved_comp_uuid) = match (payload.company_name.clone(), payload.company_uuid.clone()) {
+        (Some(name), Some(id)) => (Some(name), Some(id)),
+        (None, Some(id)) => {
+            let name = state
+                .db
+                .get_company(&id)
+                .ok()
+                .flatten()
+                .map(|c| c.company_name)
+                .unwrap_or_else(|| id.clone());
+            (Some(name), Some(id))
         }
-    } else {
-        (Some("Smart Attendance HQ".to_string()), Some("HQ_001".to_string()))
+        (Some(name), None) => {
+            let id = state
+                .db
+                .list_companies()
+                .ok()
+                .and_then(|list| {
+                    list.into_iter()
+                        .find(|c| c.company_name.eq_ignore_ascii_case(&name))
+                        .map(|c| c.company_id)
+                })
+                .unwrap_or_else(|| "TECHFIRM_01".to_string());
+            (Some(name), Some(id))
+        }
+        (None, None) => {
+            if let Ok(mut companies) = state.db.list_companies() {
+                companies.sort_by(|a, b| b.last_updated.cmp(&a.last_updated));
+                if let Some(c) = companies.into_iter().next() {
+                    (Some(c.company_name), Some(c.company_id))
+                } else {
+                    (Some("Smart Attendance HQ".to_string()), Some("HQ_001".to_string()))
+                }
+            } else {
+                (Some("Smart Attendance HQ".to_string()), Some("HQ_001".to_string()))
+            }
+        }
     };
 
     let now = attendance_common::TimeHelper::now_utc_sqlite_string();

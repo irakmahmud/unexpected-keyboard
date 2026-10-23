@@ -15,16 +15,16 @@ impl BiometricsRepo {
     ) -> Result<i64> {
         let embedding_json = serde_json::to_string(embedding)
             .map_err(AppError::Serialization)?;
+        let upper = username.trim().to_uppercase();
 
         conn.execute(
             "INSERT INTO face_profiles (username, employee_code, embedding_json, sample_quality, pose)
              VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![username, employee_code, embedding_json, quality, pose],
+            params![upper, employee_code, embedding_json, quality, pose],
         )
         .map_err(|e| AppError::Database(format!("Failed to save face profile: {}", e)))?;
 
         let row_id = conn.last_insert_rowid();
-        let upper = username.trim().to_uppercase();
         let _ = conn.execute(
             "UPDATE users SET face_encoding = COALESCE(face_encoding, ?1), register_with_camera = 'Y' WHERE UPPER(username) = ?2",
             params![embedding_json, upper],
@@ -34,15 +34,16 @@ impl BiometricsRepo {
     }
 
     pub fn get_profiles_by_username(conn: &Connection, username: &str) -> Result<Vec<FaceProfile>> {
+        let upper = username.trim().to_uppercase();
         let mut stmt = conn
             .prepare(
                 "SELECT id, username, embedding_json, sample_quality, created_at 
-                 FROM face_profiles WHERE username = ?1 ORDER BY id DESC",
+                 FROM face_profiles WHERE UPPER(username) = ?1 ORDER BY id DESC",
             )
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         let rows = stmt
-            .query_map(params![username], |row| {
+            .query_map(params![upper], |row| {
                 let id: i64 = row.get(0)?;
                 let uname: String = row.get(1)?;
                 let json_str: String = row.get(2)?;

@@ -48,8 +48,30 @@ async fn handle_sync_users_to_local(
     State(state): State<AppState>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let users = state.db.get_all_users()?;
-    let existing_embeddings = state.face_index.get_all_embeddings();
+    let mut existing_embeddings = state.face_index.get_all_embeddings();
     let mut indexed = 0usize;
+
+    if let Ok(profiles) = state.db.get_all_face_profiles() {
+        let mut users_from_profiles = std::collections::HashSet::new();
+        for p in profiles {
+            let upper = p.username.trim().to_uppercase();
+            if existing_embeddings.contains_key(&upper) {
+                continue;
+            }
+            if !p.embedding_vector.is_empty()
+                && !attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&p.embedding_vector)
+            {
+                if state.face_index.enroll_user(&upper, p.embedding_vector).is_ok() {
+                    users_from_profiles.insert(upper);
+                    indexed += 1;
+                }
+            }
+        }
+        if !users_from_profiles.is_empty() {
+            existing_embeddings = state.face_index.get_all_embeddings();
+        }
+    }
+
     for u in &users {
         let upper = u.username.trim().to_uppercase();
         if existing_embeddings.contains_key(&upper) {
@@ -68,6 +90,12 @@ async fn handle_sync_users_to_local(
             }
         }
     }
+
+    if let Ok(faiss_loaded) = state.face_index.load_faiss_files() {
+        indexed += faiss_loaded;
+    }
+    let _ = state.face_index.sync_faiss_files();
+
     Ok(Json(serde_json::json!({
         "success": true,
         "local_users_count": users.len(),

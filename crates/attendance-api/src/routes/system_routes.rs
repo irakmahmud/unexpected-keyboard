@@ -24,6 +24,7 @@ pub async fn get_health_status(State(state): State<AppState>) -> Json<serde_json
 
     Json(serde_json::json!({
         "status": "healthy",
+        "system": "Pure Rust Axum Attendance Core",
         "service_name": "Attendance Pure Rust Axum System",
         "version": "8.0.0-pure-rust",
         "server_time_dhaka": now_dhaka,

@@ -51,7 +51,23 @@ async fn handle_enroll(
     Json(payload): Json<FaceEnrollRequest>,
 ) -> std::result::Result<Json<FaceEnrollResponse>, ApiError> {
     let mut vector = payload.embedding;
+    if vector.len() != 512 {
+        return Err(attendance_common::AppError::Validation(format!(
+            "Invalid embedding dimension: expected 512, got {}",
+            vector.len()
+        ))
+        .into());
+    }
+    if attendance_face::FaceVectorIndex::is_corrupted_constant_vector(&vector) {
+        return Err(attendance_common::AppError::Validation(
+            "Corrupted or uniform face embedding rejected".to_string(),
+        )
+        .into());
+    }
     DistanceMetrics::l2_normalize(&mut vector);
+
+    // Add to RAM vector index first
+    state.face_index.enroll_user(&payload.username, vector.clone())?;
 
     // Save to SQLite
     state.db.save_face_profile(
@@ -61,9 +77,6 @@ async fn handle_enroll(
         payload.quality_score.unwrap_or(1.0),
         payload.pose.as_deref().unwrap_or("FRONTAL"),
     )?;
-
-    // Add to RAM vector index
-    state.face_index.enroll_user(&payload.username, vector)?;
 
     Ok(Json(FaceEnrollResponse {
         success: true,
@@ -77,23 +90,49 @@ async fn handle_match(
     State(state): State<AppState>,
     Json(payload): Json<FaceMatchRequest>,
 ) -> std::result::Result<Json<FaceMatchResponse>, ApiError> {
-    let profiles = state.db.get_face_profiles(&payload.candidate_username)?;
+    let mut query_emb = payload.embedding;
+    DistanceMetrics::l2_normalize(&mut query_emb);
+
+    let candidate_trimmed = payload.candidate_username.trim().to_uppercase();
+    if candidate_trimmed.is_empty() {
+        // 1-to-N search across all enrolled faces when candidate_username is omitted
+        if let Ok(Some(tiered)) = state.face_index.search_tiered(query_emb.clone()) {
+            let euclidean_dist = (2.0 * tiered.cosine_distance).max(0.0).sqrt();
+            return Ok(Json(FaceMatchResponse {
+                matched: tiered.is_match,
+                username: tiered.username,
+                distance: euclidean_dist,
+                threshold: 0.60,
+                confidence: tiered.confidence_pct,
+            }));
+        }
+        return Ok(Json(FaceMatchResponse {
+            matched: false,
+            username: String::new(),
+            distance: 1.0,
+            threshold: 0.60,
+            confidence: 0.0,
+        }));
+    }
+
+    let profiles = state.db.get_face_profiles(&candidate_trimmed)?;
     let mut min_dist = f32::MAX;
     if !profiles.is_empty() {
         for p in profiles {
-            let d = DistanceMetrics::euclidean_l2(&payload.embedding, &p.embedding_vector);
+            let mut prof_vec = p.embedding_vector;
+            DistanceMetrics::l2_normalize(&mut prof_vec);
+            let d = DistanceMetrics::euclidean_l2(&query_emb, &prof_vec);
             if d < min_dist {
                 min_dist = d;
             }
         }
-    } else {
+    } else if let Ok(Some(u)) = state.db.get_user_by_username(&candidate_trimmed) {
         // Fallback to users table face_encoding (parity with Python reference database)
-        if let Ok(Some(u)) = state.db.get_user_by_username(&payload.candidate_username) {
-            if let Some(enc_str) = u.face_encoding {
-                if let Ok(vec) = serde_json::from_str::<Vec<f32>>(&enc_str) {
-                    if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
-                        min_dist = DistanceMetrics::euclidean_l2(&payload.embedding, &vec);
-                    }
+        if let Some(enc_str) = u.face_encoding {
+            if let Ok(mut vec) = serde_json::from_str::<Vec<f32>>(&enc_str) {
+                if !vec.is_empty() && vec.iter().any(|&v| v != 0.0) {
+                    DistanceMetrics::l2_normalize(&mut vec);
+                    min_dist = DistanceMetrics::euclidean_l2(&query_emb, &vec);
                 }
             }
         }
@@ -102,7 +141,7 @@ async fn handle_match(
     if min_dist == f32::MAX {
         return Ok(Json(FaceMatchResponse {
             matched: false,
-            username: payload.candidate_username,
+            username: candidate_trimmed,
             distance: 1.0,
             threshold: 0.60,
             confidence: 0.0,
@@ -123,7 +162,7 @@ async fn handle_match(
 
     Ok(Json(FaceMatchResponse {
         matched,
-        username: payload.candidate_username,
+        username: candidate_trimmed,
         distance: min_dist,
         threshold,
         confidence,
@@ -257,6 +296,11 @@ async fn handle_rebuild_index(
             }
         }
     }
+
+    if let Ok(faiss_loaded) = state.face_index.load_faiss_files() {
+        enrolled_count += faiss_loaded;
+    }
+    let _ = state.face_index.sync_faiss_files();
 
     Ok(Json(serde_json::json!({
         "success": true,

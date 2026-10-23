@@ -79,7 +79,20 @@ impl AttendanceEngine {
             .map(|u| u.company_user_uuid.clone())
             .or_else(|| emp.as_ref().map(|e| e.user_uuid.clone()));
 
-        // 2. PIN / Password verification if provided
+        // 2. PIN / Password verification if provided or required by method
+        let method_upper = req
+            .method
+            .as_deref()
+            .unwrap_or("CAMERA")
+            .trim()
+            .to_uppercase();
+        if matches!(method_upper.as_str(), "PIN" | "PASSWORD" | "WITHOUT_CAMERA")
+            && req.pin.as_deref().map(|s| s.trim().is_empty()).unwrap_or(true)
+        {
+            return Err(attendance_common::AppError::Unauthorized(
+                "PIN or password is required for password-based attendance".to_string(),
+            ));
+        }
         if let Some(ref pin) = req.pin {
             let mut valid = false;
             if let Some(ref u) = user {

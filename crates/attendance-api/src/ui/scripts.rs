@@ -1585,6 +1585,9 @@ async function submitCameraRegistration() {
     }
     if (regCapturedFrames.length === 0) {
         await runAuto20PoseCapture();
+        if (regCapturedFrames.length === 0) {
+            return;
+        }
     }
 
     try {

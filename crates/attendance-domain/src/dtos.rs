@@ -203,6 +203,7 @@ pub struct FaceEnrollResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FaceMatchRequest {
     pub embedding: Vec<f32>,
+    #[serde(default)]
     pub candidate_username: String,
 }
 

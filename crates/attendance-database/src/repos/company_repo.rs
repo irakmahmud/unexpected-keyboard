@@ -70,11 +70,23 @@ impl CompanyRepo {
     pub fn upsert_company(conn: &Connection, info: &CompanyInfo) -> Result<()> {
         let now = TimeHelper::now_utc_sqlite_string();
         conn.execute(
-            "INSERT OR REPLACE INTO company_info (
+            "INSERT INTO company_info (
                 company_id, company_name, password, address_road, address_city,
                 contact_person_name, contact_person_designation, contact_person_number,
                 website, email, tax_id, created_at, last_updated
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            ON CONFLICT(company_id) DO UPDATE SET
+                company_name = excluded.company_name,
+                password = excluded.password,
+                address_road = COALESCE(excluded.address_road, company_info.address_road),
+                address_city = COALESCE(excluded.address_city, company_info.address_city),
+                contact_person_name = COALESCE(excluded.contact_person_name, company_info.contact_person_name),
+                contact_person_designation = COALESCE(excluded.contact_person_designation, company_info.contact_person_designation),
+                contact_person_number = COALESCE(excluded.contact_person_number, company_info.contact_person_number),
+                website = COALESCE(excluded.website, company_info.website),
+                email = COALESCE(excluded.email, company_info.email),
+                tax_id = COALESCE(excluded.tax_id, company_info.tax_id),
+                last_updated = excluded.last_updated",
             params![
                 info.company_id,
                 info.company_name,

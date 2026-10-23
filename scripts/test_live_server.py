@@ -6,7 +6,7 @@ import sys
 import subprocess
 import os
 
-PORT = 8088
+PORT = 8089
 BASE_URL = f"http://127.0.0.1:{PORT}"
 
 env = os.environ.copy()
@@ -14,8 +14,10 @@ env["PORT"] = str(PORT)
 env["DATABASE_URL"] = "sqlite:///home/opc/attendance_system/data/test_attendance.db"
 
 # Remove any old test db
-if os.path.exists("/home/opc/attendance_system/data/test_attendance.db"):
-    os.remove("/home/opc/attendance_system/data/test_attendance.db")
+for suffix in ("", "-wal", "-shm"):
+    p = f"/home/opc/attendance_system/data/test_attendance.db{suffix}"
+    if os.path.exists(p):
+        os.remove(p)
 
 print(f"Starting Attendance System Rust Binary on port {PORT}...")
 proc = subprocess.Popen(
@@ -24,8 +26,6 @@ proc = subprocess.Popen(
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )
-
-time.sleep(1.5)
 
 def req(path, method="GET", body=None):
     url = f"{BASE_URL}{path}"
@@ -48,6 +48,14 @@ def req(path, method="GET", body=None):
         except:
             parsed = content
         return e.code, parsed
+
+for _ in range(30):
+    try:
+        st, _ = req("/api/v1/health")
+        if st == 200:
+            break
+    except Exception:
+        time.sleep(0.3)
 
 try:
     print("\n--- TEST 1: Health Check ---")
@@ -109,10 +117,14 @@ try:
     assert summary["checked_in"] >= 1
 
     print("\n--- TEST 8: Face Vector Matching (512-D L2 Euclidean) ---")
-    # Query vector close to RAHIM's deterministic embedding
-    test_vec = [((ord("R") + i) % 17.0) / 17.0 for i in range(512)]
-    # Add minor noise
-    test_vec[0] += 0.01
+    # Enroll a valid non-constant 512-D embedding for RAHIM, then match with slight noise
+    base_vec = [0.0] * 512
+    base_vec[0] = 0.99
+    base_vec[1] = 0.14
+    enr_status, enr_res = req("/api/v1/face/enroll", method="POST", body={"username": "RAHIM", "embedding": base_vec})
+    assert enr_status == 200 and enr_res.get("success") is True
+    test_vec = list(base_vec)
+    test_vec[2] = 0.01
     status, face_res = req("/api/v1/face/match", method="POST", body={"embedding": test_vec})
     print(f"Status: {status}, Face Match: {face_res}")
     assert status == 200

@@ -189,7 +189,7 @@ impl TimeHelper {
             }
         }
 
-        // If full ISO/datetime string with space: "2026-10-12 09:15:30"
+        // If full ISO/datetime string with space: "2026-10-12 09:15:30" (stored in SQLite as UTC)
         let parts: Vec<&str> = trimmed.split_whitespace().collect();
         if parts.len() >= 2 {
             if parts.len() == 3 && (parts[2].eq_ignore_ascii_case("AM") || parts[2].eq_ignore_ascii_case("PM")) {
@@ -199,6 +199,13 @@ impl TimeHelper {
                 }
                 if let Ok(t) = NaiveTime::parse_from_str(&combined, "%I:%M:%S %p") {
                     return Ok(t);
+                }
+            }
+            if parts.len() == 2 && trimmed.len() == 19 && trimmed.chars().nth(4) == Some('-') {
+                if let Ok(dhaka_full) = Self::utc_to_dhaka_string(trimmed) {
+                    if let Some(dhaka_time_part) = dhaka_full.split_whitespace().nth(1) {
+                        return Self::parse_time(dhaka_time_part);
+                    }
                 }
             }
             return Self::parse_time(parts[1]);

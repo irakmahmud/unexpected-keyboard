@@ -19,11 +19,11 @@
 | **O-Net Landmark Extraction** | 5 facial landmarks (`left_eye`, `right_eye`, `nose`, `mouth_left`, `mouth_right`) scaled by patch width/height | Separate `[1,5]` x/y arrays (`facenet-pytorch` format) and interleaved `[1,10]` arrays supported | **100% Compatible** |
 | **Face Enforcement (`enforce_detection=True`)** | Rejects 0 faces; enforces single subject in frame during enrollment and verification | `detect_face()` returns `Err(AppError::NoFaceDetected)` when `0` faces found and `Err(AppError::MultipleFacesDetected(n))` when `>1` faces found; 60% center-crop silent fallback completely removed | **100% Compatible** |
 | **Alignment & Crop** | 2D eye-angle similarity transform around crop center + bilinear resize to `160x160` RGB | `alignment::align_and_crop()` using eye coordinates `landmarks[0]` and `landmarks[1]` + bilinear resize to `160x160` RGB | **100% Compatible** |
-| **Pixel Normalization** | `normalization="Facenet2018"` (`x / 127.5 - 1.0`, mapping `[0, 255] -> [-1.0, 1.0]`) | `preprocessing::preprocess_face()` (`px / 127.5 - 1.0`, NCHW `[1, 3, 160, 160]`) | **100% Compatible** |
+| **Pixel Normalization** | `normalization="Facenet"` (per-image z-score `(x - mean) / std_adj`, `std_adj = max(std, 1/sqrt(N))`) | `preprocessing::normalize_facenet()` (`(px - mean) / std_adj`, NHWC `[1, 160, 160, 3]`) | **100% Compatible** |
 | **Backbone Architecture** | `Inception-ResNet-v1` (`facenet512_weights.h5`, 447 layers, `Bottleneck` 1792->512) | `models/facenet512.onnx` converted directly from `serengil/deepface_models` `facenet512_weights.h5` (279 ONNX nodes, opset 13) | **100% Identical Weights** |
 | **Embedding Normalization** | L2 unit normalization (`v / \|\|v\|\|_2`) | `math::l2_normalize()` (`\|\|v\|\|_2 = 1.000000`) | **100% Compatible** |
 | **Verification Metric & Threshold** | Cosine distance `1.0 - dot(a, b)`, threshold `<= 0.30` | `math::cosine_distance()`, `COSINE_THRESHOLD = 0.30` | **100% Compatible** |
-| **3-Tier Multi-Pose Matching** | Tier 1 `< 0.30` (`EXACT MATCH`), Tier 2 `< 0.40` (`STRONG MATCH`), Tier 3 `< 0.45` (`POSSIBLE MATCH` requiring `>= 3` poses) | `FaceVectorIndex::search_tiered()` implementing identical 3-tier logic | **100% Compatible** |
+| **3-Tier Multi-Pose Matching** | Tier 1 `< 0.30` (`EXACT MATCH`), Tier 2 `< 0.40` (`STRONG MATCH`), Tier 3 `< 0.45` (`POSSIBLE MATCH` requiring `>= 3` poses), `match_ratio >= 0.40` when `enrolled >= 8` | `FaceVectorIndex::search_tiered()` implementing identical 3-tier cosine distance logic and `REJECT` candidate filtering | **100% Compatible** |
 
 ---
 

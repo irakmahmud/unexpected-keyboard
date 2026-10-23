@@ -34,17 +34,36 @@ impl CooldownManager {
             ];
             for p in &paths {
                 if let Ok(content) = std::fs::read_to_string(p) {
-                    for line in content.lines() {
-                        let line = line.trim();
-                        if let Some((user, ts_str)) = line.split_once(':') {
-                            if let Ok(ts) = ts_str.trim().parse::<i64>() {
-                                if let Some(dt) = DateTime::<Utc>::from_timestamp(ts, 0) {
-                                    initial_map.insert(user.trim().to_uppercase(), dt);
+                    let trimmed = content.trim();
+                    if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(trimmed) {
+                        if let Some(users_obj) = json_val.get("users").and_then(|v| v.as_object()) {
+                            for (u, v) in users_obj {
+                                if let Some(ts) = v.as_i64() {
+                                    if let Some(dt) = DateTime::<Utc>::from_timestamp(ts, 0) {
+                                        initial_map.insert(u.trim().to_uppercase(), dt);
+                                    }
                                 }
                             }
-                        } else if let Ok(ts) = line.parse::<f64>() {
-                            if let Some(dt) = DateTime::<Utc>::from_timestamp(ts as i64, 0) {
+                        }
+                        if let Some(last_str) = json_val.get("last_attendance").and_then(|v| v.as_str()) {
+                            if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(last_str, "%Y-%m-%d %H:%M:%S") {
+                                let dt = DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc);
                                 initial_map.insert("__GLOBAL__".to_string(), dt);
+                            }
+                        }
+                    } else {
+                        for line in trimmed.lines() {
+                            let line = line.trim();
+                            if let Some((user, ts_str)) = line.split_once(':') {
+                                if let Ok(ts) = ts_str.trim().parse::<i64>() {
+                                    if let Some(dt) = DateTime::<Utc>::from_timestamp(ts, 0) {
+                                        initial_map.insert(user.trim().to_uppercase(), dt);
+                                    }
+                                }
+                            } else if let Ok(ts) = line.parse::<f64>() {
+                                if let Some(dt) = DateTime::<Utc>::from_timestamp(ts as i64, 0) {
+                                    initial_map.insert("__GLOBAL__".to_string(), dt);
+                                }
                             }
                         }
                     }
@@ -59,12 +78,26 @@ impl CooldownManager {
         }
     }
 
-
     fn persist_user_punches(map: &HashMap<String, DateTime<Utc>>) {
-        let mut out = String::new();
+        let mut users_json = serde_json::Map::new();
+        let mut latest_dt: Option<DateTime<Utc>> = None;
         for (u, dt) in map.iter() {
-            out.push_str(&format!("{}:{}\n", u, dt.timestamp()));
+            users_json.insert(u.clone(), serde_json::Value::Number(dt.timestamp().into()));
+            if latest_dt.map_or(true, |prev| *dt > prev) {
+                latest_dt = Some(*dt);
+            }
         }
+        let last_att_str = latest_dt
+            .unwrap_or_else(Utc::now)
+            .with_timezone(&attendance_common::TimeHelper::dhaka_offset())
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+        let payload = serde_json::json!({
+            "last_attendance": last_att_str,
+            "pid": std::process::id(),
+            "users": users_json,
+        });
+        let out = serde_json::to_string(&payload).unwrap_or_default();
         let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
         let paths = [
             std::path::PathBuf::from(&home).join(".last_attendance"),

@@ -45,11 +45,14 @@ A full forensic audit was conducted across `/home/opc/attendance_system`, `/home
 
 ---
 
-## 3. Authentic ONNX Model Inventory & Checksums
+## 3. Phase 0 Model File Verification & Authentic ONNX Checksums
 
-| Model File | Architecture | Size (Bytes) | SHA-256 Checksum | Input Shape | Output Shape(s) |
-| :--- | :--- | ---: | :--- | :--- | :--- |
-| `models/facenet512.onnx` | Inception-ResNet-v1 (`facenet512_weights.h5`, 447 layers, Bottleneck 512-D) | `94,176,340` | `044fb54215246cb269a17c85a609849ae96b6a413a1cf082a0bf89a9fd73250d` | `[1, 3, 160, 160]` (`(x - 127.5)/128.0`) | `embeddings: [1, 512]` |
-| `models/mtcnn_pnet.onnx` | MTCNN Stage 1 Proposal Net (`pnet.pt`, Conv+PReLU) | `27,818` | `eaae199e9873ab417b4f87df6560edf270bc6a256ed9798e5033ccbc998aa545` | `[1, 3, H, W]` (dynamic spatial) | `bbox_reg: [1, 4, H', W']`, `prob: [1, 2, H', W']` |
-| `models/mtcnn_rnet.onnx` | MTCNN Stage 2 Refine Net (`rnet.pt`, 24x24) | `402,155` | `6cc0d5de9b02bbbf3232d97e7e7a46f5d2b1f5137a46f5d2b1f5137a28fe35af` | `[1, 3, 24, 24]` | `bbox_reg: [1, 4]`, `prob: [1, 2]` |
-| `models/mtcnn_onet.onnx` | MTCNN Stage 3 Output + 5-Point Landmarks Net (`onet.pt`, 48x48) | `1,558,062` | `895408d9adc972aa29620f630cab42027b4f235f109bd4bed857e58957054253` | `[1, 3, 48, 48]` | `landmarks: [1, 10]`, `bbox_reg: [1, 4]`, `prob: [1, 2]` |
+Per Phase 0 requirements, all 4 ONNX model files in `/home/opc/attendance_system/models/` were verified for byte size, SHA-256 digest, and `tract-onnx` graph compatibility:
+
+| Model File | Architecture | Pre-Recovery Dummy Size | Authentic Size (Bytes) | SHA-256 Checksum | Input Shape | Output Shape(s) |
+| :--- | :--- | ---: | ---: | :--- | :--- | :--- |
+| `models/facenet512.onnx` | Inception-ResNet-v1 (`facenet512_weights.h5`, 447 layers, Bottleneck 512-D) | `1,191,598` | `94,176,340` | `044fb54215246cb269a17c85a609849ae96b6a413a1cf082a0bf89a9fd73250d` | `[1, 160, 160, 3]` (NHWC, per-image z-score `(x - mean) / std_adj`) | `Bottleneck_BatchNorm: [1, 512]` |
+| `models/mtcnn_pnet.onnx` | MTCNN Stage 1 Proposal Net (`pnet.pt`, Conv+PReLU) | `3,549` | `27,818` | `eaae199e9873ab417b4f87df6560edf270bc6a256ed9798e5033ccbc998aa545` | `[1, 3, H, W]` (dynamic spatial, `(x - 127.5) * 0.0078125`) | `bbox_reg: [1, 4, H', W']`, `prob: [1, 2, H', W']` |
+| `models/mtcnn_rnet.onnx` | MTCNN Stage 2 Refine Net (`rnet.pt`, 24x24) | `422,554` | `402,155` | `6cc0d5de9b02bbbf3232d97e7e7a46f5d2b1f5137a28fe35af723db49aa22bbe` | `[1, 3, 24, 24]` | `bbox_reg: [1, 4]`, `prob: [1, 2]` |
+| `models/mtcnn_onet.onnx` | MTCNN Stage 3 Output + 5-Point Landmarks Net (`onet.pt`, 48x48) | `1,562,994` | `1,558,062` | `895408d9adc972aa29620f630cab42027b4f235f109bd4bed857e58957054253` | `[1, 3, 48, 48]` | `landmarks: [1, 10]`, `bbox_reg: [1, 4]`, `prob: [1, 2]` |
+

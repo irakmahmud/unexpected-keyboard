@@ -449,10 +449,14 @@ impl FaceVectorIndex {
         if dim != st.dimension {
             return Ok(0);
         }
+        let existing_users: std::collections::HashSet<String> = st.embeddings.keys().cloned().collect();
         for i in 0..ntotal {
             let Some(user) = idx_to_user.get(&i) else {
                 continue;
             };
+            if existing_users.contains(user) {
+                continue;
+            }
             let base = 16 + i * dim * 4;
             let mut vec = Vec::with_capacity(dim);
             for j in 0..dim {
@@ -578,5 +582,44 @@ mod tests {
         assert_eq!(index.count_users(), 0);
         assert_eq!(index.count_faces(), 0);
     }
+
+    #[test]
+    fn test_faiss_binary_roundtrip_save_and_load() {
+        let tmp_dir = std::env::temp_dir().join(format!("faiss_test_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        std::fs::create_dir_all(&tmp_dir).unwrap();
+
+        let v1 = make_basis_vec(12, 1.0);
+        let v2 = make_basis_vec(42, 1.0);
+        let mut raw_bytes = Vec::with_capacity(16 + 2 * 512 * 4);
+        raw_bytes.extend_from_slice(b"IxF2");
+        raw_bytes.extend_from_slice(&512u32.to_le_bytes());
+        raw_bytes.extend_from_slice(&2u64.to_le_bytes());
+        for &val in &v1 {
+            raw_bytes.extend_from_slice(&val.to_le_bytes());
+        }
+        for &val in &v2 {
+            raw_bytes.extend_from_slice(&val.to_le_bytes());
+        }
+        std::fs::write(tmp_dir.join("face_encodings.index"), &raw_bytes).unwrap();
+        std::fs::write(tmp_dir.join("user_mappings.txt"), "0:FAISS_USER_A\n1:FAISS_USER_B\n").unwrap();
+
+        let idx = FaceVectorIndex::new(0.40);
+        let loaded = idx.load_faiss_from_dir(&tmp_dir).unwrap();
+        assert_eq!(loaded, 2);
+        assert_eq!(idx.count_users(), 2);
+        assert_eq!(idx.count_faces(), 2);
+
+        // Calling load_faiss_from_dir again must skip already loaded users
+        let loaded_again = idx.load_faiss_from_dir(&tmp_dir).unwrap();
+        assert_eq!(loaded_again, 0);
+        assert_eq!(idx.count_faces(), 2);
+
+        let m = idx.search_tiered(v1).unwrap().expect("Should match FAISS_USER_A");
+        assert_eq!(m.username, "FAISS_USER_A");
+
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+    }
 }
+
 

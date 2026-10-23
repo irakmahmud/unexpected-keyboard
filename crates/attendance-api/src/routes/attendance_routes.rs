@@ -85,20 +85,48 @@ async fn handle_punch(
         }
     }
 
-    if payload.username.trim().is_empty() {
-        if let Some(ref emb) = payload.face_embedding {
-            if let Ok(Some(match_res)) = state.face_index.search_tiered(emb.clone()) {
-                if match_res.is_match {
-                    payload.username = match_res.username;
-                }
-            }
-            if payload.username.trim().is_empty() {
+    if let Some(ref emb) = payload.face_embedding {
+        let matched_user = state
+            .face_index
+            .search_tiered(emb.clone())
+            .ok()
+            .flatten()
+            .filter(|m| m.is_match)
+            .map(|m| m.username);
+
+        if payload.username.trim().is_empty() {
+            if let Some(uname) = matched_user {
+                payload.username = uname;
+            } else {
                 return Err(attendance_common::AppError::Unauthorized(
                     "Face verification failed: no confident match found in enrolled profiles".to_string(),
                 )
                 .into());
             }
+        } else if decoded_image_bytes.is_some() {
+            let claimed = payload.username.trim().to_uppercase();
+            match matched_user {
+                Some(ref uname) if uname.eq_ignore_ascii_case(&claimed) => {}
+                Some(other_user) => {
+                    return Err(attendance_common::AppError::Unauthorized(format!(
+                        "Face verification mismatch: camera image matched '{}' instead of claimed user '{}'",
+                        other_user, claimed
+                    ))
+                    .into());
+                }
+                None => {
+                    return Err(attendance_common::AppError::Unauthorized(
+                        "Face verification failed: camera image did not match claimed user".to_string(),
+                    )
+                    .into());
+                }
+            }
         }
+    } else if payload.username.trim().is_empty() {
+        return Err(attendance_common::AppError::Validation(
+            "Either username or a valid camera face image/embedding must be provided".to_string(),
+        )
+        .into());
     }
 
     if let Some(bytes) = decoded_image_bytes {

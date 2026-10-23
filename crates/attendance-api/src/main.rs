@@ -70,8 +70,9 @@ impl IntoResponse for ApiError {
             }
             AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
+            AppError::Conflict(msg) | AppError::Cooldown(msg) => (StatusCode::CONFLICT, msg.clone()),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg.clone()),
             AppError::Database(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             other => (StatusCode::INTERNAL_SERVER_ERROR, other.to_string()),
         };
@@ -411,6 +412,9 @@ fn bootstrap_face_index(db: &DbPool, face_index: &FaceVectorIndex) -> Result<()>
                 }
             }
         }
+    }
+    if let Ok(faiss_loaded) = face_index.load_faiss_files() {
+        loaded += faiss_loaded;
     }
     let _ = face_index.sync_faiss_files();
     tracing::info!("Bootstrapped {} valid face embeddings into memory index", loaded);
