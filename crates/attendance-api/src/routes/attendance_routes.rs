@@ -122,11 +122,6 @@ async fn handle_punch(
                 }
             }
         }
-    } else if payload.username.trim().is_empty() {
-        return Err(attendance_common::AppError::Validation(
-            "Either username or a valid camera face image/embedding must be provided".to_string(),
-        )
-        .into());
     }
 
     if let Some(bytes) = decoded_image_bytes {
