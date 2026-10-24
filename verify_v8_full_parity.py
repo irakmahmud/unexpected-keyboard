@@ -95,10 +95,30 @@ def main():
 
     # 3. ONNX FaceNet512 Single Frame Extraction & 20-Pose Registration
     frames_20 = [load_real_face_b64(i) for i in range(20)]
-    st, ext_frame = req("/api/v1/face/extract-frame", "POST", {"image_b64": frames_20[0]})
-    assert st == 200 and ext_frame.get("dimension") == 512, f"Extract frame failed: {ext_frame}"
+    st, ext_frame = req("/api/v1/face/extract-frame", "POST", {"image_b64": frames_20[0], "pose_index": 0, "enforce_pose": True})
+    assert st == 200 and ext_frame.get("dimension") == 512 and ext_frame.get("pose_verified") is True, f"Extract frame failed: {ext_frame}"
+    base_yaw = ext_frame["pose_metrics"]["yaw_ratio"]
     l2_norm = sum(x * x for x in ext_frame["embedding"]) ** 0.5
-    print(f"[3/8] ONNX FaceNet512 Single-Frame Extracted: dim={ext_frame['dimension']}, L2_norm={l2_norm:.4f}, model={ext_frame['model']}")
+    print(f"[3/8] ONNX FaceNet512 Single-Frame Extracted: dim={ext_frame['dimension']}, L2_norm={l2_norm:.4f}, model={ext_frame['model']}, pose_metrics={ext_frame['pose_metrics']}")
+
+    # Verify Pose 11/20 (pose_index=10: Turn head MORE to LEFT) rejects straight frontal image and accepts turned head image
+    st_p10_rej, p10_rej = req("/api/v1/face/extract-frame", "POST", {
+        "image_b64": frames_20[0],
+        "pose_index": 10,
+        "enforce_pose": True,
+        "baseline_yaw": base_yaw
+    })
+    assert st_p10_rej == 200 and p10_rej.get("pose_verified") is False, f"Expected frontal image to fail pose 10 (Turn MORE to LEFT): {p10_rej}"
+    with open("rust_deepFace/test_images/Anjelina Jolie/40.jpg", "rb") as f40:
+        b64_40 = "data:image/jpeg;base64," + base64.b64encode(f40.read()).decode("ascii")
+    st_p10_ok, p10_ok = req("/api/v1/face/extract-frame", "POST", {
+        "image_b64": b64_40,
+        "pose_index": 10,
+        "enforce_pose": True,
+        "baseline_yaw": base_yaw
+    })
+    assert st_p10_ok == 200 and p10_ok.get("pose_verified") is True, f"Expected angled image 40.jpg to pass pose 10 (Turn MORE to LEFT): {p10_ok}"
+    print(f"      20-Pose MTCNN 5-Landmark Verification Confirmed: Frontal rejected on Pose 11/20, Angled head turn accepted ({p10_ok.get('detected_pose')}).")
 
     st, reg_cam = req("/api/v1/users", "POST", {
         "username": "ONNX_CAM_USER",

@@ -454,12 +454,24 @@ function captureFrameFromVideoElement(videoEl) {
         return window.__TEST_FACE_B64;
     }
     const canvas = document.getElementById('camera-canvas') || document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    let vw = (videoEl && videoEl.videoWidth) ? videoEl.videoWidth : 640;
+    let vh = (videoEl && videoEl.videoHeight) ? videoEl.videoHeight : 480;
+    const maxDim = 640;
+    if (vw > maxDim || vh > maxDim) {
+        if (vw >= vh) {
+            vh = Math.max(1, Math.round((vh * maxDim) / vw));
+            vw = maxDim;
+        } else {
+            vw = Math.max(1, Math.round((vw * maxDim) / vh));
+            vh = maxDim;
+        }
+    }
+    canvas.width = vw;
+    canvas.height = vh;
     const ctx = canvas.getContext('2d');
 
     if (videoEl && videoEl.srcObject && videoEl.readyState >= 2) {
-        ctx.drawImage(videoEl, 0, 0, 640, 480);
+        ctx.drawImage(videoEl, 0, 0, vw, vh);
     }
     return canvas.toDataURL('image/jpeg', 0.92);
 }
@@ -476,7 +488,9 @@ async function openCameraLogin() {
     status.style.color = '#fdcb6e';
 
     try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        });
         video.srcObject = cameraStream;
         status.innerText = 'Camera Ready - Click Capture when ready';
         status.style.color = '#00b894';
@@ -1172,6 +1186,7 @@ function backToHrMainMenu() {
 }
 
 function stopHrRegCamera() {
+    regAutoCaptureRunning = false;
     if (hrRegCameraStream) {
         hrRegCameraStream.getTracks().forEach(t => t.stop());
         hrRegCameraStream = null;
@@ -1183,6 +1198,62 @@ function stopHrRegCamera() {
 // ============================================================================
 let regCapturedFrames = [];
 let regCurrentPoseIdx = 0;
+let regAutoCaptureRunning = false;
+let regBaselineMetrics = null;
+let regPrevPoseMetrics = null;
+let regPoseAttemptCount = 0;
+
+function buildRegPoseThumbsHtml() {
+    let html = '';
+    for (let i = 0; i < 20; i++) {
+        const isCurrent = (i === 0);
+        html += `<div id="reg-pose-thumb-${i}" style="height: 36px; border-radius: 6px; background: #10101c; border: 1px solid ${isCurrent ? '#00d2d3' : 'rgba(255,255,255,0.12)'}; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: ${isCurrent ? '#00d2d3' : '#636e72'}; overflow: hidden; position: relative;" title="${POSE_INSTRUCTIONS[i].en}">${i + 1}</div>`;
+    }
+    return html;
+}
+
+function resetRegPoses() {
+    regAutoCaptureRunning = false;
+    regCapturedFrames = [];
+    regCurrentPoseIdx = 0;
+    regBaselineMetrics = null;
+    regPrevPoseMetrics = null;
+    regPoseAttemptCount = 0;
+    const bar = document.getElementById('reg-pose-bar');
+    const status = document.getElementById('reg-pose-status');
+    const enEl = document.getElementById('reg-pose-en');
+    const bnEl = document.getElementById('reg-pose-bn');
+    const msgEl = document.getElementById('reg-cam-result-msg');
+    const angleEl = document.getElementById('reg-pose-angle-badge');
+    const lastImg = document.getElementById('reg-last-captured-img');
+    const lastPlaceholder = document.getElementById('reg-last-captured-empty');
+    const lastLabel = document.getElementById('reg-last-captured-label');
+    const autoBtn = document.getElementById('btn-auto-capture-poses');
+    const gridEl = document.getElementById('reg-pose-thumbs-grid');
+    const cdBadge = document.getElementById('hr-reg-countdown-badge');
+
+    if (bar) bar.style.width = '0%';
+    if (status) status.innerText = 'Captured: 0 / 20 poses (512-D ONNX vectors)';
+    if (enEl) enEl.innerText = POSE_INSTRUCTIONS[0].en;
+    if (bnEl) bnEl.innerText = POSE_INSTRUCTIONS[0].bn;
+    if (msgEl) {
+        msgEl.style.color = '#dfe6e9';
+        msgEl.innerText = 'Poses reset to 0/20. Ready to capture & verify Pose 1/20.';
+    }
+    if (angleEl) angleEl.innerText = 'MTCNN 5-Landmark Pose Verifier: Ready for Pose 1/20';
+    if (lastImg) {
+        lastImg.src = '';
+        lastImg.style.display = 'none';
+    }
+    if (lastPlaceholder) lastPlaceholder.style.display = 'flex';
+    if (lastLabel) lastLabel.innerText = 'Last Captured (0/20)';
+    if (autoBtn) {
+        autoBtn.innerText = '⚡ Auto Capture All 20 Poses';
+        autoBtn.style.background = '#3498db';
+    }
+    if (gridEl) gridEl.innerHTML = buildRegPoseThumbsHtml();
+    if (cdBadge) cdBadge.innerText = 'Pose 1/20 Ready';
+}
 
 async function openHrAction(action) {
     const grid = document.getElementById('hr-main-menu-grid');
@@ -1229,10 +1300,14 @@ async function openHrAction(action) {
         `;
     } else if (action === 'reg-camera') {
         if (titleEl) titleEl.innerText = '📷 1. User Registration with Camera (20-Pose ONNX FaceNet512)';
+        regAutoCaptureRunning = false;
         regCapturedFrames = [];
         regCurrentPoseIdx = 0;
+        regBaselineMetrics = null;
+        regPrevPoseMetrics = null;
+        regPoseAttemptCount = 0;
         box.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.15rem;">
                 <div>
                     <label style="font-size: 0.85rem; color: #ccc;">Username (Full Name / ID):</label>
                     <input type="text" id="reg-cam-username" class="form-input" placeholder="e.g. RAKIB_01">
@@ -1241,37 +1316,66 @@ async function openHrAction(action) {
                     <label style="font-size: 0.85rem; color: #ccc;">Password:</label>
                     <input type="password" id="reg-cam-password" class="form-input" placeholder="Enter password for user">
                     
-                    <div style="background: #10101c; padding: 1rem; border-radius: 10px; border: 1px solid rgba(46,204,113,0.3); margin-top: 0.5rem;">
-                        <div style="font-size: 0.8rem; color: #a29bfe; font-weight: 700;">POSE INSTRUCTION (ENGLISH & বাংলা):</div>
-                        <div id="reg-pose-en" style="font-size: 1rem; font-weight: 700; color: #2ecc71; margin-top: 0.35rem;">${POSE_INSTRUCTIONS[0].en}</div>
-                        <div id="reg-pose-bn" style="font-size: 0.95rem; color: #fdcb6e; margin-top: 0.2rem;">${POSE_INSTRUCTIONS[0].bn}</div>
-                        <div style="margin-top: 0.75rem; background: #2d3436; height: 12px; border-radius: 6px; overflow: hidden;">
-                            <div id="reg-pose-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.2s;"></div>
+                    <div style="background: #10101c; padding: 0.9rem; border-radius: 10px; border: 1px solid rgba(46,204,113,0.35); margin-top: 0.35rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.78rem; color: #a29bfe; font-weight: 700;">POSE INSTRUCTION (ENGLISH & বাংলা):</span>
+                            <button type="button" onclick="resetRegPoses()" style="background: rgba(255,255,255,0.08); color: #dfe6e9; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 2px 8px; font-size: 0.72rem; cursor: pointer;">🔄 Reset</button>
                         </div>
-                        <div id="reg-pose-status" style="font-size: 0.8rem; color: #dfe6e9; margin-top: 0.4rem;">Captured: 0 / 20 poses (512-D ONNX vectors)</div>
+                        <div id="reg-pose-en" style="font-size: 0.98rem; font-weight: 700; color: #2ecc71; margin-top: 0.35rem;">${POSE_INSTRUCTIONS[0].en}</div>
+                        <div id="reg-pose-bn" style="font-size: 0.92rem; color: #fdcb6e; margin-top: 0.2rem;">${POSE_INSTRUCTIONS[0].bn}</div>
+                        <div style="margin-top: 0.65rem; background: #2d3436; height: 12px; border-radius: 6px; overflow: hidden;">
+                            <div id="reg-pose-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.25s;"></div>
+                        </div>
+                        <div id="reg-pose-status" style="font-size: 0.8rem; color: #dfe6e9; margin-top: 0.4rem; font-weight: 600;">Captured: 0 / 20 poses (512-D ONNX vectors)</div>
+                        <div id="reg-pose-angle-badge" style="font-size: 0.75rem; color: #00d2d3; margin-top: 0.25rem; font-family: monospace;">MTCNN 5-Landmark Pose Verifier: Ready for Pose 1/20</div>
                     </div>
 
-                    <div style="display: flex; gap: 0.5rem; margin-top: 0.85rem; flex-wrap: wrap;">
-                        <button class="btn-primary-action" style="flex: 1; background: #2ecc71; color: #fff;" onclick="captureSingleRegPose()">📸 Capture Pose</button>
-                        <button class="btn-primary-action" style="flex: 1; background: #3498db; color: #fff;" onclick="runAuto20PoseCapture()">⚡ Auto Capture All 20 Poses</button>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                        <button class="btn-primary-action" style="flex: 1; background: #2ecc71; color: #fff; padding: 0.7rem;" onclick="captureSingleRegPose()">📸 Capture Pose</button>
+                        <button id="btn-auto-capture-poses" class="btn-primary-action" style="flex: 1.2; background: #3498db; color: #fff; padding: 0.7rem;" onclick="runAuto20PoseCapture()">⚡ Auto Capture All 20 Poses</button>
                     </div>
-                    <div id="reg-cam-result-msg" style="font-size: 0.85rem; margin-top: 0.5rem;"></div>
-                    <button id="btn-finish-cam-reg" class="btn-primary-action" style="margin-top: 0.75rem; background: #9b59b6; color: #fff;" onclick="submitCameraRegistration()">✅ Complete ONNX Face Registration</button>
+                    <div id="reg-cam-result-msg" style="font-size: 0.84rem; margin-top: 0.55rem; min-height: 2.2rem; padding: 0.45rem 0.65rem; border-radius: 8px; background: rgba(16,16,28,0.7); border: 1px solid rgba(255,255,255,0.08); color: #dfe6e9;">Enter Username and click "📸 Capture Pose" or "⚡ Auto Capture All 20 Poses" (each pose is verified).</div>
+                    <button id="btn-finish-cam-reg" class="btn-primary-action" style="margin-top: 0.65rem; background: #9b59b6; color: #fff;" onclick="submitCameraRegistration()">✅ Complete ONNX Face Registration</button>
                 </div>
                 <div>
-                    <div class="camera-wrapper" style="height: 280px;">
-                        <video id="hr-reg-video" class="camera-video" autoplay playsinline muted></video>
-                        <div class="camera-overlay-box"></div>
+                    <!-- Side-by-Side Live Camera & Last Captured Pose (attendance_v8.py lines 1290-1324 Parity) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="font-size: 0.75rem; font-weight: 700; color: #00b894; margin-bottom: 0.25rem; text-align: center;">🔴 LIVE CAMERA</div>
+                            <div id="hr-reg-cam-wrap" class="camera-wrapper" style="height: 220px; margin-bottom: 0; border: 2px solid rgba(0, 184, 148, 0.5); transition: border-color 0.2s;">
+                                <video id="hr-reg-video" class="camera-video" autoplay playsinline muted style="transform: scaleX(-1);"></video>
+                                <div class="camera-overlay-box" style="width: 120px; height: 155px;"></div>
+                                <div id="hr-reg-countdown-badge" style="position: absolute; bottom: 6px; left: 6px; right: 6px; background: rgba(16,16,28,0.82); color: #00d2d3; font-size: 0.72rem; font-weight: 700; text-align: center; padding: 3px 6px; border-radius: 6px;">Pose 1/20 Ready</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div id="reg-last-captured-label" style="font-size: 0.75rem; font-weight: 700; color: #fdcb6e; margin-bottom: 0.25rem; text-align: center;">🖼️ LAST CAPTURED (0/20)</div>
+                            <div id="reg-last-captured-wrap" style="height: 220px; background: #10101c; border-radius: 12px; border: 2px solid rgba(253, 203, 110, 0.35); overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
+                                <img id="reg-last-captured-img" src="" alt="Last Captured Pose" style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: none;" />
+                                <div id="reg-last-captured-empty" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.75rem; text-align: center; color: #636e72; font-size: 0.76rem;">
+                                    <span style="font-size: 1.6rem; margin-bottom: 0.35rem;">📸</span>
+                                    <span>Verified pose photo will appear here after each capture</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="hr-reg-cam-msg" style="text-align: center; font-size: 0.85rem; color: #00b894;">Initializing registration camera...</div>
+                    <div id="hr-reg-cam-msg" style="text-align: center; font-size: 0.8rem; color: #00b894; margin-bottom: 0.45rem;">Initializing registration camera...</div>
+                    <div style="background: rgba(16,16,28,0.75); padding: 0.55rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="font-size: 0.72rem; color: #a29bfe; font-weight: 700; margin-bottom: 0.35rem;">VERIFIED 20-POSE GALLERY (1/20 .. 20/20):</div>
+                        <div id="reg-pose-thumbs-grid" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px;">
+                            ${buildRegPoseThumbsHtml()}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
         try {
-            hrRegCameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            hrRegCameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+            });
             const v = document.getElementById('hr-reg-video');
             if (v) v.srcObject = hrRegCameraStream;
-            document.getElementById('hr-reg-cam-msg').innerText = 'Webcam Live — Follow the 20 pose instructions';
+            document.getElementById('hr-reg-cam-msg').innerText = 'Webcam Live — Follow each pose instruction (all 20 poses are verified)';
         } catch (e) {
             document.getElementById('hr-reg-cam-msg').innerText = 'Webcam unavailable — Ready for frame capture';
             document.getElementById('hr-reg-cam-msg').style.color = '#fdcb6e';
@@ -1498,6 +1602,10 @@ async function deleteUserAccount(username) {
 async function captureSingleRegPose(skipRemoteExtract = false) {
     const username = (document.getElementById('reg-cam-username')?.value || '').trim();
     const msgEl = document.getElementById('reg-cam-result-msg');
+    const angleEl = document.getElementById('reg-pose-angle-badge');
+    const camWrap = document.getElementById('hr-reg-cam-wrap');
+    const cdBadge = document.getElementById('hr-reg-countdown-badge');
+
     if (!username) {
         if (msgEl) {
             msgEl.style.color = '#ff7675';
@@ -1508,24 +1616,68 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
     if (regCurrentPoseIdx >= 20) {
         return true;
     }
+
     const video = document.getElementById('hr-reg-video');
     const frameB64 = captureFrameFromVideoElement(video);
-    const hasLiveOrTestFrame = Boolean(window.__TEST_FACE_B64 || (video && video.srcObject && video.readyState >= 2));
+    const isTestFrame = Boolean(window.__TEST_FACE_B64);
+    const hasLiveOrTestFrame = Boolean(isTestFrame || (video && video.srcObject && video.readyState >= 2));
+
+    let verifiedPoseLabel = 'VERIFIED';
 
     if (!skipRemoteExtract && hasLiveOrTestFrame) {
         try {
+            if (cdBadge) cdBadge.innerText = `🔍 Verifying Pose ${regCurrentPoseIdx + 1}/20...`;
+            const reqPayload = {
+                image_b64: frameB64,
+                pose_index: regCurrentPoseIdx,
+                enforce_pose: !isTestFrame,
+                baseline_yaw: regBaselineMetrics ? regBaselineMetrics.yaw_ratio : null,
+                baseline_pitch: regBaselineMetrics ? regBaselineMetrics.pitch_ratio : null,
+                baseline_roll: regBaselineMetrics ? regBaselineMetrics.roll_deg : null,
+                baseline_area: regBaselineMetrics ? regBaselineMetrics.face_area_ratio : null,
+                prev_yaw: regPrevPoseMetrics ? regPrevPoseMetrics.yaw_ratio : null,
+                prev_roll: regPrevPoseMetrics ? regPrevPoseMetrics.roll_deg : null,
+                attempt: regPoseAttemptCount
+            };
+
             const extRes = await fetch('/api/v1/face/extract-frame', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_b64: frameB64 })
+                body: JSON.stringify(reqPayload)
             });
             const extData = await extRes.json();
-            if (!extRes.ok || !extData.success) {
-                if (msgEl) {
-                    msgEl.style.color = '#ff7675';
-                    msgEl.innerText = extData.error || extData.message || 'Face detection failed on captured pose — please align your face clearly.';
+
+            if (extData && extData.pose_metrics && angleEl) {
+                const pm = extData.pose_metrics;
+                angleEl.innerText = `Detected: ${extData.detected_pose || 'FACE'} | Yaw: ${Number(pm.yaw_deg || 0).toFixed(1)}° | Pitch: ${Number(pm.pitch_deg || 0).toFixed(1)}° | Roll: ${Number(pm.roll_deg || 0).toFixed(1)}°`;
+            }
+
+            if (!extRes.ok || !extData.success || extData.pose_verified === false) {
+                regPoseAttemptCount += 1;
+                if (extData && extData.face_detected && extData.pose_verified === false) {
+                    if (camWrap) camWrap.style.borderColor = '#fdcb6e';
+                    if (cdBadge) cdBadge.innerText = `⚠️ Adjust Pose ${regCurrentPoseIdx + 1}/20`;
+                    if (msgEl) {
+                        msgEl.style.color = '#fdcb6e';
+                        msgEl.innerText = `⚠️ ${extData.message || extData.error} (Detected: ${extData.detected_pose || 'FRONTAL'})`;
+                    }
+                } else {
+                    if (camWrap) camWrap.style.borderColor = '#ff7675';
+                    if (cdBadge) cdBadge.innerText = `⚠️ Face Not Detected (${regCurrentPoseIdx + 1}/20)`;
+                    if (msgEl) {
+                        msgEl.style.color = '#ff7675';
+                        msgEl.innerText = `⚠️ Face not detected clearly for Pose ${regCurrentPoseIdx + 1}/20 (${POSE_INSTRUCTIONS[regCurrentPoseIdx].bn}) — keep your face inside the camera frame.`;
+                    }
                 }
                 return false;
+            }
+
+            verifiedPoseLabel = extData.detected_pose || 'VERIFIED';
+            if (regCurrentPoseIdx === 0 && extData.pose_metrics) {
+                regBaselineMetrics = extData.pose_metrics;
+            }
+            if (extData.pose_metrics) {
+                regPrevPoseMetrics = extData.pose_metrics;
             }
         } catch (err) {
             if (msgEl) {
@@ -1536,8 +1688,39 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
         }
     }
 
+    const capturedIdx = regCurrentPoseIdx;
+    regPoseAttemptCount = 0;
     regCapturedFrames.push(frameB64);
     regCurrentPoseIdx += 1;
+
+    // Update Live Camera border & Last Captured Pose preview
+    if (camWrap) camWrap.style.borderColor = '#2ecc71';
+    if (cdBadge) cdBadge.innerText = `✅ Pose ${regCurrentPoseIdx}/20 Captured!`;
+
+    const lastImg = document.getElementById('reg-last-captured-img');
+    const lastEmpty = document.getElementById('reg-last-captured-empty');
+    const lastLabel = document.getElementById('reg-last-captured-label');
+    if (lastImg) {
+        lastImg.src = frameB64;
+        lastImg.style.display = 'block';
+    }
+    if (lastEmpty) lastEmpty.style.display = 'none';
+    if (lastLabel) lastLabel.innerText = `✅ LAST CAPTURED: #${regCurrentPoseIdx}/20 (${verifiedPoseLabel})`;
+
+    // Update 20-Pose Gallery Thumbnail Slot
+    const thumbEl = document.getElementById(`reg-pose-thumb-${capturedIdx}`);
+    if (thumbEl) {
+        thumbEl.style.border = '2px solid #2ecc71';
+        thumbEl.innerHTML = `
+            <img src="${frameB64}" style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);" />
+            <span style="position:absolute;bottom:0;right:0;background:rgba(46,204,113,0.92);color:#000;font-size:0.6rem;font-weight:800;padding:0 3px;border-top-left-radius:4px;">✓${regCurrentPoseIdx}</span>
+        `;
+    }
+    const nextThumbEl = document.getElementById(`reg-pose-thumb-${regCurrentPoseIdx}`);
+    if (nextThumbEl) {
+        nextThumbEl.style.borderColor = '#00d2d3';
+        nextThumbEl.style.color = '#00d2d3';
+    }
 
     const pct = Math.round((regCurrentPoseIdx / 20) * 100);
     const bar = document.getElementById('reg-pose-bar');
@@ -1547,27 +1730,116 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
 
     if (bar) bar.style.width = `${pct}%`;
     if (status) status.innerText = `Captured: ${regCurrentPoseIdx} / 20 poses (512-D ONNX vectors)`;
+
+    if (msgEl) {
+        msgEl.style.color = '#2ecc71';
+        msgEl.innerText = `✅ Pose ${regCurrentPoseIdx}/20 Verified & Captured! (${POSE_INSTRUCTIONS[capturedIdx].en})`;
+    }
+
     if (regCurrentPoseIdx < 20) {
         if (enEl) enEl.innerText = POSE_INSTRUCTIONS[regCurrentPoseIdx].en;
         if (bnEl) bnEl.innerText = POSE_INSTRUCTIONS[regCurrentPoseIdx].bn;
     } else {
-        if (enEl) enEl.innerText = '✅ All 20/20 Poses Captured! Ready to Save.';
-        if (bnEl) bnEl.innerText = '✅ ২০/২০টি পোজ সম্পন্ন হয়েছে! এখন রেজিস্ট্রেশন সম্পন্ন করুন।';
+        if (enEl) enEl.innerText = '✅ All 20/20 Poses Verified & Captured! Ready to Save.';
+        if (bnEl) bnEl.innerText = '✅ ২০/২০টি পোজ যাচাই ও ক্যাপচার সম্পন্ন হয়েছে! এখন রেজিস্ট্রেশন সম্পন্ন করুন।';
     }
     return true;
 }
 
 async function runAuto20PoseCapture() {
     const username = (document.getElementById('reg-cam-username')?.value || '').trim();
-    if (!username) return;
-    regCapturedFrames = [];
-    regCurrentPoseIdx = 0;
-    for (let i = 0; i < 20; i++) {
-        const ok = await captureSingleRegPose(i > 0 && Boolean(window.__TEST_FACE_B64));
-        if (!ok) return;
-        await new Promise(r => setTimeout(r, 30));
+    const msgEl = document.getElementById('reg-cam-result-msg');
+    const autoBtn = document.getElementById('btn-auto-capture-poses');
+    const cdBadge = document.getElementById('hr-reg-countdown-badge');
+
+    if (!username) {
+        if (msgEl) {
+            msgEl.style.color = '#ff7675';
+            msgEl.innerText = 'Please enter Username first before starting 20-pose capture!';
+        }
+        return;
     }
-    addTerminalLog(`Captured 20 multi-angle frames for ${username}`, 'CAMERA');
+
+    // Toggle pause if already running
+    if (regAutoCaptureRunning) {
+        regAutoCaptureRunning = false;
+        if (autoBtn) {
+            autoBtn.innerText = '⚡ Resume Auto Capture (20 Poses)';
+            autoBtn.style.background = '#3498db';
+        }
+        if (msgEl) {
+            msgEl.style.color = '#fdcb6e';
+            msgEl.innerText = `⏸️ Auto-capture paused at ${regCurrentPoseIdx}/20 poses. Click Resume or Capture Pose to continue.`;
+        }
+        return;
+    }
+
+    if (regCurrentPoseIdx >= 20) {
+        resetRegPoses();
+    }
+
+    regAutoCaptureRunning = true;
+    const isTestMode = Boolean(window.__TEST_FACE_B64);
+
+    if (autoBtn) {
+        autoBtn.innerText = '⏸️ Pause Auto Capture';
+        autoBtn.style.background = '#e67e22';
+    }
+
+    while (regAutoCaptureRunning && regCurrentPoseIdx < 20) {
+        const poseNum = regCurrentPoseIdx + 1;
+        const currInstr = POSE_INSTRUCTIONS[regCurrentPoseIdx];
+
+        if (isTestMode) {
+            const ok = await captureSingleRegPose(regCurrentPoseIdx > 0);
+            if (!ok) {
+                regAutoCaptureRunning = false;
+                break;
+            }
+            await new Promise(r => setTimeout(r, 20));
+            continue;
+        }
+
+        // Human-paced countdown so the user can read the pose instruction and see each captured photo
+        if (regPoseAttemptCount === 0) {
+            for (let sec = 3; sec >= 1; sec--) {
+                if (!regAutoCaptureRunning) break;
+                if (cdBadge) cdBadge.innerText = `⏳ Pose ${poseNum}/20 in ${sec}s...`;
+                if (msgEl) {
+                    msgEl.style.color = '#74b9ff';
+                    msgEl.innerText = `⏳ Get Ready for ${currInstr.en} (${currInstr.bn}) — Capturing in ${sec}s...`;
+                }
+                await new Promise(r => setTimeout(r, 750));
+            }
+        } else {
+            if (cdBadge) cdBadge.innerText = `🔄 Retrying Pose ${poseNum}/20...`;
+            await new Promise(r => setTimeout(r, 1100));
+        }
+
+        if (!regAutoCaptureRunning) break;
+
+        const ok = await captureSingleRegPose(false);
+        if (ok) {
+            // Brief pause to let user see the green verification flash & captured image
+            await new Promise(r => setTimeout(r, 650));
+        } else if (regPoseAttemptCount >= 25) {
+            regAutoCaptureRunning = false;
+            if (msgEl) {
+                msgEl.style.color = '#fdcb6e';
+                msgEl.innerText = `⏸️ Paused at Pose ${poseNum}/20 (${currInstr.bn}). Adjust your face angle and click Resume or Capture Pose.`;
+            }
+            break;
+        }
+    }
+
+    regAutoCaptureRunning = false;
+    if (autoBtn) {
+        autoBtn.innerText = regCurrentPoseIdx >= 20 ? '✅ 20/20 Poses Verified' : '⚡ Resume Auto Capture (20 Poses)';
+        autoBtn.style.background = regCurrentPoseIdx >= 20 ? '#27ae60' : '#3498db';
+    }
+    if (regCurrentPoseIdx >= 20) {
+        addTerminalLog(`Captured & verified all 20 multi-angle frames for ${username}`, 'CAMERA');
+    }
 }
 
 async function submitCameraRegistration() {
@@ -1583,9 +1855,13 @@ async function submitCameraRegistration() {
         }
         return;
     }
-    if (regCapturedFrames.length === 0) {
+    if (regCapturedFrames.length < 20) {
         await runAuto20PoseCapture();
-        if (regCapturedFrames.length === 0) {
+        if (regCapturedFrames.length < 20) {
+            if (msgEl && !msgEl.innerText) {
+                msgEl.style.color = '#fdcb6e';
+                msgEl.innerText = `Please complete all 20 verified poses (currently ${regCapturedFrames.length}/20) before saving.`;
+            }
             return;
         }
     }

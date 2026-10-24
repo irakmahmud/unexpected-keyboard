@@ -217,6 +217,7 @@ fn run_rnet(
     }
     
     let mut refined_boxes = Vec::new();
+    let mut fallback_boxes = Vec::new();
     
     for bbox in boxes {
         // Extract and resize face patch to 24x24
@@ -234,7 +235,7 @@ fn run_rnet(
         
         let score = prob[[0, 1]];
         
-        if score > RNET_THRESHOLD {
+        if score > 0.50 {
             let mut new_box = bbox.clone();
             new_box.score = score;
             new_box.reg = [
@@ -243,10 +244,17 @@ fn run_rnet(
                 reg[[0, 2]],
                 reg[[0, 3]],
             ];
-            refined_boxes.push(new_box);
+            if score > RNET_THRESHOLD {
+                refined_boxes.push(new_box);
+            } else {
+                fallback_boxes.push(new_box);
+            }
         }
     }
     
+    if refined_boxes.is_empty() {
+        refined_boxes = fallback_boxes;
+    }
     if refined_boxes.is_empty() {
         return Ok(Vec::new());
     }
@@ -278,6 +286,8 @@ fn run_onet(
     
     let mut final_boxes = Vec::new();
     let mut all_landmarks = Vec::new();
+    let mut fallback_boxes = Vec::new();
+    let mut fallback_landmarks = Vec::new();
     
     for bbox in boxes {
         // Extract and resize face patch to 48x48
@@ -303,7 +313,7 @@ fn run_onet(
 
         let score = prob[[0, 1]];
 
-        if score > ONET_THRESHOLD {
+        if score > 0.50 {
             let mut new_box = bbox.clone();
             new_box.score = score;
             new_box.reg = [
@@ -337,11 +347,20 @@ fn run_onet(
                 ]
             };
 
-            final_boxes.push(new_box);
-            all_landmarks.push(landmarks);
+            if score > ONET_THRESHOLD {
+                final_boxes.push(new_box);
+                all_landmarks.push(landmarks);
+            } else {
+                fallback_boxes.push(new_box);
+                fallback_landmarks.push(landmarks);
+            }
         }
     }
 
+    if final_boxes.is_empty() {
+        final_boxes = fallback_boxes;
+        all_landmarks = fallback_landmarks;
+    }
     if final_boxes.is_empty() {
         return Ok((Vec::new(), Vec::new()));
     }

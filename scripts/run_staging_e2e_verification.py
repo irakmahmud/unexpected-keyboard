@@ -208,8 +208,10 @@ def run_playwright_tests(record):
                 pose_ok = page.evaluate("captureSingleRegPose()")
                 page.wait_for_timeout(200)
                 pose_status = page.locator("#reg-pose-status").inner_text()
+                last_img_vis = page.locator("#reg-last-captured-img").is_visible()
+                thumb0_html = page.locator("#reg-pose-thumb-0").inner_html()
                 page.evaluate("window.__TEST_FACE_B64 = null;")
-                record("Frontend", "Live Single-Pose Camera Validation via /api/v1/face/extract-frame", bool(pose_ok) and "1 / 20" in pose_status, f"status='{pose_status}'")
+                record("Frontend", "Live Single-Pose Camera Validation & Last-Captured Preview + 20-Pose Gallery", bool(pose_ok) and "1 / 20" in pose_status and last_img_vis and "✓1" in thumb0_html, f"status='{pose_status}', last_img_vis={last_img_vis}")
             if act_key == "reg-no-camera":
                 page.fill("#reg-nocam-username", "UI_TEST_USER")
                 page.fill("#reg-nocam-desig", "QA Engineer")
@@ -379,6 +381,45 @@ def main():
 
         code, body = http_req("POST", "/api/v1/face/extract-frame", {"image_b64": b64_img("100.jpeg")})
         record("Biometric", "Multi-face (2 faces) rejection (100.jpeg)", code == 422, f"HTTP {code}, body={body}")
+
+        # 20-Pose MTCNN 5-Landmark Head Orientation Verification checks
+        c_p0, b_p0 = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Jolie_1.jpg"),
+            "pose_index": 0,
+            "enforce_pose": True,
+        })
+        base_yaw = b_p0.get("pose_metrics", {}).get("yaw_ratio", 0.0) if isinstance(b_p0, dict) else 0.0
+        base_pitch = b_p0.get("pose_metrics", {}).get("pitch_ratio", 0.54) if isinstance(b_p0, dict) else 0.54
+        c_p10_rej, b_p10_rej = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Jolie_1.jpg"),
+            "pose_index": 10,
+            "enforce_pose": True,
+            "baseline_yaw": base_yaw,
+        })
+        c_p10_ok, b_p10_ok = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Anjelina Jolie/40.jpg"),
+            "pose_index": 10,
+            "enforce_pose": True,
+            "baseline_yaw": base_yaw,
+        })
+        c_p2_ok, b_p2_ok = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Jolie_2.png"),
+            "pose_index": 2,
+            "enforce_pose": True,
+            "baseline_pitch": base_pitch,
+        })
+        pose_ver_ok = (
+            c_p0 == 200 and b_p0.get("pose_verified") is True
+            and c_p10_rej == 200 and b_p10_rej.get("pose_verified") is False
+            and c_p10_ok == 200 and b_p10_ok.get("pose_verified") is True
+            and c_p2_ok == 200 and b_p2_ok.get("pose_verified") is True
+        )
+        record(
+            "Biometric",
+            "20-Pose MTCNN 5-landmark head orientation verification (frontal vs left-turn vs tilt-up)",
+            pose_ver_ok,
+            f"p0={b_p0.get('pose_verified')}, p10_frontal_rej={b_p10_rej.get('pose_verified')}, p10_left_ok={b_p10_ok.get('pose_verified')}, p2_up_ok={b_p2_ok.get('pose_verified')}",
+        )
 
         # 2. User Enrollment, Duplicate Rejection, Identity Verification, Biometric Punch & Deletion
         code, body = http_req("POST", "/api/v1/users", {

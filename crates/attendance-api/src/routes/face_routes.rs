@@ -609,6 +609,24 @@ async fn handle_upload_ai_model(
 #[derive(Deserialize)]
 pub struct SingleImagePayload {
     pub image_b64: String,
+    #[serde(default)]
+    pub pose_index: Option<usize>,
+    #[serde(default)]
+    pub enforce_pose: Option<bool>,
+    #[serde(default)]
+    pub baseline_yaw: Option<f32>,
+    #[serde(default)]
+    pub baseline_pitch: Option<f32>,
+    #[serde(default)]
+    pub baseline_roll: Option<f32>,
+    #[serde(default)]
+    pub baseline_area: Option<f32>,
+    #[serde(default)]
+    pub prev_yaw: Option<f32>,
+    #[serde(default)]
+    pub prev_roll: Option<f32>,
+    #[serde(default)]
+    pub attempt: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -629,7 +647,7 @@ fn decode_data_uri(b64: &str) -> std::result::Result<Vec<u8>, attendance_common:
         .map_err(|e| attendance_common::AppError::Validation(format!("Invalid base64 image data: {}", e)))
 }
 
-/// Extract 512-D FaceNet512 embedding from a single camera frame (Python verify_face_detection lines 1397-1415)
+/// Extract 512-D FaceNet512 embedding from a single camera frame + verify 20-pose head orientation via MTCNN 5-point landmarks
 async fn handle_extract_frame(
     State(state): State<AppState>,
     Json(payload): Json<SingleImagePayload>,
@@ -640,12 +658,238 @@ async fn handle_extract_frame(
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let (emb, det, _dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
+    let (emb, det, dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
     let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
+
+    // Compute 3D head pose ratios from MTCNN 5-point landmarks: [left_eye, right_eye, nose, mouth_left, mouth_right]
+    let (lx, ly) = det.landmarks[0];
+    let (rx, ry) = det.landmarks[1];
+    let (nx, ny) = det.landmarks[2];
+    let (mlx, mly) = det.landmarks[3];
+    let (mrx, mry) = det.landmarks[4];
+
+    let dl = (nx - lx).abs();
+    let dr = (rx - nx).abs();
+    let yaw_ratio = (dl - dr) / (dl + dr).max(1.0);
+    let yaw_deg = (yaw_ratio * 65.0).clamp(-75.0, 75.0);
+
+    let eye_cy = (ly + ry) * 0.5;
+    let mouth_cy = (mly + mry) * 0.5;
+    let pitch_ratio = (ny - eye_cy) / (mouth_cy - eye_cy).abs().max(1.0);
+    let pitch_deg = ((0.55 - pitch_ratio) * 90.0).clamp(-60.0, 60.0);
+
+    let roll_deg = (ry - ly).atan2((rx - lx).abs().max(1.0)).to_degrees();
+
+    let bbox_w = (det.bbox.2 - det.bbox.0).max(1.0);
+    let bbox_h = (det.bbox.3 - det.bbox.1).max(1.0);
+    let img_area = ((dims.0 as f32) * (dims.1 as f32)).max(1.0);
+    let face_area_ratio = (bbox_w * bbox_h) / img_area;
+
+    let eye_dist = (rx - lx).hypot(ry - ly).max(1.0);
+    let mouth_width_ratio = (mrx - mlx).hypot(mry - mly) / eye_dist;
+
+    let detected_pose = if yaw_ratio.abs() >= 0.12 {
+        if yaw_ratio > 0.0 { "MORE_LEFT" } else { "MORE_RIGHT" }
+    } else if yaw_ratio.abs() >= 0.075 {
+        if yaw_ratio > 0.0 { "SLIGHT_LEFT" } else { "SLIGHT_RIGHT" }
+    } else if roll_deg.abs() >= 3.5 {
+        if roll_deg > 0.0 { "TILT_LEFT" } else { "TILT_RIGHT" }
+    } else if pitch_ratio <= 0.51 {
+        "TILT_UP"
+    } else if pitch_ratio >= 0.57 {
+        "TILT_DOWN"
+    } else {
+        "FRONTAL"
+    };
+
+    let pose_idx = payload.pose_index.unwrap_or(0).min(19);
+    let attempt = payload.attempt.unwrap_or(0);
+    let relax = if attempt >= 3 { 0.65_f32 } else { 1.0_f32 };
+
+    let base_yaw = payload.baseline_yaw.unwrap_or(0.0);
+    let base_pitch = payload.baseline_pitch.unwrap_or(0.54);
+    let base_roll = payload.baseline_roll.unwrap_or(0.0);
+    let base_area = payload.baseline_area.unwrap_or(face_area_ratio);
+
+    let delta_yaw = yaw_ratio - base_yaw;
+    let delta_pitch = pitch_ratio - base_pitch;
+    let delta_roll = roll_deg - base_roll;
+    let delta_area = (face_area_ratio - base_area) / base_area.max(0.005);
+
+    let (expected_pose, pose_verified, guidance) = match pose_idx {
+        0 => (
+            "1/20: FRONTAL_NORMAL",
+            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            "1/20: Look straight at camera (ক্যামেরার দিকে সরাসরি সোজা হয়ে তাকান)",
+        ),
+        1 => (
+            "2/20: FRONTAL_SLIGHT_SMILE",
+            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            "2/20: Look straight with a slight smile (সরাসরি তাকান ও হালকা হাসুন)",
+        ),
+        2 => (
+            "3/20: TILT_HEAD_UP",
+            delta_pitch <= -0.018 * relax || pitch_ratio <= 0.515 || (attempt >= 4 && delta_pitch.abs() >= 0.01),
+            "3/20: Please tilt your head slightly UP (মাথা সামান্য উপরে তুলুন)",
+        ),
+        3 => (
+            "4/20: TILT_HEAD_DOWN",
+            delta_pitch >= 0.018 * relax || pitch_ratio >= 0.565 || (attempt >= 4 && delta_pitch.abs() >= 0.01),
+            "4/20: Please tilt your head slightly DOWN (মাথা সামান্য নিচে নামান)",
+        ),
+        4 => (
+            "5/20: TURN_SLIGHT_LEFT",
+            delta_yaw.abs() >= 0.065 * relax || yaw_ratio.abs() >= 0.085 * relax,
+            "5/20: Please turn your head slightly LEFT (মাথা সামান্য বামে ঘোরান)",
+        ),
+        5 => {
+            let moved_opposite = payload
+                .prev_yaw
+                .map(|py| (yaw_ratio - py).abs() >= 0.08 * relax || yaw_ratio * py <= 0.0)
+                .unwrap_or(true);
+            (
+                "6/20: TURN_SLIGHT_RIGHT",
+                (delta_yaw.abs() >= 0.065 * relax || yaw_ratio.abs() >= 0.085 * relax) && moved_opposite,
+                "6/20: Please turn your head slightly RIGHT (মাথা সামান্য ডানে ঘোরান)",
+            )
+        }
+        6 => (
+            "7/20: TILT_LEFT_SHOULDER",
+            delta_roll.abs() >= 3.0 * relax || roll_deg.abs() >= 3.5 * relax || delta_yaw.abs() >= 0.08 * relax,
+            "7/20: Please tilt your head to LEFT shoulder (মাথা বাম কাঁধের দিকে কাত করুন)",
+        ),
+        7 => {
+            let roll_moved = payload
+                .prev_roll
+                .map(|pr| (roll_deg - pr).abs() >= 3.5 * relax || roll_deg * pr <= 0.0)
+                .unwrap_or(true);
+            (
+                "8/20: TILT_RIGHT_SHOULDER",
+                (delta_roll.abs() >= 3.0 * relax || roll_deg.abs() >= 3.5 * relax || delta_yaw.abs() >= 0.08 * relax)
+                    && roll_moved,
+                "8/20: Please tilt your head to RIGHT shoulder (মাথা ডান কাঁধের দিকে কাত করুন)",
+            )
+        }
+        8 => (
+            "9/20: FRONTAL_SERIOUS",
+            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            "9/20: Look straight with a serious expression (সরাসরি তাকান — গম্ভীর অভিব্যক্তি)",
+        ),
+        9 => (
+            "10/20: FRONTAL_EYES_WIDE",
+            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            "10/20: Look straight with eyes wide (সরাসরি তাকান — চোখ বড় করে)",
+        ),
+        10 => (
+            "11/20: TURN_MORE_LEFT",
+            delta_yaw.abs() >= 0.10 * relax || yaw_ratio.abs() >= 0.12 * relax,
+            "11/20: Please turn your head MORE to LEFT (মাথা আরও একটু বামে ঘোরান)",
+        ),
+        11 => {
+            let moved_opposite = payload
+                .prev_yaw
+                .map(|py| (yaw_ratio - py).abs() >= 0.10 * relax || yaw_ratio * py <= 0.0)
+                .unwrap_or(true);
+            (
+                "12/20: TURN_MORE_RIGHT",
+                (delta_yaw.abs() >= 0.10 * relax || yaw_ratio.abs() >= 0.12 * relax) && moved_opposite,
+                "12/20: Please turn your head MORE to RIGHT (মাথা আরও একটু ডানে ঘোরান)",
+            )
+        }
+        12 => (
+            "13/20: CHIN_UP",
+            delta_pitch <= -0.015 * relax || pitch_ratio <= 0.525 || (attempt >= 3 && delta_pitch.abs() >= 0.008),
+            "13/20: Raise chin UP slightly & look at camera (থুতনি সামান্য উপরে তুলে ক্যামেরায় তাকান)",
+        ),
+        13 => (
+            "14/20: CHIN_DOWN",
+            delta_pitch >= 0.015 * relax || pitch_ratio >= 0.555 || (attempt >= 3 && delta_pitch.abs() >= 0.008),
+            "14/20: Lower chin DOWN slightly & look at camera (থুতনি সামান্য নিচে নামিয়ে ক্যামেরায় তাকান)",
+        ),
+        14 => (
+            "15/20: MOVE_CLOSER",
+            delta_area >= 0.02 * relax || face_area_ratio >= 0.07 || attempt >= 2,
+            "15/20: Move slightly CLOSER to the camera (ক্যামেরার সামান্য কাছে আসুন)",
+        ),
+        15 => (
+            "16/20: MOVE_FURTHER",
+            delta_area <= -0.02 * relax || face_area_ratio <= 0.28 || attempt >= 2,
+            "16/20: Move slightly FURTHER from the camera (ক্যামেরা থেকে সামান্য দূরে যান)",
+        ),
+        16 => (
+            "17/20: LOOK_UP_LEFT",
+            delta_yaw.abs() >= 0.05 * relax
+                || yaw_ratio.abs() >= 0.07 * relax
+                || delta_pitch <= -0.015 * relax
+                || pitch_ratio <= 0.525,
+            "17/20: Look from UP-LEFT angle towards camera (উপরে-বামে কোণ থেকে ক্যামেরায় তাকান)",
+        ),
+        17 => {
+            let moved_ur = payload
+                .prev_yaw
+                .map(|py| (yaw_ratio - py).abs() >= 0.06 * relax || yaw_ratio * py <= 0.0)
+                .unwrap_or(true);
+            (
+                "18/20: LOOK_UP_RIGHT",
+                (delta_yaw.abs() >= 0.05 * relax
+                    || yaw_ratio.abs() >= 0.07 * relax
+                    || delta_pitch <= -0.015 * relax
+                    || pitch_ratio <= 0.525)
+                    && moved_ur,
+                "18/20: Look from UP-RIGHT angle towards camera (উপরে-ডানে কোণ থেকে ক্যামেরায় তাকান)",
+            )
+        }
+        18 => (
+            "19/20: FRONTAL_NATURAL_SMILE",
+            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            "19/20: Give a natural smile & look straight (স্বাভাবিক হাসি দিয়ে সরাসরি তাকান)",
+        ),
+        _ => (
+            "20/20: FRONTAL_FINAL_RELAXED",
+            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            "20/20: Final straight relaxed pose (চূড়ান্ত সোজা পোজ — স্বাভাবিক থাকুন)",
+        ),
+    };
+
+    let pose_metrics = serde_json::json!({
+        "yaw_ratio": yaw_ratio,
+        "yaw_deg": yaw_deg,
+        "pitch_ratio": pitch_ratio,
+        "pitch_deg": pitch_deg,
+        "roll_deg": roll_deg,
+        "face_area_ratio": face_area_ratio,
+        "mouth_width_ratio": mouth_width_ratio
+    });
+
+    if payload.enforce_pose.unwrap_or(false) && !pose_verified {
+        let err_msg = format!(
+            "Pose verification required — {} [Current: {}, Yaw: {:+.1}°, Pitch: {:+.1}°, Roll: {:+.1}°]",
+            guidance, detected_pose, yaw_deg, pitch_deg, roll_deg
+        );
+        return Ok(Json(serde_json::json!({
+            "success": false,
+            "face_detected": true,
+            "pose_verified": false,
+            "pose_index": pose_idx,
+            "expected_pose": expected_pose,
+            "detected_pose": detected_pose,
+            "pose_metrics": pose_metrics,
+            "error": err_msg,
+            "message": guidance,
+            "bbox": det.bbox,
+            "detection_score": det.confidence,
+            "landmarks": det.landmarks
+        })));
+    }
 
     Ok(Json(serde_json::json!({
         "success": true,
         "face_detected": true,
+        "pose_verified": true,
+        "pose_index": pose_idx,
+        "expected_pose": expected_pose,
+        "detected_pose": detected_pose,
+        "pose_metrics": pose_metrics,
         "dimension": emb.len(),
         "model": "Facenet512",
         "detector": "MTCNN",
