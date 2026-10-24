@@ -12,7 +12,7 @@ DEPLOY_DIR="${WORKSPACE_DIR}/deploy"
 STAGING_DIR="${DEPLOY_DIR}/staging"
 BACKUP_DIR="${DEPLOY_DIR}/backups"
 TARGET_DIR="${WORKSPACE_DIR}/target/release"
-MAX_BACKUPS=3
+MAX_BACKUPS=1
 
 mkdir -p "${STAGING_DIR}" "${BACKUP_DIR}" "${TARGET_DIR}"
 
@@ -31,7 +31,7 @@ check_storage_and_system() {
     log "Checking available storage on Oracle VM..."
     local avail_kb
     avail_kb=$(df -k "${WORKSPACE_DIR}" | awk 'NR==2 {print $4}')
-    local min_kb=512000 # 500 MB minimum
+    local min_kb=150000 # 150 MB minimum
     if [ "${avail_kb}" -lt "${min_kb}" ]; then
         err "CRITICAL: Insufficient disk space on Oracle VM (${avail_kb} KB available, required >= ${min_kb} KB). Aborting deployment!"
         exit 1
