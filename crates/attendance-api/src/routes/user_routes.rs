@@ -134,7 +134,23 @@ async fn create_user(
     }
 
     let mut extracted_embeddings: Vec<Vec<f32>> = Vec::new();
-    if !frames_b64.is_empty() {
+    let pre_extracted_valid: Vec<Vec<f32>> = payload
+        .face_embeddings
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|emb| emb.len() == 512 && !attendance_face::FaceVectorIndex::is_corrupted_constant_vector(emb))
+        .collect();
+
+    if !pre_extracted_valid.is_empty() {
+        let _ = std::fs::create_dir_all("data/captures");
+        if let Some(first_frame) = frames_b64.first() {
+            if let Ok(img_bytes) = decode_b64_image(first_frame) {
+                let save_path = format!("data/captures/{}_REGISTERED.jpg", upper_username);
+                let _ = std::fs::write(&save_path, &img_bytes);
+            }
+        }
+        extracted_embeddings = pre_extracted_valid;
+    } else if !frames_b64.is_empty() {
         let df_state = state.get_deepface().ok_or_else(|| {
             attendance_common::AppError::Validation(
                 "DeepFace ONNX models not loaded in ./models/".to_string(),

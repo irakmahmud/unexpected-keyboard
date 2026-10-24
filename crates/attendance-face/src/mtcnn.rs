@@ -64,15 +64,32 @@ pub fn detect_faces(state: &AppState, img: &DynamicImage) -> Result<Vec<FaceDete
 
     // Stage 2: R-Net (Refine Network) - refine proposals
     info!("MTCNN Stage 2: R-Net starting with {} boxes...", boxes.len());
-    boxes = run_rnet(state, &rgb, boxes)?;
-    info!("R-Net refined to {} boxes", boxes.len());
-    if boxes.is_empty() {
+    let (primary_rnet_boxes, fallback_rnet_boxes) = run_rnet(state, &rgb, boxes)?;
+    info!(
+        "R-Net refined to {} primary boxes ({} fallback boxes)",
+        primary_rnet_boxes.len(),
+        fallback_rnet_boxes.len()
+    );
+    if primary_rnet_boxes.is_empty() && fallback_rnet_boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
 
     // Stage 3: O-Net (Output Network) - final detection + landmarks
-    info!("MTCNN Stage 3: O-Net starting with {} boxes...", boxes.len());
-    let (final_boxes, landmarks) = run_onet(state, &rgb, boxes)?;
+    let (mut final_boxes, mut landmarks) = if !primary_rnet_boxes.is_empty() {
+        info!("MTCNN Stage 3: O-Net starting with {} primary boxes...", primary_rnet_boxes.len());
+        run_onet(state, &rgb, primary_rnet_boxes)?
+    } else {
+        (Vec::new(), Vec::new())
+    };
+    if final_boxes.is_empty() && !fallback_rnet_boxes.is_empty() {
+        info!(
+            "MTCNN Stage 3: O-Net retrying with {} fallback R-Net boxes...",
+            fallback_rnet_boxes.len()
+        );
+        let (fb_boxes, fb_lms) = run_onet(state, &rgb, fallback_rnet_boxes)?;
+        final_boxes = fb_boxes;
+        landmarks = fb_lms;
+    }
     info!("O-Net finalized to {} boxes", final_boxes.len());
     if final_boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
@@ -138,6 +155,7 @@ fn run_pnet(
     use tracing::info;
     
     let mut all_boxes = Vec::new();
+    let mut fallback_boxes = Vec::new();
     
     // Calculate scales for image pyramid
     let min_dim = width.min(height) as f32;
@@ -183,10 +201,17 @@ fn run_pnet(
         
         // Generate bounding boxes from P-Net output
         let boxes = generate_pnet_boxes(&prob, &reg, current_scale, PNET_THRESHOLD);
+        if boxes.is_empty() {
+            let fb = generate_pnet_boxes(&prob, &reg, current_scale, 0.45);
+            fallback_boxes.extend(fb);
+        }
         info!("  Scale {}/{} ({}x{}): found {} boxes", idx+1, scales.len(), scaled_w, scaled_h, boxes.len());
         all_boxes.extend(boxes);
     }
     
+    if all_boxes.is_empty() {
+        all_boxes = fallback_boxes;
+    }
     if all_boxes.is_empty() {
         return Ok(Vec::new());
     }
@@ -211,9 +236,9 @@ fn run_rnet(
     state: &AppState,
     img: &RgbImage,
     boxes: Vec<BBox>,
-) -> Result<Vec<BBox>, AppError> {
+) -> Result<(Vec<BBox>, Vec<BBox>), AppError> {
     if boxes.is_empty() {
-        return Ok(Vec::new());
+        return Ok((Vec::new(), Vec::new()));
     }
     
     let mut refined_boxes = Vec::new();
@@ -235,7 +260,7 @@ fn run_rnet(
         
         let score = prob[[0, 1]];
         
-        if score > 0.50 {
+        if score > 0.48 {
             let mut new_box = bbox.clone();
             new_box.score = score;
             new_box.reg = [
@@ -252,23 +277,16 @@ fn run_rnet(
         }
     }
     
-    if refined_boxes.is_empty() {
-        refined_boxes = fallback_boxes;
-    }
-    if refined_boxes.is_empty() {
-        return Ok(Vec::new());
-    }
+    let finalize = |raw: &[BBox]| -> Vec<BBox> {
+        if raw.is_empty() {
+            return Vec::new();
+        }
+        let b = nms(raw, NMS_THRESHOLD);
+        let b = apply_regression(&b);
+        make_square(&b)
+    };
     
-    // Apply NMS
-    let boxes = nms(&refined_boxes, NMS_THRESHOLD);
-    
-    // Apply regression
-    let boxes = apply_regression(&boxes);
-    
-    // Make square
-    let boxes = make_square(&boxes);
-    
-    Ok(boxes)
+    Ok((finalize(&refined_boxes), finalize(&fallback_boxes)))
 }
 
 // ============================================================================

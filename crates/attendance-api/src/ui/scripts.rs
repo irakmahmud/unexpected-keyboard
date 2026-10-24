@@ -1197,11 +1197,13 @@ function stopHrRegCamera() {
 // 6. ALL 12 HR MANAGEMENT ACTIONS + USERS LIST
 // ============================================================================
 let regCapturedFrames = [];
+let regCapturedEmbeddings = [];
 let regCurrentPoseIdx = 0;
 let regAutoCaptureRunning = false;
 let regBaselineMetrics = null;
 let regPrevPoseMetrics = null;
 let regPoseAttemptCount = 0;
+let regTotalPoseRetries = 0;
 
 function buildRegPoseThumbsHtml() {
     let html = '';
@@ -1215,10 +1217,12 @@ function buildRegPoseThumbsHtml() {
 function resetRegPoses() {
     regAutoCaptureRunning = false;
     regCapturedFrames = [];
+    regCapturedEmbeddings = [];
     regCurrentPoseIdx = 0;
     regBaselineMetrics = null;
     regPrevPoseMetrics = null;
     regPoseAttemptCount = 0;
+    regTotalPoseRetries = 0;
     const bar = document.getElementById('reg-pose-bar');
     const status = document.getElementById('reg-pose-status');
     const enEl = document.getElementById('reg-pose-en');
@@ -1302,10 +1306,12 @@ async function openHrAction(action) {
         if (titleEl) titleEl.innerText = '📷 1. User Registration with Camera (20-Pose ONNX FaceNet512)';
         regAutoCaptureRunning = false;
         regCapturedFrames = [];
+        regCapturedEmbeddings = [];
         regCurrentPoseIdx = 0;
         regBaselineMetrics = null;
         regPrevPoseMetrics = null;
         regPoseAttemptCount = 0;
+        regTotalPoseRetries = 0;
         box.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.15rem;">
                 <div>
@@ -1623,6 +1629,7 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
     const hasLiveOrTestFrame = Boolean(isTestFrame || (video && video.srcObject && video.readyState >= 2));
 
     let verifiedPoseLabel = 'VERIFIED';
+    let extractedEmbedding = null;
 
     if (!skipRemoteExtract && hasLiveOrTestFrame) {
         try {
@@ -1636,7 +1643,9 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
                 baseline_roll: regBaselineMetrics ? regBaselineMetrics.roll_deg : null,
                 baseline_area: regBaselineMetrics ? regBaselineMetrics.face_area_ratio : null,
                 prev_yaw: regPrevPoseMetrics ? regPrevPoseMetrics.yaw_ratio : null,
+                prev_pitch: regPrevPoseMetrics ? regPrevPoseMetrics.pitch_ratio : null,
                 prev_roll: regPrevPoseMetrics ? regPrevPoseMetrics.roll_deg : null,
+                prev_area: regPrevPoseMetrics ? regPrevPoseMetrics.face_area_ratio : null,
                 attempt: regPoseAttemptCount
             };
 
@@ -1653,8 +1662,9 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
             }
 
             if (!extRes.ok || !extData.success || extData.pose_verified === false) {
-                regPoseAttemptCount += 1;
+                regTotalPoseRetries += 1;
                 if (extData && extData.face_detected && extData.pose_verified === false) {
+                    regPoseAttemptCount += 1;
                     if (camWrap) camWrap.style.borderColor = '#fdcb6e';
                     if (cdBadge) cdBadge.innerText = `⚠️ Adjust Pose ${regCurrentPoseIdx + 1}/20`;
                     if (msgEl) {
@@ -1673,6 +1683,9 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
             }
 
             verifiedPoseLabel = extData.detected_pose || 'VERIFIED';
+            if (Array.isArray(extData.embedding) && extData.embedding.length === 512) {
+                extractedEmbedding = extData.embedding;
+            }
             if (regCurrentPoseIdx === 0 && extData.pose_metrics) {
                 regBaselineMetrics = extData.pose_metrics;
             }
@@ -1690,7 +1703,11 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
 
     const capturedIdx = regCurrentPoseIdx;
     regPoseAttemptCount = 0;
+    regTotalPoseRetries = 0;
     regCapturedFrames.push(frameB64);
+    if (extractedEmbedding) {
+        regCapturedEmbeddings.push(extractedEmbedding);
+    }
     regCurrentPoseIdx += 1;
 
     // Update Live Camera border & Last Captured Pose preview
@@ -1801,7 +1818,7 @@ async function runAuto20PoseCapture() {
         }
 
         // Human-paced countdown so the user can read the pose instruction and see each captured photo
-        if (regPoseAttemptCount === 0) {
+        if (regTotalPoseRetries === 0) {
             for (let sec = 3; sec >= 1; sec--) {
                 if (!regAutoCaptureRunning) break;
                 if (cdBadge) cdBadge.innerText = `⏳ Pose ${poseNum}/20 in ${sec}s...`;
@@ -1813,22 +1830,25 @@ async function runAuto20PoseCapture() {
             }
         } else {
             if (cdBadge) cdBadge.innerText = `🔄 Retrying Pose ${poseNum}/20...`;
-            await new Promise(r => setTimeout(r, 1100));
+            await new Promise(r => setTimeout(r, 350));
         }
 
         if (!regAutoCaptureRunning) break;
 
         const ok = await captureSingleRegPose(false);
         if (ok) {
-            // Brief pause to let user see the green verification flash & captured image
-            await new Promise(r => setTimeout(r, 650));
-        } else if (regPoseAttemptCount >= 25) {
+            // Pause so the user clearly sees the green verification flash & captured image
+            await new Promise(r => setTimeout(r, 850));
+        } else if (regTotalPoseRetries >= 25) {
             regAutoCaptureRunning = false;
             if (msgEl) {
                 msgEl.style.color = '#fdcb6e';
                 msgEl.innerText = `⏸️ Paused at Pose ${poseNum}/20 (${currInstr.bn}). Adjust your face angle and click Resume or Capture Pose.`;
             }
             break;
+        } else {
+            // Keep the warning badge & bilingual adjustment message visible before retrying
+            await new Promise(r => setTimeout(r, 950));
         }
     }
 
@@ -1856,6 +1876,13 @@ async function submitCameraRegistration() {
         return;
     }
     if (regCapturedFrames.length < 20) {
+        if (regAutoCaptureRunning && !window.__TEST_FACE_B64) {
+            if (msgEl) {
+                msgEl.style.color = '#fdcb6e';
+                msgEl.innerText = `⏳ Auto-capture is in progress (${regCapturedFrames.length}/20 poses verified). Please complete all 20 poses first.`;
+            }
+            return;
+        }
         await runAuto20PoseCapture();
         if (regCapturedFrames.length < 20) {
             if (msgEl && !msgEl.innerText) {
@@ -1867,21 +1894,26 @@ async function submitCameraRegistration() {
     }
 
     try {
+        const hasAllPreVerifiedEmbeddings = (regCapturedEmbeddings.length === regCapturedFrames.length && regCapturedEmbeddings.length > 0);
+        const reqBody = {
+            username,
+            user_designation: designation,
+            password,
+            company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
+            images_b64: hasAllPreVerifiedEmbeddings ? [regCapturedFrames[0]] : regCapturedFrames,
+            overwrite_existing: true
+        };
+        if (hasAllPreVerifiedEmbeddings) {
+            reqBody.face_embeddings = regCapturedEmbeddings;
+        }
         const res = await fetch('/api/v1/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username,
-                user_designation: designation,
-                password,
-                company_uuid: activeCompany?.company_id || 'TECHFIRM_01',
-                images_b64: regCapturedFrames,
-                overwrite_existing: true
-            })
+            body: JSON.stringify(reqBody)
         });
         const data = await res.json();
         if (res.ok && (data.success || data.id)) {
-            addTerminalLog(`User ${username} registered with ${data.enrolled_poses || regCapturedFrames.length} ONNX FaceNet512 poses`, 'SUCCESS');
+            addTerminalLog(`User ${username} registered with ${data.embeddings_enrolled || data.enrolled_poses || regCapturedFrames.length} ONNX FaceNet512 poses`, 'SUCCESS');
             backToHrMainMenu();
         } else {
             if (msgEl) {

@@ -624,7 +624,11 @@ pub struct SingleImagePayload {
     #[serde(default)]
     pub prev_yaw: Option<f32>,
     #[serde(default)]
+    pub prev_pitch: Option<f32>,
+    #[serde(default)]
     pub prev_roll: Option<f32>,
+    #[serde(default)]
+    pub prev_area: Option<f32>,
     #[serde(default)]
     pub attempt: Option<usize>,
 }
@@ -692,26 +696,12 @@ async fn handle_extract_frame(
     let mouth_dy = mry - mly;
     let mouth_width_ratio = (mouth_dx * mouth_dx + mouth_dy * mouth_dy).sqrt() / eye_dist;
 
-    let detected_pose = if yaw_ratio.abs() >= 0.12 {
-        if yaw_ratio > 0.0 { "MORE_LEFT" } else { "MORE_RIGHT" }
-    } else if yaw_ratio.abs() >= 0.075 {
-        if yaw_ratio > 0.0 { "SLIGHT_LEFT" } else { "SLIGHT_RIGHT" }
-    } else if roll_deg.abs() >= 3.5 {
-        if roll_deg > 0.0 { "TILT_LEFT" } else { "TILT_RIGHT" }
-    } else if pitch_ratio <= 0.51 {
-        "TILT_UP"
-    } else if pitch_ratio >= 0.57 {
-        "TILT_DOWN"
-    } else {
-        "FRONTAL"
-    };
-
     let pose_idx = payload.pose_index.unwrap_or(0).min(19);
     let attempt = payload.attempt.unwrap_or(0);
-    let relax = if attempt >= 3 { 0.65_f32 } else { 1.0_f32 };
+    let relax = if attempt >= 3 { 0.75_f32 } else { 1.0_f32 };
 
     let base_yaw = payload.baseline_yaw.unwrap_or(0.0);
-    let base_pitch = payload.baseline_pitch.unwrap_or(0.54);
+    let base_pitch = payload.baseline_pitch.unwrap_or(0.535);
     let base_roll = payload.baseline_roll.unwrap_or(0.0);
     let base_area = payload.baseline_area.unwrap_or(face_area_ratio);
 
@@ -720,137 +710,198 @@ async fn handle_extract_frame(
     let delta_roll = roll_deg - base_roll;
     let delta_area = (face_area_ratio - base_area) / base_area.max(0.005);
 
+    let detected_pose = if yaw_ratio.abs() >= 0.115 {
+        if yaw_ratio > 0.0 { "MORE_LEFT" } else { "MORE_RIGHT" }
+    } else if yaw_ratio.abs() >= 0.075 {
+        if yaw_ratio > 0.0 { "SLIGHT_LEFT" } else { "SLIGHT_RIGHT" }
+    } else if roll_deg.abs() >= 3.2 {
+        if roll_deg > 0.0 { "TILT_LEFT" } else { "TILT_RIGHT" }
+    } else if pitch_ratio <= 0.512 || (payload.baseline_pitch.is_some() && delta_pitch <= -0.015) {
+        "TILT_UP"
+    } else if pitch_ratio >= 0.562 || (payload.baseline_pitch.is_some() && delta_pitch >= 0.015) {
+        "TILT_DOWN"
+    } else {
+        "FRONTAL"
+    };
+
+    let is_frontal_abs = yaw_ratio.abs() <= 0.115
+        && roll_deg.abs() <= 6.5
+        && (0.475..=0.585).contains(&pitch_ratio);
+    let is_frontal_rel = payload.baseline_yaw.is_some()
+        && delta_yaw.abs() <= 0.065
+        && delta_pitch.abs() <= 0.035
+        && delta_roll.abs() <= 4.5
+        && yaw_ratio.abs() <= 0.13
+        && roll_deg.abs() <= 8.0;
+    let is_frontal = is_frontal_abs || (pose_idx > 0 && is_frontal_rel);
+
     let (expected_pose, pose_verified, guidance) = match pose_idx {
         0 => (
             "1/20: FRONTAL_NORMAL",
-            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            is_frontal_abs,
             "1/20: Look straight at camera (ক্যামেরার দিকে সরাসরি সোজা হয়ে তাকান)",
         ),
         1 => (
             "2/20: FRONTAL_SLIGHT_SMILE",
-            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            is_frontal,
             "2/20: Look straight with a slight smile (সরাসরি তাকান ও হালকা হাসুন)",
         ),
         2 => (
             "3/20: TILT_HEAD_UP",
-            delta_pitch <= -0.018 * relax || pitch_ratio <= 0.515 || (attempt >= 4 && delta_pitch.abs() >= 0.01),
-            "3/20: Please tilt your head slightly UP (মাথা সামান্য উপরে তুলুন)",
+            delta_pitch <= -0.015 * relax || pitch_ratio <= 0.512,
+            if delta_pitch >= 0.015 || pitch_ratio >= 0.565 {
+                "3/20: You tilted DOWN — please tilt your head slightly UP (আপনি নিচে তাকিয়েছেন — মাথা সামান্য উপরে তুলুন)"
+            } else {
+                "3/20: Please tilt your head slightly UP (মাথা সামান্য উপরে তুলুন)"
+            },
         ),
         3 => (
             "4/20: TILT_HEAD_DOWN",
-            delta_pitch >= 0.018 * relax || pitch_ratio >= 0.565 || (attempt >= 4 && delta_pitch.abs() >= 0.01),
-            "4/20: Please tilt your head slightly DOWN (মাথা সামান্য নিচে নামান)",
+            delta_pitch >= 0.015 * relax || pitch_ratio >= 0.562,
+            if delta_pitch <= -0.015 || pitch_ratio <= 0.512 {
+                "4/20: You tilted UP — please tilt your head slightly DOWN (আপনি উপরে তাকিয়েছেন — মাথা সামান্য নিচে নামান)"
+            } else {
+                "4/20: Please tilt your head slightly DOWN (মাথা সামান্য নিচে নামান)"
+            },
         ),
         4 => (
             "5/20: TURN_SLIGHT_LEFT",
-            delta_yaw.abs() >= 0.065 * relax || yaw_ratio.abs() >= 0.085 * relax,
-            "5/20: Please turn your head slightly LEFT (মাথা সামান্য বামে ঘোরান)",
+            delta_yaw >= 0.055 * relax || yaw_ratio >= 0.075 * relax,
+            if yaw_ratio <= -0.07 {
+                "5/20: You turned RIGHT — please turn your head slightly LEFT (আপনি ডানে তাকিয়েছেন — মাথা সামান্য বামে ঘোরান)"
+            } else {
+                "5/20: Please turn your head slightly LEFT (মাথা সামান্য বামে ঘোরান)"
+            },
         ),
-        5 => {
-            let moved_opposite = payload
-                .prev_yaw
-                .map(|py| (yaw_ratio - py).abs() >= 0.08 * relax || yaw_ratio * py <= 0.0)
-                .unwrap_or(true);
-            (
-                "6/20: TURN_SLIGHT_RIGHT",
-                (delta_yaw.abs() >= 0.065 * relax || yaw_ratio.abs() >= 0.085 * relax) && moved_opposite,
-                "6/20: Please turn your head slightly RIGHT (মাথা সামান্য ডানে ঘোরান)",
-            )
-        }
+        5 => (
+            "6/20: TURN_SLIGHT_RIGHT",
+            delta_yaw <= -0.055 * relax || yaw_ratio <= -0.075 * relax,
+            if yaw_ratio >= 0.07 {
+                "6/20: You turned LEFT — please turn your head slightly RIGHT (আপনি বামে তাকিয়েছেন — মাথা সামান্য ডানে ঘোরান)"
+            } else {
+                "6/20: Please turn your head slightly RIGHT (মাথা সামান্য ডানে ঘোরান)"
+            },
+        ),
         6 => (
             "7/20: TILT_LEFT_SHOULDER",
-            delta_roll.abs() >= 3.0 * relax || roll_deg.abs() >= 3.5 * relax || delta_yaw.abs() >= 0.08 * relax,
-            "7/20: Please tilt your head to LEFT shoulder (মাথা বাম কাঁধের দিকে কাত করুন)",
+            delta_roll >= 2.8 * relax || roll_deg >= 3.2 * relax,
+            if roll_deg <= -3.0 {
+                "7/20: You tilted to RIGHT shoulder — please tilt your head to LEFT shoulder (মাথা বাম কাঁধের দিকে কাত করুন)"
+            } else {
+                "7/20: Please tilt your head to LEFT shoulder (মাথা বাম কাঁধের দিকে কাত করুন)"
+            },
         ),
-        7 => {
-            let roll_moved = payload
-                .prev_roll
-                .map(|pr| (roll_deg - pr).abs() >= 3.5 * relax || roll_deg * pr <= 0.0)
-                .unwrap_or(true);
-            (
-                "8/20: TILT_RIGHT_SHOULDER",
-                (delta_roll.abs() >= 3.0 * relax || roll_deg.abs() >= 3.5 * relax || delta_yaw.abs() >= 0.08 * relax)
-                    && roll_moved,
-                "8/20: Please tilt your head to RIGHT shoulder (মাথা ডান কাঁধের দিকে কাত করুন)",
-            )
-        }
+        7 => (
+            "8/20: TILT_RIGHT_SHOULDER",
+            delta_roll <= -2.8 * relax || roll_deg <= -3.2 * relax,
+            if roll_deg >= 3.0 {
+                "8/20: You tilted to LEFT shoulder — please tilt your head to RIGHT shoulder (মাথা ডান কাঁধের দিকে কাত করুন)"
+            } else {
+                "8/20: Please tilt your head to RIGHT shoulder (মাথা ডান কাঁধের দিকে কাত করুন)"
+            },
+        ),
         8 => (
             "9/20: FRONTAL_SERIOUS",
-            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            is_frontal,
             "9/20: Look straight with a serious expression (সরাসরি তাকান — গম্ভীর অভিব্যক্তি)",
         ),
         9 => (
             "10/20: FRONTAL_EYES_WIDE",
-            yaw_ratio.abs() <= 0.30 && roll_deg.abs() <= 20.0,
+            is_frontal,
             "10/20: Look straight with eyes wide (সরাসরি তাকান — চোখ বড় করে)",
         ),
         10 => (
             "11/20: TURN_MORE_LEFT",
-            delta_yaw.abs() >= 0.10 * relax || yaw_ratio.abs() >= 0.12 * relax,
-            "11/20: Please turn your head MORE to LEFT (মাথা আরও একটু বামে ঘোরান)",
+            delta_yaw >= 0.095 * relax || yaw_ratio >= 0.115 * relax,
+            if yaw_ratio <= -0.07 {
+                "11/20: You turned RIGHT — please turn your head MORE to LEFT (আপনি ডানে তাকিয়েছেন — মাথা আরও একটু বামে ঘোরান)"
+            } else {
+                "11/20: Please turn your head MORE to LEFT (মাথা আরও একটু বামে ঘোরান)"
+            },
         ),
-        11 => {
-            let moved_opposite = payload
-                .prev_yaw
-                .map(|py| (yaw_ratio - py).abs() >= 0.10 * relax || yaw_ratio * py <= 0.0)
-                .unwrap_or(true);
-            (
-                "12/20: TURN_MORE_RIGHT",
-                (delta_yaw.abs() >= 0.10 * relax || yaw_ratio.abs() >= 0.12 * relax) && moved_opposite,
-                "12/20: Please turn your head MORE to RIGHT (মাথা আরও একটু ডানে ঘোরান)",
-            )
-        }
+        11 => (
+            "12/20: TURN_MORE_RIGHT",
+            delta_yaw <= -0.095 * relax || yaw_ratio <= -0.115 * relax,
+            if yaw_ratio >= 0.07 {
+                "12/20: You turned LEFT — please turn your head MORE to RIGHT (আপনি বামে তাকিয়েছেন — মাথা আরও একটু ডানে ঘোরান)"
+            } else {
+                "12/20: Please turn your head MORE to RIGHT (মাথা আরও একটু ডানে ঘোরান)"
+            },
+        ),
         12 => (
             "13/20: CHIN_UP",
-            delta_pitch <= -0.015 * relax || pitch_ratio <= 0.525 || (attempt >= 3 && delta_pitch.abs() >= 0.008),
-            "13/20: Raise chin UP slightly & look at camera (থুতনি সামান্য উপরে তুলে ক্যামেরায় তাকান)",
+            delta_pitch <= -0.012 * relax || pitch_ratio <= 0.515,
+            if delta_pitch >= 0.015 || pitch_ratio >= 0.565 {
+                "13/20: You lowered chin DOWN — please raise chin UP slightly (থুতনি সামান্য উপরে তুলে ক্যামেরায় তাকান)"
+            } else {
+                "13/20: Raise chin UP slightly & look at camera (থুতনি সামান্য উপরে তুলে ক্যামেরায় তাকান)"
+            },
         ),
         13 => (
             "14/20: CHIN_DOWN",
-            delta_pitch >= 0.015 * relax || pitch_ratio >= 0.555 || (attempt >= 3 && delta_pitch.abs() >= 0.008),
-            "14/20: Lower chin DOWN slightly & look at camera (থুতনি সামান্য নিচে নামিয়ে ক্যামেরায় তাকান)",
+            delta_pitch >= 0.012 * relax || pitch_ratio >= 0.558,
+            if delta_pitch <= -0.015 || pitch_ratio <= 0.512 {
+                "14/20: You raised chin UP — please lower chin DOWN slightly (থুতনি সামান্য নিচে নামিয়ে ক্যামেরায় তাকান)"
+            } else {
+                "14/20: Lower chin DOWN slightly & look at camera (থুতনি সামান্য নিচে নামিয়ে ক্যামেরায় তাকান)"
+            },
         ),
-        14 => (
-            "15/20: MOVE_CLOSER",
-            delta_area >= 0.02 * relax || face_area_ratio >= 0.07 || attempt >= 2,
-            "15/20: Move slightly CLOSER to the camera (ক্যামেরার সামান্য কাছে আসুন)",
-        ),
-        15 => (
-            "16/20: MOVE_FURTHER",
-            delta_area <= -0.02 * relax || face_area_ratio <= 0.28 || attempt >= 2,
-            "16/20: Move slightly FURTHER from the camera (ক্যামেরা থেকে সামান্য দূরে যান)",
-        ),
-        16 => (
-            "17/20: LOOK_UP_LEFT",
-            delta_yaw.abs() >= 0.05 * relax
-                || yaw_ratio.abs() >= 0.07 * relax
-                || delta_pitch <= -0.015 * relax
-                || pitch_ratio <= 0.525,
-            "17/20: Look from UP-LEFT angle towards camera (উপরে-বামে কোণ থেকে ক্যামেরায় তাকান)",
-        ),
-        17 => {
-            let moved_ur = payload
-                .prev_yaw
-                .map(|py| (yaw_ratio - py).abs() >= 0.06 * relax || yaw_ratio * py <= 0.0)
-                .unwrap_or(true);
+        14 => {
+            let closer_ok = if payload.baseline_area.is_some() {
+                delta_area >= 0.05 * relax || face_area_ratio >= 0.24
+            } else {
+                face_area_ratio >= 0.14
+            };
             (
-                "18/20: LOOK_UP_RIGHT",
-                (delta_yaw.abs() >= 0.05 * relax
-                    || yaw_ratio.abs() >= 0.07 * relax
-                    || delta_pitch <= -0.015 * relax
-                    || pitch_ratio <= 0.525)
-                    && moved_ur,
-                "18/20: Look from UP-RIGHT angle towards camera (উপরে-ডানে কোণ থেকে ক্যামেরায় তাকান)",
+                "15/20: MOVE_CLOSER",
+                closer_ok,
+                "15/20: Move slightly CLOSER to the camera (ক্যামেরার সামান্য কাছে আসুন)",
             )
         }
+        15 => {
+            let moved_back_from_prev = payload
+                .prev_area
+                .map(|pa| ((face_area_ratio - pa) / pa.max(0.005)) <= -0.06 * relax && delta_area <= 0.05)
+                .unwrap_or(false);
+            let further_ok = if payload.baseline_area.is_some() {
+                delta_area <= -0.05 * relax || moved_back_from_prev || face_area_ratio <= 0.065
+            } else {
+                face_area_ratio <= 0.075 || moved_back_from_prev
+            };
+            (
+                "16/20: MOVE_FURTHER",
+                further_ok,
+                "16/20: Move slightly FURTHER from the camera (ক্যামেরা থেকে সামান্য দূরে যান)",
+            )
+        }
+        16 => (
+            "17/20: LOOK_UP_LEFT",
+            (delta_yaw >= 0.045 * relax || yaw_ratio >= 0.065 * relax)
+                && (delta_pitch <= -0.008 * relax || pitch_ratio <= 0.535),
+            if yaw_ratio <= -0.06 {
+                "17/20: You turned RIGHT — look from UP-LEFT angle towards camera (উপরে-বামে কোণ থেকে ক্যামেরায় তাকান)"
+            } else {
+                "17/20: Look from UP-LEFT angle towards camera (উপরে-বামে কোণ থেকে ক্যামেরায় তাকান)"
+            },
+        ),
+        17 => (
+            "18/20: LOOK_UP_RIGHT",
+            (delta_yaw <= -0.045 * relax || yaw_ratio <= -0.065 * relax)
+                && (delta_pitch <= -0.008 * relax || pitch_ratio <= 0.535),
+            if yaw_ratio >= 0.06 {
+                "18/20: You turned LEFT — look from UP-RIGHT angle towards camera (উপরে-ডানে কোণ থেকে ক্যামেরায় তাকান)"
+            } else {
+                "18/20: Look from UP-RIGHT angle towards camera (উপরে-ডানে কোণ থেকে ক্যামেরায় তাকান)"
+            },
+        ),
         18 => (
             "19/20: FRONTAL_NATURAL_SMILE",
-            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            is_frontal,
             "19/20: Give a natural smile & look straight (স্বাভাবিক হাসি দিয়ে সরাসরি তাকান)",
         ),
         _ => (
             "20/20: FRONTAL_FINAL_RELAXED",
-            yaw_ratio.abs() <= 0.32 && roll_deg.abs() <= 22.0,
+            is_frontal,
             "20/20: Final straight relaxed pose (চূড়ান্ত সোজা পোজ — স্বাভাবিক থাকুন)",
         ),
     };

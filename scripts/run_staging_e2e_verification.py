@@ -390,15 +390,28 @@ def main():
         })
         base_yaw = b_p0.get("pose_metrics", {}).get("yaw_ratio", 0.0) if isinstance(b_p0, dict) else 0.0
         base_pitch = b_p0.get("pose_metrics", {}).get("pitch_ratio", 0.54) if isinstance(b_p0, dict) else 0.54
+        base_area = b_p0.get("pose_metrics", {}).get("face_area_ratio", 0.088) if isinstance(b_p0, dict) else 0.088
         c_p10_rej, b_p10_rej = http_req("POST", "/api/v1/face/extract-frame", {
             "image_b64": b64_img("Jolie_1.jpg"),
             "pose_index": 10,
             "enforce_pose": True,
             "baseline_yaw": base_yaw,
         })
-        c_p10_ok, b_p10_ok = http_req("POST", "/api/v1/face/extract-frame", {
+        c_p10_wrong_dir, b_p10_wrong_dir = http_req("POST", "/api/v1/face/extract-frame", {
             "image_b64": b64_img("Anjelina Jolie/40.jpg"),
             "pose_index": 10,
+            "enforce_pose": True,
+            "baseline_yaw": base_yaw,
+        })
+        c_p10_ok, b_p10_ok = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Anjelina Jolie/face9.jpg"),
+            "pose_index": 10,
+            "enforce_pose": True,
+            "baseline_yaw": base_yaw,
+        })
+        c_p11_ok, b_p11_ok = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Anjelina Jolie/40.jpg"),
+            "pose_index": 11,
             "enforce_pose": True,
             "baseline_yaw": base_yaw,
         })
@@ -408,17 +421,26 @@ def main():
             "enforce_pose": True,
             "baseline_pitch": base_pitch,
         })
+        c_p14_rej, b_p14_rej = http_req("POST", "/api/v1/face/extract-frame", {
+            "image_b64": b64_img("Jolie_1.jpg"),
+            "pose_index": 14,
+            "enforce_pose": True,
+            "baseline_area": base_area,
+        })
         pose_ver_ok = (
             c_p0 == 200 and b_p0.get("pose_verified") is True
             and c_p10_rej == 200 and b_p10_rej.get("pose_verified") is False
-            and c_p10_ok == 200 and b_p10_ok.get("pose_verified") is True
+            and c_p10_wrong_dir == 200 and b_p10_wrong_dir.get("pose_verified") is False
+            and c_p10_ok == 200 and b_p10_ok.get("pose_verified") is True and b_p10_ok.get("detected_pose") == "MORE_LEFT"
+            and c_p11_ok == 200 and b_p11_ok.get("pose_verified") is True and b_p11_ok.get("detected_pose") == "MORE_RIGHT"
             and c_p2_ok == 200 and b_p2_ok.get("pose_verified") is True
+            and c_p14_rej == 200 and b_p14_rej.get("pose_verified") is False
         )
         record(
             "Biometric",
-            "20-Pose MTCNN 5-landmark head orientation verification (frontal vs left-turn vs tilt-up)",
+            "20-Pose MTCNN 5-landmark head orientation verification (frontal vs left-turn vs right-turn vs tilt-up vs closer)",
             pose_ver_ok,
-            f"p0={b_p0.get('pose_verified')}, p10_frontal_rej={b_p10_rej.get('pose_verified')}, p10_left_ok={b_p10_ok.get('pose_verified')}, p2_up_ok={b_p2_ok.get('pose_verified')}",
+            f"p0={b_p0.get('pose_verified')}, p10_frontal_rej={b_p10_rej.get('pose_verified')}, p10_right_rej={b_p10_wrong_dir.get('pose_verified')}, p10_left_ok={b_p10_ok.get('pose_verified')}, p11_right_ok={b_p11_ok.get('pose_verified')}, p2_up_ok={b_p2_ok.get('pose_verified')}, p14_unmoved_rej={b_p14_rej.get('pose_verified')}",
         )
 
         # 2. User Enrollment, Duplicate Rejection, Identity Verification, Biometric Punch & Deletion

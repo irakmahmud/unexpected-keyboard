@@ -101,7 +101,7 @@ def main():
     l2_norm = sum(x * x for x in ext_frame["embedding"]) ** 0.5
     print(f"[3/8] ONNX FaceNet512 Single-Frame Extracted: dim={ext_frame['dimension']}, L2_norm={l2_norm:.4f}, model={ext_frame['model']}, pose_metrics={ext_frame['pose_metrics']}")
 
-    # Verify Pose 11/20 (pose_index=10: Turn head MORE to LEFT) rejects straight frontal image and accepts turned head image
+    # Verify Pose 11/20 (pose_index=10: Turn head MORE to LEFT) rejects straight frontal & MORE_RIGHT, and accepts MORE_LEFT
     st_p10_rej, p10_rej = req("/api/v1/face/extract-frame", "POST", {
         "image_b64": frames_20[0],
         "pose_index": 10,
@@ -111,14 +111,30 @@ def main():
     assert st_p10_rej == 200 and p10_rej.get("pose_verified") is False, f"Expected frontal image to fail pose 10 (Turn MORE to LEFT): {p10_rej}"
     with open("rust_deepFace/test_images/Anjelina Jolie/40.jpg", "rb") as f40:
         b64_40 = "data:image/jpeg;base64," + base64.b64encode(f40.read()).decode("ascii")
-    st_p10_ok, p10_ok = req("/api/v1/face/extract-frame", "POST", {
+    with open("rust_deepFace/test_images/Anjelina Jolie/face9.jpg", "rb") as f9:
+        b64_f9 = "data:image/jpeg;base64," + base64.b64encode(f9.read()).decode("ascii")
+    st_p10_wrong_dir, p10_wrong_dir = req("/api/v1/face/extract-frame", "POST", {
         "image_b64": b64_40,
         "pose_index": 10,
         "enforce_pose": True,
         "baseline_yaw": base_yaw
     })
-    assert st_p10_ok == 200 and p10_ok.get("pose_verified") is True, f"Expected angled image 40.jpg to pass pose 10 (Turn MORE to LEFT): {p10_ok}"
-    print(f"      20-Pose MTCNN 5-Landmark Verification Confirmed: Frontal rejected on Pose 11/20, Angled head turn accepted ({p10_ok.get('detected_pose')}).")
+    assert st_p10_wrong_dir == 200 and p10_wrong_dir.get("pose_verified") is False, f"Expected MORE_RIGHT image 40.jpg to fail pose 10 (Turn MORE to LEFT): {p10_wrong_dir}"
+    st_p10_ok, p10_ok = req("/api/v1/face/extract-frame", "POST", {
+        "image_b64": b64_f9,
+        "pose_index": 10,
+        "enforce_pose": True,
+        "baseline_yaw": base_yaw
+    })
+    assert st_p10_ok == 200 and p10_ok.get("pose_verified") is True and p10_ok.get("detected_pose") == "MORE_LEFT", f"Expected MORE_LEFT image face9.jpg to pass pose 10 (Turn MORE to LEFT): {p10_ok}"
+    st_p11_ok, p11_ok = req("/api/v1/face/extract-frame", "POST", {
+        "image_b64": b64_40,
+        "pose_index": 11,
+        "enforce_pose": True,
+        "baseline_yaw": base_yaw
+    })
+    assert st_p11_ok == 200 and p11_ok.get("pose_verified") is True and p11_ok.get("detected_pose") == "MORE_RIGHT", f"Expected MORE_RIGHT image 40.jpg to pass pose 11 (Turn MORE to RIGHT): {p11_ok}"
+    print(f"      20-Pose MTCNN 5-Landmark Directional Verification Confirmed: Frontal & opposite direction rejected, MORE_LEFT ({p10_ok.get('detected_pose')}) and MORE_RIGHT ({p11_ok.get('detected_pose')}) verified.")
 
     st, reg_cam = req("/api/v1/users", "POST", {
         "username": "ONNX_CAM_USER",

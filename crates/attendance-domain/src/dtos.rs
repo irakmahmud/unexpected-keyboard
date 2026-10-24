@@ -57,6 +57,8 @@ pub struct CreateUserRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub face_embedding: Option<Vec<f32>>,
+    #[serde(default)]
+    pub face_embeddings: Option<Vec<Vec<f32>>>,
     pub image_b64: Option<String>,
     pub images_b64: Option<Vec<String>>,
     pub overwrite_existing: Option<bool>,
