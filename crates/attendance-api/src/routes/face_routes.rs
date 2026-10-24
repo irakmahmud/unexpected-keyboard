@@ -685,8 +685,12 @@ async fn handle_extract_frame(
     let img_area = ((dims.0 as f32) * (dims.1 as f32)).max(1.0);
     let face_area_ratio = (bbox_w * bbox_h) / img_area;
 
-    let eye_dist = (rx - lx).hypot(ry - ly).max(1.0);
-    let mouth_width_ratio = (mrx - mlx).hypot(mry - mly) / eye_dist;
+    let eye_dx = rx - lx;
+    let eye_dy = ry - ly;
+    let eye_dist = (eye_dx * eye_dx + eye_dy * eye_dy).sqrt().max(1.0);
+    let mouth_dx = mrx - mlx;
+    let mouth_dy = mry - mly;
+    let mouth_width_ratio = (mouth_dx * mouth_dx + mouth_dy * mouth_dy).sqrt() / eye_dist;
 
     let detected_pose = if yaw_ratio.abs() >= 0.12 {
         if yaw_ratio > 0.0 { "MORE_LEFT" } else { "MORE_RIGHT" }
