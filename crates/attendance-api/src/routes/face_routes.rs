@@ -41,6 +41,9 @@ pub fn face_router() -> Router<AppState> {
         .route("/reset", post(handle_reset_index))
         .route("/embeddings-report", get(get_embeddings_report_json))
         .route("/embeddings-report.csv", get(get_embeddings_report_csv))
+        .route("/embeddings-summary.csv", get(get_embeddings_summary_csv))
+        .route("/embeddings-vectors.csv", get(get_embeddings_vectors_csv))
+        .route("/faiss-index/inspect", get(get_faiss_index_inspect))
         .route("/upload-model", post(handle_upload_ai_model))
         .route("/verify", post(handle_verify_json))
         .route("/verify_multipart", post(handle_verify_multipart))
@@ -409,13 +412,107 @@ fn build_embeddings_analysis(state: &AppState) -> Vec<serde_json::Value> {
     rows
 }
 
+fn build_faiss_index_inspection(state: &AppState) -> serde_json::Value {
+    let all_map = state.face_index.get_all_embeddings();
+    let mut usernames: Vec<String> = all_map.keys().cloned().collect();
+    usernames.sort();
+
+    let mut total_vectors = 0usize;
+    let mut user_summaries = Vec::new();
+    let mut mappings_list = Vec::new();
+    let mut idx_counter = 0usize;
+
+    for uname in &usernames {
+        if let Some(vecs) = all_map.get(uname) {
+            let start_idx = idx_counter;
+            let count = vecs.len();
+            total_vectors += count;
+            for _ in 0..count {
+                mappings_list.push(format!("{}:{}", idx_counter, uname));
+                idx_counter += 1;
+            }
+            let avg_norm = if count > 0 {
+                let sum_norm: f32 = vecs
+                    .iter()
+                    .map(|v| v.iter().map(|x| x * x).sum::<f32>().sqrt())
+                    .sum();
+                sum_norm / (count as f32)
+            } else {
+                0.0
+            };
+            user_summaries.push(serde_json::json!({
+                "username": uname,
+                "embeddings_count": count,
+                "dimension": 512,
+                "faiss_index_range": if count > 0 {
+                    format!("{}..{}", start_idx, start_idx + count - 1)
+                } else {
+                    "empty".to_string()
+                },
+                "avg_l2_norm": (avg_norm * 10000.0).round() / 10000.0,
+            }));
+        }
+    }
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+    let home_index_path = std::path::PathBuf::from(&home).join("db").join("face_encodings.index");
+    let data_index_path = std::path::PathBuf::from("data").join("db").join("face_encodings.index");
+    let active_path = if home_index_path.exists() {
+        home_index_path
+    } else {
+        data_index_path
+    };
+
+    let (file_exists, file_bytes, header_magic, header_dim, header_ntotal) =
+        if let Ok(raw) = std::fs::read(&active_path) {
+            if raw.len() >= 16 {
+                let magic = String::from_utf8_lossy(&raw[0..4]).to_string();
+                let dim = u32::from_le_bytes([raw[4], raw[5], raw[6], raw[7]]);
+                let ntotal = u64::from_le_bytes([
+                    raw[8], raw[9], raw[10], raw[11], raw[12], raw[13], raw[14], raw[15],
+                ]);
+                (true, raw.len(), magic, dim, ntotal)
+            } else {
+                (true, raw.len(), "SHORT".to_string(), 0, 0)
+            }
+        } else {
+            (false, 0, "NONE".to_string(), 512, 0)
+        };
+
+    serde_json::json!({
+        "index_type": "FAISS IndexFlatL2 (512-D L2-Normalized FaceNet512)",
+        "file_path": active_path.to_string_lossy(),
+        "file_exists": file_exists,
+        "file_size_bytes": file_bytes,
+        "header_magic": header_magic,
+        "dimension": header_dim,
+        "ntotal_on_disk": header_ntotal,
+        "ntotal_in_ram": total_vectors,
+        "total_users": usernames.len(),
+        "users": user_summaries,
+        "user_mappings": mappings_list
+    })
+}
+
+async fn get_faiss_index_inspect(
+    State(state): State<AppState>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let info = build_faiss_index_inspection(&state);
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "faiss_index": info
+    })))
+}
+
 async fn get_embeddings_report_json(
     State(state): State<AppState>,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
     let rows = build_embeddings_analysis(&state);
+    let faiss_info = build_faiss_index_inspection(&state);
     Ok(Json(serde_json::json!({
         "success": true,
         "total_records": rows.len(),
+        "faiss_index": faiss_info,
         "report": rows
     })))
 }
@@ -443,6 +540,9 @@ async fn get_embeddings_report_csv(
         ));
     }
 
+    let _ = std::fs::write("embeddings_analysis.csv", csv.as_bytes());
+    let _ = std::fs::write("data/embeddings_analysis.csv", csv.as_bytes());
+
     let mut response = csv.into_response();
     response.headers_mut().insert(
         header::CONTENT_TYPE,
@@ -451,6 +551,111 @@ async fn get_embeddings_report_csv(
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,
         HeaderValue::from_static("attachment; filename=\"embeddings_analysis.csv\""),
+    );
+    Ok(response)
+}
+
+async fn get_embeddings_summary_csv(
+    State(state): State<AppState>,
+) -> std::result::Result<Response, ApiError> {
+    let rows = build_embeddings_analysis(&state);
+    let mut grouped: std::collections::BTreeMap<String, Vec<&serde_json::Value>> =
+        std::collections::BTreeMap::new();
+    for r in &rows {
+        let u = r["Username"].as_str().unwrap_or("").to_string();
+        grouped.entry(u).or_default().push(r);
+    }
+
+    let mut csv = String::from("Username,Total_Images,Number_of_Embeddings_Generated,Number_of_Errors,Number_of_Unusable_Embeddings,Mean_Nan_Values,Mean_Zero_Values,Mean_Negative_Values,Mean_Positive_Values\n");
+    for (uname, list) in grouped {
+        let n = (list.len() as f64).max(1.0);
+        let sum_emb: u64 = list.iter().map(|r| r["Number_of_Embeddings_Generated"].as_u64().unwrap_or(0)).sum();
+        let sum_err: u64 = list.iter().map(|r| r["Number_of_Errors"].as_u64().unwrap_or(0)).sum();
+        let sum_unusable: u64 = list.iter().map(|r| r["Number_of_Unusable_Embeddings"].as_u64().unwrap_or(0)).sum();
+        let mean_nan: f64 = list.iter().map(|r| r["Number_of_Nan_Values"].as_u64().unwrap_or(0) as f64).sum::<f64>() / n;
+        let mean_zero: f64 = list.iter().map(|r| r["Number_of_Zero_Values"].as_u64().unwrap_or(0) as f64).sum::<f64>() / n;
+        let mean_neg: f64 = list.iter().map(|r| r["Number_of_Negative_Values"].as_u64().unwrap_or(0) as f64).sum::<f64>() / n;
+        let mean_pos: f64 = list.iter().map(|r| r["Number_of_Positive_Values"].as_u64().unwrap_or(0) as f64).sum::<f64>() / n;
+
+        csv.push_str(&format!(
+            "{},{},{},{},{},{:.2},{:.2},{:.2},{:.2}\n",
+            uname,
+            list.len(),
+            sum_emb,
+            sum_err,
+            sum_unusable,
+            mean_nan,
+            mean_zero,
+            mean_neg,
+            mean_pos
+        ));
+    }
+
+    let _ = std::fs::write("embeddings_summary.csv", csv.as_bytes());
+    let _ = std::fs::write("data/embeddings_summary.csv", csv.as_bytes());
+
+    let mut response = csv.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/csv; charset=utf-8"),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"embeddings_summary.csv\""),
+    );
+    Ok(response)
+}
+
+async fn get_embeddings_vectors_csv(
+    State(state): State<AppState>,
+) -> std::result::Result<Response, ApiError> {
+    let all_map = state.face_index.get_all_embeddings();
+    let mut usernames: Vec<String> = all_map.keys().cloned().collect();
+    usernames.sort();
+
+    let mut header_cols = vec![
+        "FAISS_Row_ID".to_string(),
+        "Username".to_string(),
+        "Image_Name".to_string(),
+        "Dimension".to_string(),
+        "L2_Norm".to_string(),
+    ];
+    for d in 0..512 {
+        header_cols.push(format!("dim_{}", d));
+    }
+    let mut csv = header_cols.join(",") + "\n";
+
+    let mut row_id = 0usize;
+    for uname in usernames {
+        if let Some(vecs) = all_map.get(&uname) {
+            for (i, vec) in vecs.iter().enumerate() {
+                let norm: f32 = vec.iter().map(|x| x * x).sum::<f32>().sqrt();
+                let dims_str: Vec<String> = vec.iter().map(|v| format!("{:.6}", v)).collect();
+                csv.push_str(&format!(
+                    "{},{},image_{},{},{:.6},{}\n",
+                    row_id,
+                    uname,
+                    i + 1,
+                    vec.len(),
+                    norm,
+                    dims_str.join(",")
+                ));
+                row_id += 1;
+            }
+        }
+    }
+
+    let _ = std::fs::write("embeddings_vectors_512d.csv", csv.as_bytes());
+    let _ = std::fs::write("data/embeddings_vectors_512d.csv", csv.as_bytes());
+
+    let mut response = csv.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/csv; charset=utf-8"),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"embeddings_vectors_512d.csv\""),
     );
     Ok(response)
 }
@@ -651,19 +856,83 @@ fn decode_data_uri(b64: &str) -> std::result::Result<Vec<u8>, attendance_common:
         .map_err(|e| attendance_common::AppError::Validation(format!("Invalid base64 image data: {}", e)))
 }
 
-/// Extract 512-D FaceNet512 embedding from a single camera frame + verify 20-pose head orientation via MTCNN 5-point landmarks
+/// Extract 512-D FaceNet512 embedding from a single camera frame + verify 20-pose head orientation & image quality gate
 async fn handle_extract_frame(
     State(state): State<AppState>,
     Json(payload): Json<SingleImagePayload>,
-) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+) -> std::result::Result<Response, ApiError> {
     let df_state = state.get_deepface().ok_or_else(|| {
         attendance_common::AppError::Validation(
             "DeepFace ONNX models not loaded in ./models/".to_string(),
         )
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
-    let (emb, det, dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
-    let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
+
+    let (emb, det, dims) = match attendance_face::extract_face_embedding_with_detection(&df_state, &bytes) {
+        Ok(res) => res,
+        Err(face_err) => {
+            let img_quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
+            let (reason_code, msg) = match &face_err {
+                attendance_face::FaceError::MultipleFacesDetected(n) => (
+                    "MULTIPLE_FACES",
+                    format!(
+                        "Multiple faces ({}) detected — only one person should be in front of the camera! (একাধিক মুখ শনাক্ত হয়েছে — ক্যামেরার সামনে একজন থাকুন ও পুনরায় ছবি তুলুন)",
+                        n
+                    ),
+                ),
+                _ => {
+                    if let Some(ref q) = img_quality {
+                        if q.is_dark {
+                            (
+                                "DARK",
+                                format!(
+                                    "Image is too dark or black (brightness {:.1} < 38.0) — Must retake in proper lighting! (ছবিটি অন্ধকার বা কালো — পর্যাপ্ত আলোতে পুনরায় ছবি তুলুন)",
+                                    q.brightness
+                                ),
+                            )
+                        } else if q.is_blurry {
+                            (
+                                "BLURRY",
+                                format!(
+                                    "Image is blurry (sharpness {:.1} < 35.0) — Hold camera steady and retake! (ছবিটি ঘোলা বা অস্পষ্ট — ক্যামেরা স্থির রেখে পুনরায় ছবি তুলুন)",
+                                    q.sharpness
+                                ),
+                            )
+                        } else {
+                            (
+                                "FACE_NOT_CLEAR",
+                                "Face is not clear or not detected — Keep your face clearly visible inside the camera frame and retake! (চেহারা স্পষ্ট নয় বা শনাক্ত হয়নি — ক্যামেরার ফ্রেমে স্পষ্টভাবে মুখ রেখে পুনরায় ছবি তুলুন)".to_string(),
+                            )
+                        }
+                    } else {
+                        (
+                            "FACE_NOT_CLEAR",
+                            "Face is not clear or not detected — Must retake! (চেহারা স্পষ্ট নয় — পুনরায় ছবি তুলুন)".to_string(),
+                        )
+                    }
+                }
+            };
+
+            let body = Json(serde_json::json!({
+                "success": false,
+                "face_detected": false,
+                "pose_verified": false,
+                "quality_ok": false,
+                "must_retake": true,
+                "quality_reason": reason_code,
+                "error": msg,
+                "message": msg,
+                "quality": img_quality
+            }));
+            return Ok((axum::http::StatusCode::UNPROCESSABLE_ENTITY, body).into_response());
+        }
+    };
+
+    let quality = attendance_face::FaceQualityAssessor::assess_image_and_face(
+        &bytes,
+        Some(det.bbox),
+        Some(det.confidence),
+    );
 
     // Compute 3D head pose ratios from MTCNN 5-point landmarks: [left_eye, right_eye, nose, mouth_left, mouth_right]
     let (lx, ly) = det.landmarks[0];
@@ -916,31 +1185,94 @@ async fn handle_extract_frame(
         "mouth_width_ratio": mouth_width_ratio
     });
 
+    // Hard Quality Gate: If image is blurry, dark/black, or face is not clear, MUST retake!
+    if let Some(ref q) = quality {
+        if !q.passes_quality_gate {
+            let (reason_code, qual_msg) = if q.is_dark {
+                (
+                    "DARK",
+                    format!(
+                        "Image/face is too dark or black (brightness {:.1} < 38.0) — Must retake in proper lighting! (ছবিটি অন্ধকার বা কালো — পর্যাপ্ত আলোতে পুনরায় ছবি তুলুন)",
+                        q.brightness
+                    ),
+                )
+            } else if q.is_blurry {
+                (
+                    "BLURRY",
+                    format!(
+                        "Face is blurry / out of focus (sharpness {:.1} < 32.0) — Hold camera steady and retake! (ছবিটি ঘোলা বা অস্পষ্ট — ক্যামেরা স্থির রেখে পুনরায় ছবি তুলুন)",
+                        q.sharpness
+                    ),
+                )
+            } else {
+                (
+                    "FACE_NOT_CLEAR",
+                    format!(
+                        "Face is not clear ({}) — Must retake! (চেহারা স্পষ্ট নয় — পুনরায় পরিষ্কার ছবি তুলুন)",
+                        q.failure_reasons.join("; ")
+                    ),
+                )
+            };
+
+            return Ok(Json(serde_json::json!({
+                "success": false,
+                "face_detected": true,
+                "pose_verified": false,
+                "quality_ok": false,
+                "must_retake": true,
+                "quality_reason": reason_code,
+                "pose_index": pose_idx,
+                "expected_pose": expected_pose,
+                "detected_pose": detected_pose,
+                "pose_metrics": pose_metrics,
+                "error": qual_msg,
+                "message": qual_msg,
+                "bbox": det.bbox,
+                "detection_score": det.confidence,
+                "landmarks": det.landmarks,
+                "quality": quality
+            }))
+            .into_response());
+        }
+    }
+
     if payload.enforce_pose.unwrap_or(false) && !pose_verified {
         let err_msg = format!(
-            "Pose verification required — {} [Current: {}, Yaw: {:+.1}°, Pitch: {:+.1}°, Roll: {:+.1}°]",
+            "Pose angle skipped (marked ✗) — {} [Current: {}, Yaw: {:+.1}°, Pitch: {:+.1}°, Roll: {:+.1}°]",
             guidance, detected_pose, yaw_deg, pitch_deg, roll_deg
         );
         return Ok(Json(serde_json::json!({
             "success": false,
             "face_detected": true,
+            "quality_ok": true,
+            "must_retake": false,
             "pose_verified": false,
+            "pose_status": "CROSS_MARKED_UNVERIFIED",
             "pose_index": pose_idx,
             "expected_pose": expected_pose,
             "detected_pose": detected_pose,
             "pose_metrics": pose_metrics,
+            "dimension": emb.len(),
+            "model": "Facenet512",
+            "detector": "MTCNN",
             "error": err_msg,
             "message": guidance,
             "bbox": det.bbox,
             "detection_score": det.confidence,
-            "landmarks": det.landmarks
-        })));
+            "landmarks": det.landmarks,
+            "quality": quality,
+            "embedding": emb
+        }))
+        .into_response());
     }
 
     Ok(Json(serde_json::json!({
         "success": true,
         "face_detected": true,
+        "quality_ok": true,
+        "must_retake": false,
         "pose_verified": true,
+        "pose_status": "TICK_MARKED_VERIFIED",
         "pose_index": pose_idx,
         "expected_pose": expected_pose,
         "detected_pose": detected_pose,
@@ -953,7 +1285,8 @@ async fn handle_extract_frame(
         "landmarks": det.landmarks,
         "quality": quality,
         "embedding": emb
-    })))
+    }))
+    .into_response())
 }
 
 /// Enroll 20 multi-angle FaceNet512 embeddings for a user (Python _complete_new_user_registration lines 851-947)
