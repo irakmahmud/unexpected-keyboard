@@ -10,9 +10,12 @@ pub struct FaceQualityScore {
     pub sharpness: f32,
     pub brightness: f32,
     pub contrast: f32,
+    pub face_confidence: f32,
     pub is_blurry: bool,
     pub is_dark: bool,
     pub is_unclear: bool,
+    pub quality_ok: bool,
+    pub quality_reason: Option<String>,
     pub passes_quality_gate: bool,
     pub failure_reasons: Vec<String>,
 }
@@ -152,6 +155,15 @@ impl FaceQualityAssessor {
             + (contrast_score * 0.20);
 
         let passes_quality_gate = !is_blurry && !is_dark && !is_unclear && failure_reasons.is_empty();
+        let quality_reason = if passes_quality_gate {
+            None
+        } else if is_dark {
+            Some("DARK".to_string())
+        } else if is_blurry {
+            Some("BLURRY".to_string())
+        } else {
+            Some("FACE_NOT_CLEAR".to_string())
+        };
 
         FaceQualityScore {
             overall_score: overall,
@@ -162,9 +174,12 @@ impl FaceQualityAssessor {
             sharpness: lap_var,
             brightness: mean_brightness,
             contrast: std_contrast,
+            face_confidence: if passes_quality_gate { 1.0 } else { 0.0 },
             is_blurry,
             is_dark,
             is_unclear,
+            quality_ok: passes_quality_gate,
+            quality_reason,
             passes_quality_gate,
             failure_reasons,
         }
@@ -189,7 +204,7 @@ impl FaceQualityAssessor {
         let (w, h) = (gray.width() as usize, gray.height() as usize);
         let full_raw = gray.as_raw();
         let full_lap = Self::laplacian_variance(full_raw, w, h);
-        let (full_bright, full_contrast) = Self::brightness_and_contrast(full_raw);
+        let (full_bright, _full_contrast) = Self::brightness_and_contrast(full_raw);
 
         if let Some((bx1, by1, bx2, by2)) = bbox {
             let x1 = (bx1.max(0.0) as usize).min(w.saturating_sub(1));
@@ -209,17 +224,18 @@ impl FaceQualityAssessor {
                 let crop_lap = Self::laplacian_variance(&crop_pixels, cw, ch);
                 let (crop_bright, crop_contrast) = Self::brightness_and_contrast(&crop_pixels);
 
-                let effective_sharpness = if crop_lap < 20.0 {
+                // Do NOT let a sharp background mask a blurry face crop (crop_lap < 25.0 is always blurry)
+                let effective_sharpness = if crop_lap < 25.0 {
                     crop_lap
                 } else {
-                    crop_lap.max(full_lap)
+                    crop_lap.max(full_lap * 0.5)
                 };
                 let effective_brightness = crop_bright.min(full_bright.max(crop_bright * 0.85));
                 let effective_contrast = crop_contrast;
 
                 let mut failure_reasons = Vec::new();
                 let is_dark = crop_bright < 38.0 || full_bright < 28.0;
-                let is_blurry = crop_lap < 20.0 || effective_sharpness < 32.0;
+                let is_blurry = crop_lap < 25.0 || effective_sharpness < 32.0;
                 let conf = detection_confidence.unwrap_or(1.0);
                 let mut is_unclear = cw < 36 || ch < 36 || crop_contrast < 13.0 || conf < 0.90;
 
@@ -284,6 +300,15 @@ impl FaceQualityAssessor {
                     + (brightness_score * 0.20)
                     + (contrast_score * 0.20);
                 let passes_quality_gate = !is_dark && !is_blurry && !is_unclear && failure_reasons.is_empty();
+                let quality_reason = if passes_quality_gate {
+                    None
+                } else if is_dark {
+                    Some("DARK".to_string())
+                } else if is_blurry {
+                    Some("BLURRY".to_string())
+                } else {
+                    Some("FACE_NOT_CLEAR".to_string())
+                };
 
                 return Some(FaceQualityScore {
                     overall_score: overall,
@@ -294,17 +319,178 @@ impl FaceQualityAssessor {
                     sharpness: effective_sharpness,
                     brightness: effective_brightness,
                     contrast: effective_contrast,
+                    face_confidence: conf,
                     is_blurry,
                     is_dark,
                     is_unclear,
+                    quality_ok: passes_quality_gate,
+                    quality_reason,
                     passes_quality_gate,
                     failure_reasons,
                 });
             }
         }
 
-        Some(Self::assess_face_quality(full_raw, w, h))
+        let mut score = Self::assess_face_quality(full_raw, w, h);
+        if let Some(c) = detection_confidence {
+            score.face_confidence = c;
+        }
+        Some(score)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{GrayImage, ImageFormat, Luma};
+    use std::io::Cursor;
+
+    fn encode_gray_png(img: &GrayImage) -> Vec<u8> {
+        let mut buf = Cursor::new(Vec::new());
+        image::DynamicImage::ImageLuma8(img.clone())
+            .write_to(&mut buf, ImageFormat::Png)
+            .unwrap();
+        buf.into_inner()
+    }
+
+    #[test]
+    fn test_dark_black_image_must_retake() {
+        let mut img = GrayImage::new(128, 128);
+        for y in 0..128 {
+            for x in 0..128 {
+                img.put_pixel(x, y, Luma([((x + y) % 15) as u8]));
+            }
+        }
+        let bytes = encode_gray_png(&img);
+        let q = FaceQualityAssessor::assess_image_and_face(&bytes, Some((16.0, 16.0, 112.0, 112.0)), Some(0.99)).unwrap();
+        assert!(q.is_dark);
+        assert!(!q.quality_ok);
+        assert!(!q.passes_quality_gate);
+        assert_eq!(q.quality_reason.as_deref(), Some("DARK"));
+    }
+
+    #[test]
+    fn test_blurry_smooth_image_must_retake() {
+        let mut img = GrayImage::new(128, 128);
+        for y in 0..128 {
+            for x in 0..128 {
+                let v = (70 + ((x as i32 - 64) / 2) + ((y as i32 - 64) / 2)).clamp(45, 180) as u8;
+                img.put_pixel(x, y, Luma([v]));
+            }
+        }
+        let bytes = encode_gray_png(&img);
+        let q = FaceQualityAssessor::assess_image_and_face(&bytes, Some((16.0, 16.0, 112.0, 112.0)), Some(0.99)).unwrap();
+        assert!(q.is_blurry);
+        assert!(!q.quality_ok);
+        assert_eq!(q.quality_reason.as_deref(), Some("BLURRY"));
+    }
+
+    #[test]
+    fn test_blurry_face_crop_on_sharp_background_must_retake() {
+        // Sharp checkerboard background, but blurry face region [24..104, 24..104]
+        let mut img = GrayImage::new(128, 128);
+        for y in 0..128 {
+            for x in 0..128 {
+                if (24..104).contains(&x) && (24..104).contains(&y) {
+                    // Smooth gradient inside face bbox (contrast > 15, brightness ~110, but low Laplacian sharpness ~6)
+                    let base = 70 + ((x - 24) * 80 / 80) as u8;
+                    let wave = if (x + y) % 4 == 0 { 2u8 } else { 0u8 };
+                    img.put_pixel(x, y, Luma([base.saturating_add(wave)]));
+                } else {
+                    // High-frequency sharp background outside face bbox
+                    let v = if (x + y) % 2 == 0 { 40u8 } else { 200u8 };
+                    img.put_pixel(x, y, Luma([v]));
+                }
+            }
+        }
+        let bytes = encode_gray_png(&img);
+        let q = FaceQualityAssessor::assess_image_and_face(&bytes, Some((24.0, 24.0, 104.0, 104.0)), Some(0.98)).unwrap();
+        assert!(q.is_blurry, "Blurry face crop on sharp background must be flagged blurry, got: {:?}", q);
+        assert!(!q.quality_ok);
+        assert_eq!(q.quality_reason.as_deref(), Some("BLURRY"));
+    }
+
+    #[test]
+    fn test_sharp_clear_face_passes_quality_gate() {
+        let mut img = GrayImage::new(128, 128);
+        for y in 0..128 {
+            for x in 0..128 {
+                let edge = if (x % 7 == 0) || (y % 7 == 0) { 175u8 } else { 85u8 };
+                img.put_pixel(x, y, Luma([edge]));
+            }
+        }
+        let bytes = encode_gray_png(&img);
+        let q = FaceQualityAssessor::assess_image_and_face(&bytes, Some((10.0, 10.0, 118.0, 118.0)), Some(0.99)).unwrap();
+        assert!(q.quality_ok, "Expected sharp clear face to pass quality gate, got: {:?}", q);
+        assert!(q.passes_quality_gate);
+        assert_eq!(q.quality_reason, None);
+        assert!(q.sharpness >= 32.0);
+        assert!(q.brightness >= 38.0);
+        assert!((q.face_confidence - 0.99).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_unclear_low_confidence_or_tiny_face_must_retake() {
+        let mut img = GrayImage::new(128, 128);
+        for y in 0..128 {
+            for x in 0..128 {
+                let edge = if (x % 6 == 0) || (y % 6 == 0) { 170u8 } else { 90u8 };
+                img.put_pixel(x, y, Luma([edge]));
+            }
+        }
+        let bytes = encode_gray_png(&img);
+        // Low detection confidence (0.75 < 0.90)
+        let q_low_conf = FaceQualityAssessor::assess_image_and_face(&bytes, Some((10.0, 10.0, 118.0, 118.0)), Some(0.75)).unwrap();
+        assert!(q_low_conf.is_unclear);
+        assert!(!q_low_conf.quality_ok);
+        assert_eq!(q_low_conf.quality_reason.as_deref(), Some("FACE_NOT_CLEAR"));
+
+        // Tiny face bbox (20x20 < 36x36)
+        let q_tiny = FaceQualityAssessor::assess_image_and_face(&bytes, Some((50.0, 50.0, 70.0, 70.0)), Some(0.99)).unwrap();
+        assert!(q_tiny.is_unclear);
+        assert!(!q_tiny.quality_ok);
+        assert_eq!(q_tiny.quality_reason.as_deref(), Some("FACE_NOT_CLEAR"));
+    }
+
+    #[test]
+    fn test_real_face_image_blur_and_dark_rejection() {
+        let candidates = [
+            "../../rust_deepFace/test_images/Anjelina Jolie/1.jpg",
+            "rust_deepFace/test_images/Anjelina Jolie/1.jpg",
+        ];
+        let Some(path) = candidates.iter().find(|p| std::path::Path::new(p).exists()) else {
+            return;
+        };
+        let raw = std::fs::read(path).unwrap();
+        let bbox = Some((401.0, 57.0, 596.0, 316.0));
+
+        // 1. Original clear image passes
+        let q_orig = FaceQualityAssessor::assess_image_and_face(&raw, bbox, Some(0.999)).unwrap();
+        assert!(q_orig.quality_ok, "Original 1.jpg should pass quality gate: {:?}", q_orig);
+        assert_eq!(q_orig.quality_reason, None);
+
+        // 2. Blurred version of real face image fails with BLURRY
+        let dyn_img = image::load_from_memory(&raw).unwrap();
+        let blurred = dyn_img.blur(6.0);
+        let mut blur_buf = Cursor::new(Vec::new());
+        blurred.write_to(&mut blur_buf, ImageFormat::Jpeg).unwrap();
+        let q_blur = FaceQualityAssessor::assess_image_and_face(blur_buf.get_ref(), bbox, Some(0.99)).unwrap();
+        assert!(q_blur.is_blurry, "Blurred 1.jpg must be flagged blurry: {:?}", q_blur);
+        assert!(!q_blur.quality_ok);
+        assert_eq!(q_blur.quality_reason.as_deref(), Some("BLURRY"));
+
+        // 3. Darkened version of real face image fails with DARK
+        let mut dark_luma = dyn_img.to_luma8();
+        for p in dark_luma.pixels_mut() {
+            p[0] = (p[0] as u16 / 6) as u8;
+        }
+        let dark_bytes = encode_gray_png(&dark_luma);
+        let q_dark = FaceQualityAssessor::assess_image_and_face(&dark_bytes, bbox, Some(0.99)).unwrap();
+        assert!(q_dark.is_dark, "Darkened 1.jpg must be flagged dark: {:?}", q_dark);
+        assert!(!q_dark.quality_ok);
+        assert_eq!(q_dark.quality_reason.as_deref(), Some("DARK"));
+    }
+}
+
 
 

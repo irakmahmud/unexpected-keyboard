@@ -391,8 +391,10 @@ impl FaceVectorIndex {
         for dir in &dirs {
             if std::fs::create_dir_all(dir).is_ok() {
                 let index_path = dir.join("face_encodings.index");
+                let alt_index_path = dir.join("face_index.faiss");
                 let map_path = dir.join("user_mappings.txt");
                 let _ = std::fs::write(&index_path, &raw_bytes);
+                let _ = std::fs::write(&alt_index_path, &raw_bytes);
                 let _ = std::fs::write(&map_path, mappings.as_bytes());
             }
         }

@@ -1401,6 +1401,18 @@ async function startRecaptureUnverifiedPoses() {
     regCurrentPoseIdx = regRecaptureQueue[0];
     const promptBox = document.getElementById('reg-unverified-prompt-box');
     if (promptBox) promptBox.style.display = 'none';
+    const enEl = document.getElementById('reg-pose-en');
+    const bnEl = document.getElementById('reg-pose-bn');
+    if (enEl) {
+        enEl.style.color = '#00d2d3';
+        enEl.innerText = `🔄 Recapturing ${POSE_INSTRUCTIONS[regCurrentPoseIdx].en}`;
+    }
+    if (bnEl) {
+        bnEl.style.color = '#fdcb6e';
+        bnEl.innerText = `🔄 পুনরায় ক্যাপচার: ${POSE_INSTRUCTIONS[regCurrentPoseIdx].bn}`;
+    }
+    const activeThumb = document.getElementById(`reg-pose-thumb-${regCurrentPoseIdx}`);
+    if (activeThumb) activeThumb.style.border = '2px solid #00d2d3';
     addTerminalLog(`Recapturing ${regRecaptureQueue.length} unverified (✗) poses: ${regRecaptureQueue.map(i => i + 1).join(', ')}`, 'CAMERA');
     await runAuto20PoseCapture(true);
 }
@@ -1412,8 +1424,16 @@ async function recaptureSinglePoseSlot(slotIdx) {
     regCurrentPoseIdx = slotIdx;
     const enEl = document.getElementById('reg-pose-en');
     const bnEl = document.getElementById('reg-pose-bn');
-    if (enEl) enEl.innerText = `🔄 Recapturing ${POSE_INSTRUCTIONS[slotIdx].en}`;
-    if (bnEl) bnEl.innerText = `🔄 পুনরায় ক্যাপচার: ${POSE_INSTRUCTIONS[slotIdx].bn}`;
+    if (enEl) {
+        enEl.style.color = '#00d2d3';
+        enEl.innerText = `🔄 Recapturing ${POSE_INSTRUCTIONS[slotIdx].en}`;
+    }
+    if (bnEl) {
+        bnEl.style.color = '#fdcb6e';
+        bnEl.innerText = `🔄 পুনরায় ক্যাপচার: ${POSE_INSTRUCTIONS[slotIdx].bn}`;
+    }
+    const activeThumb = document.getElementById(`reg-pose-thumb-${slotIdx}`);
+    if (activeThumb) activeThumb.style.border = '2px solid #00d2d3';
     await captureSingleRegPose(false);
 }
 
@@ -1426,7 +1446,7 @@ async function acceptAll20AndProceedRegistration() {
     const msgEl = document.getElementById('reg-cam-result-msg');
 
     if (designation && password) {
-        await submitCameraRegistration();
+        await submitCameraRegistration(true);
     } else {
         if (msgEl) {
             msgEl.style.color = '#2ecc71';
@@ -1846,6 +1866,7 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
                 image_b64: frameB64,
                 pose_index: targetIdx,
                 enforce_pose: enforceFlag,
+                is_recapture: regIsRecaptureMode,
                 baseline_yaw: regBaselineMetrics ? regBaselineMetrics.yaw_ratio : null,
                 baseline_pitch: regBaselineMetrics ? regBaselineMetrics.pitch_ratio : null,
                 baseline_roll: regBaselineMetrics ? regBaselineMetrics.roll_deg : null,
@@ -1867,8 +1888,10 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
             if (extData && extData.pose_metrics && angleEl) {
                 const pm = extData.pose_metrics;
                 const q = extData.quality || {};
-                const sharpStr = q.sharpness !== undefined ? ` | Sharp: ${Number(q.sharpness).toFixed(0)}` : '';
-                const brightStr = q.brightness !== undefined ? ` | Bright: ${Number(q.brightness).toFixed(0)}` : '';
+                const sharpVal = extData.sharpness ?? q.sharpness;
+                const brightVal = extData.brightness ?? q.brightness;
+                const sharpStr = sharpVal !== undefined ? ` | Sharp: ${Number(sharpVal).toFixed(0)}` : '';
+                const brightStr = brightVal !== undefined ? ` | Bright: ${Number(brightVal).toFixed(0)}` : '';
                 angleEl.innerText = `Detected: ${extData.detected_pose || 'FACE'} | Yaw: ${Number(pm.yaw_deg || 0).toFixed(1)}° | Pitch: ${Number(pm.pitch_deg || 0).toFixed(1)}°${sharpStr}${brightStr}`;
             }
 
@@ -1962,23 +1985,32 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
             : `⚠️ LAST CAPTURED: #${targetIdx + 1}/20 (✗ Skipped Angle: ${verifiedPoseLabel})`;
     }
 
-    // Advance pointer continuously
+    // Advance pointer continuously (or resume at first uncaptured slot if a single slot was recaptured mid-stream)
     if (regIsRecaptureMode) {
         regRecaptureQueue.shift();
         if (regRecaptureQueue.length > 0) {
             regCurrentPoseIdx = regRecaptureQueue[0];
         } else {
             regIsRecaptureMode = false;
-            regCurrentPoseIdx = 20;
+            const nextUncaptured = regCapturedFrames.findIndex(f => !f);
+            regCurrentPoseIdx = nextUncaptured === -1 ? 20 : nextUncaptured;
         }
     } else {
-        regCurrentPoseIdx = targetIdx + 1;
+        const nextUncaptured = regCapturedFrames.findIndex((f, i) => i > targetIdx && !f);
+        if (nextUncaptured !== -1) {
+            regCurrentPoseIdx = nextUncaptured;
+        } else {
+            const anyUncaptured = regCapturedFrames.findIndex(f => !f);
+            regCurrentPoseIdx = anyUncaptured === -1 ? 20 : anyUncaptured;
+        }
     }
 
     const nextThumbEl = document.getElementById(`reg-pose-thumb-${regCurrentPoseIdx}`);
-    if (nextThumbEl && !regCapturedFrames[regCurrentPoseIdx]) {
-        nextThumbEl.style.borderColor = '#00d2d3';
-        nextThumbEl.style.color = '#00d2d3';
+    if (nextThumbEl) {
+        nextThumbEl.style.border = '2px solid #00d2d3';
+        if (!regCapturedFrames[regCurrentPoseIdx]) {
+            nextThumbEl.style.color = '#00d2d3';
+        }
     }
 
     const summary = getRegCaptureSummary();
@@ -2004,13 +2036,15 @@ async function captureSingleRegPose(skipRemoteExtract = false) {
     }
 
     if (regCurrentPoseIdx < 20) {
+        const prefixEn = regIsRecaptureMode ? '🔄 Recapturing ' : '';
+        const prefixBn = regIsRecaptureMode ? '🔄 পুনরায় ক্যাপচার: ' : '';
         if (enEl) {
-            enEl.style.color = '#2ecc71';
-            enEl.innerText = POSE_INSTRUCTIONS[regCurrentPoseIdx].en;
+            enEl.style.color = regIsRecaptureMode ? '#00d2d3' : '#2ecc71';
+            enEl.innerText = `${prefixEn}${POSE_INSTRUCTIONS[regCurrentPoseIdx].en}`;
         }
         if (bnEl) {
             bnEl.style.color = '#fdcb6e';
-            bnEl.innerText = POSE_INSTRUCTIONS[regCurrentPoseIdx].bn;
+            bnEl.innerText = `${prefixBn}${POSE_INSTRUCTIONS[regCurrentPoseIdx].bn}`;
         }
     } else {
         evaluatePostCaptureUnverifiedPrompt();
@@ -2023,6 +2057,8 @@ async function runAuto20PoseCapture(fromRecapturePrompt = false) {
     const msgEl = document.getElementById('reg-cam-result-msg');
     const autoBtn = document.getElementById('btn-auto-capture-poses');
     const cdBadge = document.getElementById('hr-reg-countdown-badge');
+    const enEl = document.getElementById('reg-pose-en');
+    const bnEl = document.getElementById('reg-pose-bn');
 
     if (!username) {
         if (msgEl) {
@@ -2071,6 +2107,19 @@ async function runAuto20PoseCapture(fromRecapturePrompt = false) {
             : regCurrentPoseIdx;
         const poseNum = activeIdx + 1;
         const currInstr = POSE_INSTRUCTIONS[activeIdx];
+
+        const prefixEn = regIsRecaptureMode ? '🔄 Recapturing ' : '';
+        const prefixBn = regIsRecaptureMode ? '🔄 পুনরায় ক্যাপচার: ' : '';
+        if (enEl) {
+            enEl.style.color = regIsRecaptureMode ? '#00d2d3' : '#2ecc71';
+            enEl.innerText = `${prefixEn}${currInstr.en}`;
+        }
+        if (bnEl) {
+            bnEl.style.color = '#fdcb6e';
+            bnEl.innerText = `${prefixBn}${currInstr.bn}`;
+        }
+        const activeThumb = document.getElementById(`reg-pose-thumb-${activeIdx}`);
+        if (activeThumb) activeThumb.style.border = '2px solid #00d2d3';
 
         if (isTestMode) {
             const skipExtract = (window.__TEST_ENFORCE_POSE !== undefined) ? false : (activeIdx > 0 && !regIsRecaptureMode);
@@ -2130,7 +2179,7 @@ async function runAuto20PoseCapture(fromRecapturePrompt = false) {
     }
 }
 
-async function submitCameraRegistration() {
+async function submitCameraRegistration(forceKeepUnverified = false) {
     const username = (document.getElementById('reg-cam-username')?.value || '').trim();
     const designation = (document.getElementById('reg-cam-desig')?.value || '').trim();
     const password = document.getElementById('reg-cam-password')?.value || '';
@@ -2145,7 +2194,8 @@ async function submitCameraRegistration() {
     }
 
     let summary = getRegCaptureSummary();
-    if (summary.captured < 20) {
+    const hadAll20BeforeCall = (summary.captured >= 20);
+    if (!hadAll20BeforeCall) {
         if (regAutoCaptureRunning && !window.__TEST_FACE_B64) {
             if (msgEl) {
                 msgEl.style.color = '#fdcb6e';
@@ -2160,6 +2210,11 @@ async function submitCameraRegistration() {
                 msgEl.style.color = '#fdcb6e';
                 msgEl.innerText = `Please complete all 20 clear face poses (currently ${summary.captured}/20) before saving.`;
             }
+            return;
+        }
+        // If auto-capture was triggered from this click and produced unverified (✗) poses, pause and show the recapture prompt!
+        if (summary.unverified > 0 && !forceKeepUnverified) {
+            evaluatePostCaptureUnverifiedPrompt();
             return;
         }
     }

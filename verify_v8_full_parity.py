@@ -97,11 +97,14 @@ def main():
     frames_20 = [load_real_face_b64(i) for i in range(20)]
     st, ext_frame = req("/api/v1/face/extract-frame", "POST", {"image_b64": frames_20[0], "pose_index": 0, "enforce_pose": True})
     assert st == 200 and ext_frame.get("dimension") == 512 and ext_frame.get("pose_verified") is True, f"Extract frame failed: {ext_frame}"
+    for req_field in ("quality_ok", "quality_reason", "brightness", "sharpness", "face_confidence"):
+        assert req_field in ext_frame, f"Missing required top-level field '{req_field}' in /api/v1/face/extract-frame: {ext_frame}"
+    assert ext_frame["quality_ok"] is True and ext_frame["quality_reason"] is None and ext_frame["brightness"] >= 38.0 and ext_frame["sharpness"] >= 32.0 and ext_frame["face_confidence"] >= 0.90
     base_yaw = ext_frame["pose_metrics"]["yaw_ratio"]
     l2_norm = sum(x * x for x in ext_frame["embedding"]) ** 0.5
-    print(f"[3/8] ONNX FaceNet512 Single-Frame Extracted: dim={ext_frame['dimension']}, L2_norm={l2_norm:.4f}, model={ext_frame['model']}, pose_metrics={ext_frame['pose_metrics']}")
+    print(f"[3/8] ONNX FaceNet512 Single-Frame Extracted: dim={ext_frame['dimension']}, L2_norm={l2_norm:.4f}, model={ext_frame['model']}, sharp={ext_frame['sharpness']:.1f}, bright={ext_frame['brightness']:.1f}, conf={ext_frame['face_confidence']:.3f}")
 
-    # Verify Pose 11/20 (pose_index=10: Turn head MORE to LEFT) rejects straight frontal & MORE_RIGHT, and accepts MORE_LEFT
+    # Verify Pose 11/20 (pose_index=10: Turn head MORE to LEFT) marks straight frontal & MORE_RIGHT as CROSS_MARKED_UNVERIFIED while saving 512-D embedding, and accepts MORE_LEFT or is_recapture=True as TICK_MARKED_VERIFIED
     st_p10_rej, p10_rej = req("/api/v1/face/extract-frame", "POST", {
         "image_b64": frames_20[0],
         "pose_index": 10,
@@ -109,7 +112,17 @@ def main():
         "baseline_yaw": base_yaw
     })
     assert st_p10_rej == 200 and p10_rej.get("pose_verified") is False, f"Expected frontal image to fail pose 10 (Turn MORE to LEFT): {p10_rej}"
-    assert p10_rej.get("quality_ok") is True and p10_rej.get("must_retake") is False and p10_rej.get("pose_status") == "CROSS_MARKED_UNVERIFIED" and len(p10_rej.get("embedding", [])) == 512, f"Expected clear unverified pose to still return 512-D embedding with CROSS_MARKED_UNVERIFIED: {p10_rej}"
+    assert p10_rej.get("quality_ok") is True and p10_rej.get("quality_reason") is None and p10_rej.get("must_retake") is False and p10_rej.get("pose_status") == "CROSS_MARKED_UNVERIFIED" and len(p10_rej.get("embedding", [])) == 512, f"Expected clear unverified pose to still return 512-D embedding with CROSS_MARKED_UNVERIFIED: {p10_rej}"
+
+    st_p10_recap, p10_recap = req("/api/v1/face/extract-frame", "POST", {
+        "image_b64": frames_20[0],
+        "pose_index": 10,
+        "enforce_pose": True,
+        "is_recapture": True,
+        "baseline_yaw": base_yaw
+    })
+    assert st_p10_recap == 200 and p10_recap.get("pose_verified") is True and p10_recap.get("pose_status") == "TICK_MARKED_VERIFIED" and len(p10_recap.get("embedding", [])) == 512, f"Expected recaptured clear frame to be marked TICK_MARKED_VERIFIED: {p10_recap}"
+
     with open("rust_deepFace/test_images/Anjelina Jolie/40.jpg", "rb") as f40:
         b64_40 = "data:image/jpeg;base64," + base64.b64encode(f40.read()).decode("ascii")
     with open("rust_deepFace/test_images/Anjelina Jolie/face9.jpg", "rb") as f9:
@@ -135,7 +148,7 @@ def main():
         "baseline_yaw": base_yaw
     })
     assert st_p11_ok == 200 and p11_ok.get("pose_verified") is True and p11_ok.get("detected_pose") == "MORE_RIGHT" and p11_ok.get("pose_status") == "TICK_MARKED_VERIFIED", f"Expected MORE_RIGHT image 40.jpg to pass pose 11 (Turn MORE to RIGHT): {p11_ok}"
-    print(f"      20-Pose MTCNN 5-Landmark Directional Verification + Continuous Capture (✓/✗) Confirmed: Unverified clear frame saved with 512-D embedding ({p10_rej.get('pose_status')}); MORE_LEFT ({p10_ok.get('detected_pose')}) and MORE_RIGHT ({p11_ok.get('detected_pose')}) verified ({p10_ok.get('pose_status')}).")
+    print(f"      20-Pose MTCNN 5-Landmark Directional Verification + Continuous Capture (✓/✗) + Recapture Confirmed!")
 
     st, reg_cam = req("/api/v1/users", "POST", {
         "username": "ONNX_CAM_USER",
@@ -202,18 +215,18 @@ def main():
     st, emb_rep = req("/api/v1/face/embeddings-report")
     assert st == 200 and "report" in emb_rep and "faiss_index" in emb_rep, f"Embeddings report failed: {emb_rep}"
     st_fi, fi_rep = req("/api/v1/face/faiss-index/inspect")
-    assert st_fi == 200 and fi_rep.get("dimension") == 512, f"FAISS index inspect failed: {fi_rep}"
+    assert st_fi == 200 and fi_rep.get("faiss_index", {}).get("dimension") == 512, f"FAISS index inspect failed: {fi_rep}"
     st_csv1, csv_analysis = req("/api/v1/face/embeddings-report.csv")
-    assert st_csv1 == 200 and "Username,Image_Path,Number_of_Embeddings_Generated" in str(csv_analysis), f"Embeddings analysis CSV failed: {csv_analysis}"
+    assert st_csv1 == 200 and "Username,Image_Name,Number_of_Embeddings_Generated" in str(csv_analysis), f"Embeddings analysis CSV failed: {csv_analysis}"
     st_csv2, csv_summary = req("/api/v1/face/embeddings-summary.csv")
     assert st_csv2 == 200 and "Username,Total_Images,Number_of_Embeddings_Generated" in str(csv_summary), f"Embeddings summary CSV failed: {csv_summary}"
     st_csv3, csv_vectors = req("/api/v1/face/embeddings-vectors.csv")
-    assert st_csv3 == 200 and "FAISS_Index_ID,Username,Pose_Slot,Dimension,L2_Norm,dim_0" in str(csv_vectors), f"Embeddings vectors CSV failed: {csv_vectors}"
+    assert st_csv3 == 200 and "FAISS_Row_ID,Username,Image_Name,Dimension,L2_Norm,dim_0" in str(csv_vectors), f"Embeddings vectors CSV failed: {csv_vectors}"
     st, ver_imgs = req("/api/v1/reports/verify-images")
     assert st == 200 and "items" in ver_imgs, f"Verify images failed: {ver_imgs}"
     st, stats = req("/api/v1/attendance/user-stats/ONNX_CAM_USER")
     assert st == 200 and "total_lates" in stats, f"User stats failed: {stats}"
-    print(f"[8/8] HR Reports & FAISS Index Verified: Embeddings Report ({emb_rep['total_records']} records, FAISS ntotal={fi_rep.get('total_enrolled_vectors')}), 3 CSV Exports OK, Verify Images ({ver_imgs['total_found']} records), Monthly Stats ({stats})")
+    print(f"[8/8] HR Reports & FAISS Index Verified: Embeddings Report ({emb_rep['total_records']} records, FAISS ntotal={fi_rep['faiss_index'].get('ntotal_in_ram')}), 3 CSV Exports OK, Verify Images ({ver_imgs['total_found']} records), Monthly Stats ({stats})")
 
     # Clean up temporary verification users & test company so production DB stays clean
     for temp_user in ("ONNX_CAM_USER", "NOCAM_USER_01", "QR_USER_01"):

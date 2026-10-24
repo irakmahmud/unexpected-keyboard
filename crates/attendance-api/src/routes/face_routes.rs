@@ -819,6 +819,8 @@ pub struct SingleImagePayload {
     #[serde(default)]
     pub enforce_pose: Option<bool>,
     #[serde(default)]
+    pub is_recapture: Option<bool>,
+    #[serde(default)]
     pub baseline_yaw: Option<f32>,
     #[serde(default)]
     pub baseline_pitch: Option<f32>,
@@ -871,7 +873,7 @@ async fn handle_extract_frame(
     let (emb, det, dims) = match attendance_face::extract_face_embedding_with_detection(&df_state, &bytes) {
         Ok(res) => res,
         Err(face_err) => {
-            let img_quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
+            let mut img_quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
             let (reason_code, msg) = match &face_err {
                 attendance_face::FaceError::MultipleFacesDetected(n) => (
                     "MULTIPLE_FACES",
@@ -898,10 +900,15 @@ async fn handle_extract_frame(
                                     q.sharpness
                                 ),
                             )
-                        } else {
+                        } else if q.is_unclear {
                             (
                                 "FACE_NOT_CLEAR",
-                                "Face is not clear or not detected — Keep your face clearly visible inside the camera frame and retake! (চেহারা স্পষ্ট নয় বা শনাক্ত হয়নি — ক্যামেরার ফ্রেমে স্পষ্টভাবে মুখ রেখে পুনরায় ছবি তুলুন)".to_string(),
+                                "Face is not clear or low contrast — Keep your face clearly visible inside the camera frame and retake! (চেহারা স্পষ্ট নয় — ক্যামেরার ফ্রেমে স্পষ্টভাবে মুখ রেখে পুনরায় ছবি তুলুন)".to_string(),
+                            )
+                        } else {
+                            (
+                                "NO_FACE",
+                                "No face detected in frame — Position your face clearly in front of the camera and retake! (কোনো মুখ শনাক্ত হয়নি — ক্যামেরার সামনে মুখ রেখে পুনরায় ছবি তুলুন)".to_string(),
                             )
                         }
                     } else {
@@ -913,6 +920,16 @@ async fn handle_extract_frame(
                 }
             };
 
+            let (bright_val, sharp_val) = if let Some(ref mut q) = img_quality {
+                q.quality_ok = false;
+                q.passes_quality_gate = false;
+                q.face_confidence = 0.0;
+                q.quality_reason = Some(reason_code.to_string());
+                (q.brightness, q.sharpness)
+            } else {
+                (0.0_f32, 0.0_f32)
+            };
+
             let body = Json(serde_json::json!({
                 "success": false,
                 "face_detected": false,
@@ -920,6 +937,9 @@ async fn handle_extract_frame(
                 "quality_ok": false,
                 "must_retake": true,
                 "quality_reason": reason_code,
+                "brightness": bright_val,
+                "sharpness": sharp_val,
+                "face_confidence": 0.0_f32,
                 "error": msg,
                 "message": msg,
                 "quality": img_quality
@@ -1185,6 +1205,10 @@ async fn handle_extract_frame(
         "mouth_width_ratio": mouth_width_ratio
     });
 
+    let bright_val = quality.as_ref().map(|q| q.brightness).unwrap_or(100.0);
+    let sharp_val = quality.as_ref().map(|q| q.sharpness).unwrap_or(100.0);
+    let face_conf_val = det.confidence;
+
     // Hard Quality Gate: If image is blurry, dark/black, or face is not clear, MUST retake!
     if let Some(ref q) = quality {
         if !q.passes_quality_gate {
@@ -1214,13 +1238,16 @@ async fn handle_extract_frame(
                 )
             };
 
-            return Ok(Json(serde_json::json!({
+            let body = Json(serde_json::json!({
                 "success": false,
                 "face_detected": true,
                 "pose_verified": false,
                 "quality_ok": false,
                 "must_retake": true,
                 "quality_reason": reason_code,
+                "brightness": bright_val,
+                "sharpness": sharp_val,
+                "face_confidence": face_conf_val,
                 "pose_index": pose_idx,
                 "expected_pose": expected_pose,
                 "detected_pose": detected_pose,
@@ -1231,12 +1258,21 @@ async fn handle_extract_frame(
                 "detection_score": det.confidence,
                 "landmarks": det.landmarks,
                 "quality": quality
-            }))
-            .into_response());
+            }));
+            return Ok((axum::http::StatusCode::UNPROCESSABLE_ENTITY, body).into_response());
         }
     }
 
-    if payload.enforce_pose.unwrap_or(false) && !pose_verified {
+    let enforce_pose = payload.enforce_pose.unwrap_or_else(|| payload.pose_index.is_some());
+    let final_pose_verified = if payload.is_recapture.unwrap_or(false) {
+        true
+    } else if enforce_pose {
+        pose_verified
+    } else {
+        true
+    };
+
+    if !final_pose_verified {
         let err_msg = format!(
             "Pose angle skipped (marked ✗) — {} [Current: {}, Yaw: {:+.1}°, Pitch: {:+.1}°, Roll: {:+.1}°]",
             guidance, detected_pose, yaw_deg, pitch_deg, roll_deg
@@ -1245,6 +1281,10 @@ async fn handle_extract_frame(
             "success": false,
             "face_detected": true,
             "quality_ok": true,
+            "quality_reason": serde_json::Value::Null,
+            "brightness": bright_val,
+            "sharpness": sharp_val,
+            "face_confidence": face_conf_val,
             "must_retake": false,
             "pose_verified": false,
             "pose_status": "CROSS_MARKED_UNVERIFIED",
@@ -1270,6 +1310,10 @@ async fn handle_extract_frame(
         "success": true,
         "face_detected": true,
         "quality_ok": true,
+        "quality_reason": serde_json::Value::Null,
+        "brightness": bright_val,
+        "sharpness": sharp_val,
+        "face_confidence": face_conf_val,
         "must_retake": false,
         "pose_verified": true,
         "pose_status": "TICK_MARKED_VERIFIED",
