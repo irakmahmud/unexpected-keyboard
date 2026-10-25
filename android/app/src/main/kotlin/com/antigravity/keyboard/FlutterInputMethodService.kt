@@ -39,6 +39,16 @@ class FlutterInputMethodService : InputMethodService() {
         const val DEFAULT_LONG_PRESS_MS = 400
     }
 
+    override fun onEvaluateFullscreenMode(): Boolean = false
+
+    override fun onComputeInsets(outInsets: Insets) {
+        super.onComputeInsets(outInsets)
+        if (!isFullscreenMode) {
+            outInsets.contentTopInsets = outInsets.visibleTopInsets
+            outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_CONTENT
+        }
+    }
+
     override fun onCreateInputView(): View {
         val view = NativeKeyboardView(this, this)
         keyboardView = view
@@ -46,8 +56,18 @@ class FlutterInputMethodService : InputMethodService() {
         return view
     }
 
+    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        try {
+            currentInputConnection?.finishComposingText()
+        } catch (_: Exception) {}
+    }
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        try {
+            currentInputConnection?.finishComposingText()
+        } catch (_: Exception) {}
         keyboardView?.reloadConfigFromPrefs()
     }
 
@@ -105,12 +125,18 @@ class FlutterInputMethodService : InputMethodService() {
                 return
             }
         }
+        try {
+            ic.finishComposingText()
+        } catch (_: Exception) {}
         ic.commitText(text, 1)
     }
 
     fun replaceLastTextImmediate(text: String) {
         val ic: InputConnection = currentInputConnection ?: return
         ic.beginBatchEdit()
+        try {
+            ic.finishComposingText()
+        } catch (_: Exception) {}
         ic.deleteSurroundingText(1, 0)
         ic.commitText(text, 1)
         ic.endBatchEdit()
@@ -119,6 +145,9 @@ class FlutterInputMethodService : InputMethodService() {
     fun sendBackspaceImmediate() {
         val ic: InputConnection? = currentInputConnection
         if (ic != null) {
+            try {
+                ic.finishComposingText()
+            } catch (_: Exception) {}
             val selected = ic.getSelectedText(0)
             if (!selected.isNullOrEmpty()) {
                 ic.commitText("", 1)
@@ -133,8 +162,25 @@ class FlutterInputMethodService : InputMethodService() {
     fun sendEnterImmediate() {
         val ic: InputConnection? = currentInputConnection
         val info = currentInputEditorInfo
+        val inputType = info?.inputType ?: EditorInfo.TYPE_NULL
+        if (ic != null && inputType != EditorInfo.TYPE_NULL) {
+            try {
+                ic.finishComposingText()
+            } catch (_: Exception) {}
+            // Always insert a literal newline "\n" so the keyboard NEVER hides
+            // (calling performEditorAction(IME_ACTION_DONE) closes the keyboard, and
+            // sending raw KEYCODE_ENTER in WebViews/chat boxes clears/submits the message!)
+            ic.commitText("\n", 1)
+        } else {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
+        }
+    }
+
+    fun sendEditorActionImmediate() {
+        val ic: InputConnection? = currentInputConnection
+        val info = currentInputEditorInfo
         val action = info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_UNSPECIFIED
-        if (ic != null && action != EditorInfo.IME_ACTION_UNSPECIFIED && action != EditorInfo.IME_ACTION_NONE) {
+        if (ic != null && action != EditorInfo.IME_ACTION_UNSPECIFIED && action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_DONE) {
             ic.performEditorAction(action)
         } else {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
@@ -488,6 +534,7 @@ class NativeKeyboardView(
     )
 
     fun reloadConfigFromPrefs() {
+        val prevHeightPx = calculateTotalHeightPx()
         keyHeightDp = service.getSavedKeyHeightDp()
         longPressMs = service.getSavedLongPressMs()
         themeMode = service.getSavedThemeMode()
@@ -496,7 +543,9 @@ class NativeKeyboardView(
         if (width > 0) {
             rebuildHitRects(width.toFloat())
         }
-        requestLayout()
+        if (calculateTotalHeightPx() != prevHeightPx || height == 0) {
+            requestLayout()
+        }
         invalidate()
     }
 
@@ -550,7 +599,7 @@ class NativeKeyboardView(
     private fun calculateTotalHeightPx(): Int {
         val modH = (keyHeightDp * 0.85f).coerceIn(36.0f, 68.0f)
         val resizeH = if (isResizeBarOpen) 72.0f else 0.0f
-        val totalDp = 6.0f * keyHeightDp + modH + resizeH + 2.0f
+        val totalDp = 6.0f * keyHeightDp + modH + resizeH + 8.0f
         return dp(totalDp).toInt()
     }
 
