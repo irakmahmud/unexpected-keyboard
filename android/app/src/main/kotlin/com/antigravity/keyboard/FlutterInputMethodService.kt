@@ -32,7 +32,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val DEFAULT_KEY_HEIGHT_DP = 46.0f
-        private const val DEFAULT_TOTAL_HEIGHT_DP = 313
+        private const val DEFAULT_TOTAL_HEIGHT_DP = 319
     }
 
     override fun onCreate() {
@@ -51,9 +51,12 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
             val bundlePath = loader.findAppBundlePath()
             val entrypoint = DartExecutor.DartEntrypoint(bundlePath, "keyboardMain")
             flutterEngine?.dartExecutor?.executeDartEntrypoint(entrypoint)
+            flutterEngine?.lifecycleChannel?.appIsResumed()
 
             methodChannel = MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL_NAME)
             methodChannel?.setMethodCallHandler(this)
+        } else {
+            flutterEngine?.lifecycleChannel?.appIsResumed()
         }
     }
 
@@ -64,7 +67,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     private fun getSavedTotalHeightDp(): Int {
         val keyH = getSavedKeyHeightDp()
-        val modifierH = (keyH * 0.72f).coerceIn(28.0f, 68.0f)
+        val modifierH = (keyH * 0.85f).coerceIn(36.0f, 68.0f)
         val minForSixRows = (6.0f * keyH + modifierH + 4.0f).toInt()
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = prefs.getInt(KEY_TOTAL_HEIGHT_DP, DEFAULT_TOTAL_HEIGHT_DP)
@@ -104,9 +107,15 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
         } else {
             (flutterView?.parent as? ViewGroup)?.removeView(flutterView)
         }
+        flutterEngine?.lifecycleChannel?.appIsResumed()
 
         applyKeyboardHeightDp(getSavedTotalHeightDp())
         return flutterView!!
+    }
+
+    override fun onWindowShown() {
+        super.onWindowShown()
+        flutterEngine?.lifecycleChannel?.appIsResumed()
     }
 
     override fun onComputeInsets(outInsets: Insets) {
@@ -121,6 +130,7 @@ class FlutterInputMethodService : InputMethodService(), MethodChannel.MethodCall
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        flutterEngine?.lifecycleChannel?.appIsResumed()
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedKeyHeight = getSavedKeyHeightDp()
         val savedTotalDp = getSavedTotalHeightDp()

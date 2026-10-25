@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show FontVariation;
 import 'package:flutter/material.dart';
 import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
@@ -161,7 +160,6 @@ class _KeyWidgetState extends State<KeyWidget> {
                     color: widget.theme.backgroundColor,
                     fontSize: label.length > 2 ? 16.0 : 30.0,
                     fontWeight: FontWeight.w100,
-                    fontVariations: const [FontVariation('wght', 100.0)],
                   ),
                 ),
               ),
@@ -300,41 +298,35 @@ class _KeyWidgetState extends State<KeyWidget> {
         ? key.primary.toUpperCase()
         : key.primary;
 
-    // Zero gaps between keys + raw Listener for 0.0ms touch-down latency + RepaintBoundary
+    // Zero gaps between keys + raw Listener for 0.0ms touch-down latency (no RepaintBoundary/FittedBox texture stall)
     return Expanded(
       flex: (key.flex * 10).round(),
-      child: RepaintBoundary(
-        child: Listener(
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: _handlePointerDown,
-          onPointerMove: _handlePointerMove,
-          onPointerUp: _handlePointerUp,
-          onPointerCancel: _handlePointerCancel,
-          child: Container(
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
+        onPointerMove: _handlePointerMove,
+        onPointerUp: _handlePointerUp,
+        onPointerCancel: _handlePointerCancel,
+        child: Container(
           height: widget.height,
           decoration: BoxDecoration(
             color: bgColor,
             border: Border.all(
-              color: theme.modifierInactiveColor.withOpacity(0.85),
-              width: 0.5,
+              color: isActiveModifier ? theme.accentColor : theme.modifierInactiveColor.withOpacity(0.85),
+              width: isActiveModifier ? 1.0 : 0.5,
             ),
           ),
           child: Stack(
             alignment: Alignment.center,
             fit: StackFit.expand,
             children: [
-              // Primary Center Character / Icon (5x font size 90.0 scaled via FittedBox & strictly middle-aligned)
-              Positioned.fill(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
-                    child: _buildMiddleAlignedPrimaryContent(
-                      key: key,
-                      displayPrimary: displayPrimary,
-                      theme: theme,
-                      isActiveModifier: isActiveModifier,
-                    ),
-                  ),
+              // Primary Center Character / Icon (Direct fast Text layout without FittedBox or FontVariation overhead)
+              Center(
+                child: _buildMiddleAlignedPrimaryContent(
+                  key: key,
+                  displayPrimary: displayPrimary,
+                  theme: theme,
+                  isActiveModifier: isActiveModifier,
                 ),
               ),
 
@@ -351,7 +343,6 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -371,7 +362,6 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -403,7 +393,6 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -423,7 +412,6 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        fontVariations: const [FontVariation('wght', 100.0)],
                         color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : theme.cornerTextColor,
                       ),
                     ),
@@ -433,8 +421,7 @@ class _KeyWidgetState extends State<KeyWidget> {
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildMiddleAlignedPrimaryContent({
@@ -446,74 +433,62 @@ class _KeyWidgetState extends State<KeyWidget> {
     final Color fgColor = isActiveModifier ? Colors.white : theme.primaryTextColor;
 
     if (key.actionType == KeyActionType.openSettings) {
-      return FittedBox(
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.settings_outlined,
-          size: 48.0,
+      return Icon(
+        Icons.settings_outlined,
+        size: (widget.height * 0.52).clamp(16.0, 36.0),
+        color: fgColor,
+      );
+    }
+
+    if (key.actionType == KeyActionType.space) {
+      return Text(
+        '␣',
+        textAlign: TextAlign.center,
+        textHeightBehavior: const TextHeightBehavior(
+          applyHeightToFirstAscent: false,
+          applyHeightToLastDescent: false,
+        ),
+        style: TextStyle(
+          fontFamily: 'sans-serif-thin',
+          fontSize: (widget.height * 0.68).clamp(22.0, 82.0),
+          height: 1.0,
+          fontWeight: FontWeight.w100,
           color: fgColor,
         ),
       );
     }
 
-    if (key.actionType == KeyActionType.space) {
-      return FittedBox(
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
-        child: Text(
-          '␣',
-          textAlign: TextAlign.center,
-          textHeightBehavior: const TextHeightBehavior(
-            applyHeightToFirstAscent: false,
-            applyHeightToLastDescent: false,
-          ),
-          style: TextStyle(
-            fontFamily: 'sans-serif-thin',
-            fontSize: 90.0, // 5x size increase (18.0 * 5 = 90.0) with ultra-thin line stroke
-            height: 1.0,
-            fontWeight: FontWeight.w100,
-            fontVariations: const [FontVariation('wght', 100.0)],
-            color: fgColor,
-          ),
-        ),
-      );
-    }
-
-    // 5x letter size increase (18.0 * 5 = 90.0) with ultra-thin hairline stroke (FontWeight.w100 / sans-serif-thin)
     final bool isMultiCharLabel = displayPrimary.length > 1;
-    final double targetFontSize = isMultiCharLabel ? 57.5 : 90.0;
+    final double computedFontSize = isMultiCharLabel
+        ? (widget.height * 0.34).clamp(11.0, 26.0)
+        : (widget.height * 0.72).clamp(24.0, 88.0);
     final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
 
     Widget textWidget = Text(
       displayPrimary,
       textAlign: TextAlign.center,
+      maxLines: 1,
+      softWrap: false,
       textHeightBehavior: const TextHeightBehavior(
         applyHeightToFirstAscent: false,
         applyHeightToLastDescent: false,
       ),
       style: TextStyle(
         fontFamily: isMultiCharLabel ? 'sans-serif' : 'sans-serif-thin',
-        fontSize: targetFontSize,
+        fontSize: computedFontSize,
         height: 1.0,
-        fontWeight: isMultiCharLabel ? FontWeight.w400 : FontWeight.w100,
-        fontVariations: isMultiCharLabel ? null : const [FontVariation('wght', 100.0)],
+        fontWeight: isMultiCharLabel ? FontWeight.w600 : FontWeight.w100,
         color: fgColor,
       ),
     );
 
     if (isLowPunctuation) {
-      // Shift comma and dot upward so the glyph sits in the exact visual middle of the button
       textWidget = Transform.translate(
-        offset: const Offset(0, -18.0),
+        offset: Offset(0, -widget.height * 0.16),
         child: textWidget,
       );
     }
 
-    return FittedBox(
-      fit: BoxFit.contain,
-      alignment: Alignment.center,
-      child: textWidget,
-    );
+    return textWidget;
   }
 }

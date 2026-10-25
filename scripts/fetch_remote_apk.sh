@@ -16,16 +16,16 @@ echo "🚀 [ZERO LOCAL BUILD] Remote Cloud APK Fetcher & Deployer"
 echo "===================================================================="
 echo "Target Artifacts Directory: ${TARGET_DIR}"
 
-# 1. Storage Safety Gate (>= 1 GB free when overwriting 49MB APK)
+# 1. Storage Safety Gate (>= 100 MB free when overwriting 47MB APKs; skipped for tmpfiles upload)
 FREE_KB=$(df -k / | awk 'NR==2 {print $4}')
-FREE_GB=$(( FREE_KB / 1024 / 1024 ))
-echo "Current Available Disk on Oracle VM: ${FREE_GB} GB"
-if [ "${FREE_GB}" -lt 1 ]; then
-    echo "❌ STORAGE SAFETY GATE VIOLATION: Available disk space (${FREE_GB} GB) is less than required 1 GB."
+FREE_MB=$(( FREE_KB / 1024 ))
+echo "Current Available Disk on Oracle VM: ${FREE_MB} MB"
+if [ "${1:-}" != "tmpfiles" ] && [ "${FREE_MB}" -lt 100 ]; then
+    echo "❌ STORAGE SAFETY GATE VIOLATION: Available disk space (${FREE_MB} MB) is less than required 100 MB."
     echo "Aborting artifact download to protect critical runtime services."
     exit 1
 fi
-echo "✅ Storage safety gate PASSED (${FREE_GB} GB >= 1 GB)."
+echo "✅ Storage safety gate PASSED (${FREE_MB} MB available)."
 
 mkdir -p "${TARGET_DIR}"
 

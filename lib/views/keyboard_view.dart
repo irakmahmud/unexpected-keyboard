@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
 import '../models/keyboard_layout.dart';
@@ -32,7 +33,11 @@ class _KeyboardViewState extends State<KeyboardView> {
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
   late double _localKeyHeight;
-  DateTime? _lastLayoutSwitchTime;
+
+  void _forceImmediateFrame() {
+    SchedulerBinding.instance.ensureVisualUpdate();
+    SchedulerBinding.instance.scheduleForcedFrame();
+  }
 
   double get _effectiveKeyHeight =>
       ImeChannelService.clampKeyHeight(widget.keyHeight ?? _localKeyHeight);
@@ -110,6 +115,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -128,6 +134,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -136,6 +143,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -144,11 +152,11 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
       case KeyActionType.shift:
-        widget.imeService.triggerHaptic();
         setState(() {
           if (!widget.imeService.isShiftActive) {
             widget.imeService.isShiftActive = true;
@@ -160,27 +168,32 @@ class _KeyboardViewState extends State<KeyboardView> {
             widget.imeService.isCapsLock = false;
           }
         });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.ctrl:
-        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isCtrlActive = !widget.imeService.isCtrlActive;
         });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.alt:
-        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isAltActive = !widget.imeService.isAltActive;
         });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.meta:
-        widget.imeService.triggerHaptic();
         setState(() {
           widget.imeService.isMetaActive = !widget.imeService.isMetaActive;
         });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.arrowLeft:
@@ -188,6 +201,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -196,6 +210,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -204,6 +219,7 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
@@ -212,22 +228,18 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         if (hadSingleUseModifier) {
           setState(() {});
+          _forceImmediateFrame();
         }
         break;
 
       case KeyActionType.switchLayout:
-        final now = DateTime.now();
-        if (_lastLayoutSwitchTime != null &&
-            now.difference(_lastLayoutSwitchTime!).inMilliseconds < 120) {
-          break;
-        }
-        _lastLayoutSwitchTime = now;
-        widget.imeService.triggerHaptic();
         setState(() {
           _currentLayout = (_currentLayout == LayoutType.qwerty)
               ? LayoutType.symbols
               : LayoutType.qwerty;
         });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
         break;
 
       case KeyActionType.openSettings:

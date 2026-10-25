@@ -82,7 +82,7 @@ class ImeChannelService {
     final clamped = clampKeyHeight(keyHeight);
     // 6 rows (Row 0 Number Row + 4 Letter Rows + 1 Bottom Row) with zero vertical gaps
     final rowsHeight = 6.0 * clamped;
-    final modifierBarHeight = showTerminalBar ? (clamped * 0.72).clamp(28.0, 68.0) : 0.0;
+    final modifierBarHeight = showTerminalBar ? (clamped * 0.85).clamp(36.0, 68.0) : 0.0;
     final resizeBarHeight = showResizeBar ? 40.0 : 0.0;
     return (rowsHeight + modifierBarHeight + resizeBarHeight + 4.0).round();
   }

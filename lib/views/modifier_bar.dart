@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
 import '../models/keyboard_layout.dart';
 import '../themes/keyboard_theme.dart';
@@ -37,7 +38,7 @@ class ModifierBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keys = KeyboardLayout.terminalBarKeys;
-    final barButtonHeight = (keyHeight * 0.72).clamp(28.0, 68.0);
+    final barButtonHeight = (keyHeight * 0.85).clamp(36.0, 68.0);
 
     return Container(
       height: barButtonHeight,
@@ -46,21 +47,53 @@ class ModifierBar extends StatelessWidget {
       child: Row(
         children: [
           ...keys.map((key) {
-            final effectiveKey = (key.actionType == KeyActionType.switchLayout && isSymbolLayout)
+            final bool isLayoutSwitch = key.actionType == KeyActionType.switchLayout;
+            final KeyModel effectiveKey = (isLayoutSwitch && isSymbolLayout)
                 ? KeyModel(
                     primary: 'ABC',
                     actionType: KeyActionType.switchLayout,
                     flex: key.flex,
                   )
                 : key;
-            return KeyWidget(
-              keyModel: effectiveKey,
-              theme: theme,
-              onKeyPress: onKeyPress,
-              isShiftActive: isShiftActive,
-              isCtrlActive: isCtrlActive,
-              isAltActive: isAltActive,
-              height: barButtonHeight,
+
+            bool isActive = false;
+            if (effectiveKey.actionType == KeyActionType.shift && isShiftActive) isActive = true;
+            if (effectiveKey.actionType == KeyActionType.ctrl && isCtrlActive) isActive = true;
+            if (effectiveKey.actionType == KeyActionType.alt && isAltActive) isActive = true;
+            if (isLayoutSwitch && isSymbolLayout) isActive = true;
+
+            return Expanded(
+              flex: (effectiveKey.flex * 10).round(),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) => onKeyPress(effectiveKey, GestureDirection.center),
+                child: Container(
+                  height: barButtonHeight,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isActive ? theme.modifierActiveColor : theme.keyBackgroundColor,
+                    border: Border.all(
+                      color: isActive ? theme.accentColor : theme.modifierInactiveColor.withOpacity(0.85),
+                      width: isActive ? 1.2 : 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    effectiveKey.primary,
+                    maxLines: 1,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'sans-serif',
+                      fontSize: effectiveKey.primary.length > 1
+                          ? (barButtonHeight * 0.34).clamp(11.5, 20.0)
+                          : (barButtonHeight * 0.46).clamp(15.0, 26.0),
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                      color: isActive ? Colors.white : theme.primaryTextColor,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
             );
           }),
           if (onSwitchKeyboard != null)
