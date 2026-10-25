@@ -82,7 +82,7 @@ class FlutterInputMethodService : InputMethodService() {
     }
 
     fun commitTextImmediate(text: String, metaState: Int, useModifiers: Boolean) {
-        val ic: InputConnection? = currentInputConnection ?: return
+        val ic: InputConnection = currentInputConnection ?: return
         if (useModifiers && text.isNotEmpty()) {
             val keyCode = charToKeyCode(text[0])
             if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
@@ -96,7 +96,7 @@ class FlutterInputMethodService : InputMethodService() {
     }
 
     fun replaceLastTextImmediate(text: String) {
-        val ic: InputConnection? = currentInputConnection ?: return
+        val ic: InputConnection = currentInputConnection ?: return
         ic.beginBatchEdit()
         ic.deleteSurroundingText(1, 0)
         ic.commitText(text, 1)
