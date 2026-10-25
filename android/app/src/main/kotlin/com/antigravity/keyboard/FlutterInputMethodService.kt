@@ -346,46 +346,97 @@ class NativeKeyboardView(
         NativeKeySpec("0", ")", "]", "}", "»")
     )
 
+    /* ============================================================================
+     * VERSION 1 SAVED ALIGNMENT (Tag: version-1 / v1.1.5)
+     * Uncomment this block and comment out VERSION 2 below to revert to Version 1:
+     *
+     * private val qwertyRows = listOf(
+     *     numberRow,
+     *     listOf(
+     *         NativeKeySpec("q", "1", "`", "~", "\\"),
+     *         NativeKeySpec("w", "2", "|", "<", ">"),
+     *         NativeKeySpec("e", "3", "€", "{", "}"),
+     *         NativeKeySpec("r", "4", "₹", "[", "]"),
+     *         NativeKeySpec("t", "5", "%", "(", ")"),
+     *         NativeKeySpec("y", "6", "^", "=", "+")
+     *     ),
+     *     listOf(
+     *         NativeKeySpec("a", "@", "!", "#", "$"),
+     *         NativeKeySpec("s", "#", "$", "%", "^"),
+     *         NativeKeySpec("d", "$", "%", "&", "*"),
+     *         NativeKeySpec("f", "%", "^", "_", "+"),
+     *         NativeKeySpec("g", "&", "*", "-", "="),
+     *         NativeKeySpec("h", "-", "_", ":", ";")
+     *     ),
+     *     listOf(
+     *         NativeKeySpec("z", "*", "/", "\\", "|"),
+     *         NativeKeySpec("x", "\"", "'", "`", "~"),
+     *         NativeKeySpec("c", "'", "`", "©", "¢"),
+     *         NativeKeySpec("v", ":", ";", "•", "°"),
+     *         NativeKeySpec("b", ";", ":", "§", "¶"),
+     *         NativeKeySpec("n", "!", "?", "¿", "¡")
+     *     ),
+     *     listOf(
+     *         NativeKeySpec("u", "7", "&", "-", "_"),
+     *         NativeKeySpec("i", "8", "*", "/", "*"),
+     *         NativeKeySpec("j", "+", "=", "\"", "'"),
+     *         NativeKeySpec("k", "(", ")", "<", ">"),
+     *         NativeKeySpec("m", "?", "!", "«", "»"),
+     *         NativeKeySpec("o", "9", "(", "[", "]")
+     *     ),
+     *     listOf(
+     *         NativeKeySpec(",", "<", ";", "[", "{"),
+     *         NativeKeySpec(".", ":", ">", "}", "]"),
+     *         NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
+     *         NativeKeySpec("p", "0", ")", "{", "}"),
+     *         NativeKeySpec("l", ")", ":", "[", "]"),
+     *         NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
+     *         NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+     *     )
+     * )
+     * ============================================================================ */
+
+    // VERSION 2 ACTIVE ALIGNMENT: Sequential Alphabetical (a, b, c, d ... y, z)
     private val qwertyRows = listOf(
         numberRow,
         listOf(
-            NativeKeySpec("q", "1", "`", "~", "\\"),
-            NativeKeySpec("w", "2", "|", "<", ">"),
-            NativeKeySpec("e", "3", "€", "{", "}"),
-            NativeKeySpec("r", "4", "₹", "[", "]"),
-            NativeKeySpec("t", "5", "%", "(", ")"),
-            NativeKeySpec("y", "6", "^", "=", "+")
+            NativeKeySpec("a", "1", "`", "~", "\\"),
+            NativeKeySpec("b", "2", "|", "<", ">"),
+            NativeKeySpec("c", "3", "€", "{", "}"),
+            NativeKeySpec("d", "4", "₹", "[", "]"),
+            NativeKeySpec("e", "5", "%", "(", ")"),
+            NativeKeySpec("f", "6", "^", "=", "+")
         ),
         listOf(
-            NativeKeySpec("a", "@", "!", "#", "$"),
-            NativeKeySpec("s", "#", "$", "%", "^"),
-            NativeKeySpec("d", "$", "%", "&", "*"),
-            NativeKeySpec("f", "%", "^", "_", "+"),
-            NativeKeySpec("g", "&", "*", "-", "="),
-            NativeKeySpec("h", "-", "_", ":", ";")
+            NativeKeySpec("g", "@", "!", "#", "$"),
+            NativeKeySpec("h", "#", "$", "%", "^"),
+            NativeKeySpec("i", "$", "%", "&", "*"),
+            NativeKeySpec("j", "%", "^", "_", "+"),
+            NativeKeySpec("k", "&", "*", "-", "="),
+            NativeKeySpec("l", "-", "_", ":", ";")
         ),
         listOf(
-            NativeKeySpec("z", "*", "/", "\\", "|"),
-            NativeKeySpec("x", "\"", "'", "`", "~"),
-            NativeKeySpec("c", "'", "`", "©", "¢"),
-            NativeKeySpec("v", ":", ";", "•", "°"),
-            NativeKeySpec("b", ";", ":", "§", "¶"),
-            NativeKeySpec("n", "!", "?", "¿", "¡")
+            NativeKeySpec("m", "*", "/", "\\", "|"),
+            NativeKeySpec("n", "\"", "'", "`", "~"),
+            NativeKeySpec("o", "'", "`", "©", "¢"),
+            NativeKeySpec("p", ":", ";", "•", "°"),
+            NativeKeySpec("q", ";", ":", "§", "¶"),
+            NativeKeySpec("r", "!", "?", "¿", "¡")
         ),
         listOf(
-            NativeKeySpec("u", "7", "&", "-", "_"),
-            NativeKeySpec("i", "8", "*", "/", "*"),
-            NativeKeySpec("j", "+", "=", "\"", "'"),
-            NativeKeySpec("k", "(", ")", "<", ">"),
-            NativeKeySpec("m", "?", "!", "«", "»"),
-            NativeKeySpec("o", "9", "(", "[", "]")
+            NativeKeySpec("s", "7", "&", "-", "_"),
+            NativeKeySpec("t", "8", "*", "/", "*"),
+            NativeKeySpec("u", "+", "=", "\"", "'"),
+            NativeKeySpec("v", "(", ")", "<", ">"),
+            NativeKeySpec("w", "?", "!", "«", "»"),
+            NativeKeySpec("x", "9", "(", "[", "]")
         ),
         listOf(
             NativeKeySpec(",", "<", ";", "[", "{"),
             NativeKeySpec(".", ":", ">", "}", "]"),
             NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
-            NativeKeySpec("p", "0", ")", "{", "}"),
-            NativeKeySpec("l", ")", ":", "[", "]"),
+            NativeKeySpec("y", "0", ")", "{", "}"),
+            NativeKeySpec("z", ")", ":", "[", "]"),
             NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
             NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
         )
