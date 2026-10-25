@@ -549,9 +549,9 @@ class NativeKeyboardView(
     // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
     // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
     // Row 2: [ #50/#51 (8/9) | #49/#50 (//8) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
-    // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #3 (⌫) ]
-    // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #5 (r) ]
-    // Row 5: [ #39/#40 ("/3) | #21 (↵) | #6 (o) | #1 (Space) | #7 (i) ]
+    // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #5 (r — moved up!) ]
+    // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #7 (i — moved up!) ]
+    // Row 5: [ #39/#40 ("/3) | #21 (↵) | #6 (o) | #1 (Space — wider!) | #3 (⌫ — right of Space!) ]
     // Row 6: [ #35/#36 (z/0) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
     // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #19 (⇧) ]
     // Row 8: [ #43/#44 (q/)) | #30 (') | #22 (g) | #20 (p) | #23 (j) ]
@@ -576,32 +576,32 @@ class NativeKeyboardView(
             NativeKeySpec("m", "?", "!", "«", "»", flex = 1.0f),
             NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.0f)
         ),
-        // Row 3: [ 47/48 | 28 | 13 | 9 | 3 ]
+        // Row 3: [ 47/48 | 28 | 13 | 9 | 5 (r moved up!) ]
         listOf(
             NativeKeySpec("6", "7", flex = 0.5f),
             NativeKeySpec("7", flex = 0.5f),
             NativeKeySpec("?", "!", "¿", "¡", "@", flex = 1.0f),
             NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.0f),
             NativeKeySpec("k", "(", ")", "<", ">", flex = 1.0f),
-            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67)
+            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.0f)
         ),
-        // Row 4: [ 41/42 | 24 | 11 | 2 | 5 ]
+        // Row 4: [ 41/42 | 24 | 11 | 2 | 7 (i moved up!) ]
         listOf(
             NativeKeySpec("4", "5", flex = 0.5f),
             NativeKeySpec("5", flex = 0.5f),
             NativeKeySpec("y", "6", "^", "=", "+", flex = 1.0f),
             NativeKeySpec("t", "5", "%", "(", ")", flex = 1.0f),
             NativeKeySpec("a", "@", "!", "#", "$", flex = 1.0f),
-            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.0f)
-        ),
-        // Row 5: [ 39/40 | 21 | 6 | 1 | 7 ]
-        listOf(
-            NativeKeySpec("\"", "3", flex = 0.5f),
-            NativeKeySpec("3", flex = 0.5f),
-            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66),
-            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.0f),
-            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.0f),
             NativeKeySpec("i", "8", "*", "/", "*", flex = 1.0f)
+        ),
+        // Row 5: [ 39/40 | 21 | 6 | 1 (wider Space!) | 3 (⌫ Cross to the right of Space!) ]
+        listOf(
+            NativeKeySpec("\"", "3", flex = 0.44f),
+            NativeKeySpec("3", flex = 0.44f),
+            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.88f, keyCode = 66),
+            NativeKeySpec("o", "9", "(", "[", "]", flex = 0.88f),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.48f),
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.88f, keyCode = 67)
         ),
         // Row 6: [ 35/36 | 18 | 12 | 4 | 8 ]
         listOf(
@@ -986,7 +986,7 @@ class NativeKeyboardView(
     }
 
     private fun getResearchColorForSpec(spec: NativeKeySpec): Int? {
-        if (!researchColorsEnabled) return null
+        if (!researchColorsEnabled || layoutMode != "right_hand") return null
         val rank = getBanglishRank(spec)
         if (rank <= 0) return null
         return researchColorPalette[(rank - 1) % researchColorPalette.size]
@@ -1015,11 +1015,13 @@ class NativeKeyboardView(
 
         canvas.drawColor(bgColor)
 
+        val isBanglish = (layoutMode == "right_hand")
         val strokePx = max(1f, dp(0.5f))
         val activeStrokePx = max(2f, dp(1.2f))
         val cornerPaddingX = dp(3.5f)
         val cornerPaddingY = dp(2.0f)
-        cornerTextPaint.textSize = dp(9.5f)
+        val baseCornerSize = dp(9.5f)
+        cornerTextPaint.textSize = baseCornerSize
 
         for (hit in hitRects) {
             val spec = hit.spec
@@ -1050,10 +1052,11 @@ class NativeKeyboardView(
             canvas.drawRect(r, borderPaint)
 
             if (spec.action == NativeActionType.OPEN_LAYOUT_MENU) {
-                // Draw crisp 2x2 Layout Grid Icon
+                // Draw crisp 2x2 Layout Grid Icon (50% larger in Banglish layout)
                 val iconColor = if (isActiveMod) 0xFFFFFFFF.toInt() else accentColor
                 bgPaint.color = iconColor
-                val iconSize = min(r.width(), r.height()) * 0.44f
+                val iconScale = if (isBanglish) 1.5f else 1.0f
+                val iconSize = min(r.width(), r.height()) * (0.44f * iconScale).coerceAtMost(0.82f)
                 val gap = max(dp(1.8f), iconSize * 0.18f)
                 val sq = (iconSize - gap) / 2f
                 val startXIcon = r.centerX() - iconSize / 2f
@@ -1086,8 +1089,19 @@ class NativeKeyboardView(
             val cellH = r.height()
             val cellW = r.width()
             val isMulti = displayPrimary.length > 1
+            val isIconKey = spec.action == NativeActionType.SPACE ||
+                    spec.action == NativeActionType.BACKSPACE ||
+                    spec.action == NativeActionType.SHIFT ||
+                    spec.action == NativeActionType.ENTER ||
+                    spec.action == NativeActionType.SWITCH_IME ||
+                    spec.action == NativeActionType.TOGGLE_RESIZE ||
+                    spec.action == NativeActionType.OPEN_SETTINGS ||
+                    spec.action == NativeActionType.ARROW_LEFT ||
+                    spec.action == NativeActionType.ARROW_DOWN ||
+                    spec.action == NativeActionType.ARROW_UP ||
+                    spec.action == NativeActionType.ARROW_RIGHT
 
-            val paint = if (hit.isTopBar || isMulti) multiCharTextPaint else primaryTextPaint
+            val paint = if (hit.isTopBar || isMulti || (isBanglish && isIconKey)) multiCharTextPaint else primaryTextPaint
             paint.color = fgColor
 
             var targetTextSize = when {
@@ -1096,7 +1110,11 @@ class NativeKeyboardView(
                 spec.action == NativeActionType.SPACE -> cellH * 0.65f
                 else -> cellH * 0.72f
             }
-            val maxAllowedW = cellW * 0.86f
+            if (isBanglish && isIconKey) {
+                // Increase all icons by 50% in Banglish layout
+                targetTextSize *= 1.5f
+            }
+            val maxAllowedW = if (isBanglish && isIconKey) cellW * 0.96f else cellW * 0.86f
             paint.textSize = targetTextSize
             val measuredW = paint.measureText(displayPrimary)
             if (measuredW > maxAllowedW && measuredW > 0f) {
@@ -1111,30 +1129,37 @@ class NativeKeyboardView(
             }
             canvas.drawText(displayPrimary, r.centerX(), centerY, paint)
 
-            // 4 Corner Symbols
+            // 4 Corner Symbols (with 50% larger 🌐 icon on Spacebar in Banglish layout)
             if (!hit.isTopBar) {
                 val defaultCornerCol = when {
                     isBrightKeyBg -> 0xFF263238.toInt()
                     researchColor != null -> 0xFFE0E0E0.toInt()
                     else -> cornerTextColor
                 }
-                val cFm = cornerTextPaint.fontMetrics
                 if (spec.topLeft != null) {
+                    cornerTextPaint.textSize = baseCornerSize
+                    val cFm = cornerTextPaint.fontMetrics
                     cornerTextPaint.color = if (isPressed && activeCornerDir == 1) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.LEFT
                     canvas.drawText(spec.topLeft, r.left + cornerPaddingX, r.top + cornerPaddingY - cFm.ascent, cornerTextPaint)
                 }
                 if (spec.topRight != null) {
+                    cornerTextPaint.textSize = if (isBanglish && spec.action == NativeActionType.SPACE) baseCornerSize * 1.5f else baseCornerSize
+                    val cFm = cornerTextPaint.fontMetrics
                     cornerTextPaint.color = if (isPressed && activeCornerDir == 2) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.RIGHT
                     canvas.drawText(spec.topRight, r.right - cornerPaddingX, r.top + cornerPaddingY - cFm.ascent, cornerTextPaint)
                 }
                 if (spec.bottomLeft != null) {
+                    cornerTextPaint.textSize = baseCornerSize
+                    val cFm = cornerTextPaint.fontMetrics
                     cornerTextPaint.color = if (isPressed && activeCornerDir == 3) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.LEFT
                     canvas.drawText(spec.bottomLeft, r.left + cornerPaddingX, r.bottom - cornerPaddingY - cFm.descent, cornerTextPaint)
                 }
                 if (spec.bottomRight != null) {
+                    cornerTextPaint.textSize = baseCornerSize
+                    val cFm = cornerTextPaint.fontMetrics
                     cornerTextPaint.color = if (isPressed && activeCornerDir == 4) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.RIGHT
                     canvas.drawText(spec.bottomRight, r.right - cornerPaddingX, r.bottom - cornerPaddingY - cFm.descent, cornerTextPaint)

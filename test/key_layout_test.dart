@@ -106,9 +106,12 @@ void main() {
       expect(rhb.length, 9);
       expect(rhb[0].map((k) => k.primary).toList(), ['%', '&', '@', ';', 'u']);
       expect(rhb[1].map((k) => k.primary).toList(), ['8', '9', '/', '8', '!', 'w', 'm', 'n']);
-      expect(rhb[2].map((k) => k.primary).toList(), ['6', '7', '?', 'b', 'k', '⌫']);
-      expect(rhb[3].map((k) => k.primary).toList(), ['4', '5', 'y', 't', 'a', 'r']);
-      expect(rhb[4].map((k) => k.primary).toList(), ['"', '3', '↵', 'o', ' ', 'i']);
+      expect(rhb[2].map((k) => k.primary).toList(), ['6', '7', '?', 'b', 'k', 'r']);
+      expect(rhb[3].map((k) => k.primary).toList(), ['4', '5', 'y', 't', 'a', 'i']);
+      expect(rhb[4].map((k) => k.primary).toList(), ['"', '3', '↵', 'o', ' ', '⌫']);
+      expect(rhb[4][4].actionType, KeyActionType.space);
+      expect(rhb[4][5].actionType, KeyActionType.backspace);
+      expect(rhb[4][4].flex > rhb[4][3].flex, true); // Space button occupies more horizontal width
       expect(rhb[5].map((k) => k.primary).toList(), ['z', '0', 'c', 's', 'e', 'h']);
       expect(rhb[6].map((k) => k.primary).toList(), ['-', 'x', '.', 'd', 'l', '⇧']);
       expect(rhb[7].map((k) => k.primary).toList(), ['q', ')', "'", 'g', 'p', 'j']);

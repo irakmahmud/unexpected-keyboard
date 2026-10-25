@@ -301,32 +301,32 @@ class KeyboardLayout {
       KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.0),
       KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.0),
     ],
-    // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 3 (⌫) ]
+    // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 5 (r moved up!) ]
     [
       KeyModel(primary: '6', topLeft: '7', flex: 0.5),
       KeyModel(primary: '7', flex: 0.5),
       KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 1.0),
       KeyModel(primary: 'b', topLeft: ';', topRight: ':', bottomLeft: '§', bottomRight: '¶', swipeUp: ';', flex: 1.0),
       KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.0),
-      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+      KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.0),
     ],
-    // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 5 (r) ]
+    // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 7 (i moved up!) ]
     [
       KeyModel(primary: '4', topLeft: '5', flex: 0.5),
       KeyModel(primary: '5', flex: 0.5),
       KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.0),
       KeyModel(primary: 't', topLeft: '5', topRight: '%', bottomLeft: '(', bottomRight: ')', swipeUp: '5', flex: 1.0),
       KeyModel(primary: 'a', topLeft: '@', topRight: '!', bottomLeft: '#', bottomRight: '\$', swipeUp: '@', flex: 1.0),
-      KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.0),
-    ],
-    // Row 5: [ 39/40 ("/3) | 21 (↵) | 6 (o) | 1 (Space) | 7 (i) ]
-    [
-      KeyModel(primary: '"', topLeft: '3', flex: 0.5),
-      KeyModel(primary: '3', flex: 0.5),
-      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
-      KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.0),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.0),
       KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.0),
+    ],
+    // Row 5: [ 39/40 ("/3) | 21 (↵) | 6 (o) | 1 (Space — wider!) | 3 (⌫ Cross right of Space!) ]
+    [
+      KeyModel(primary: '"', topLeft: '3', flex: 0.44),
+      KeyModel(primary: '3', flex: 0.44),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.88, androidKeyCode: 66),
+      KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 0.88),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.48),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.88, androidKeyCode: 67),
     ],
     // Row 6: [ 35/36 (z/0) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
     [

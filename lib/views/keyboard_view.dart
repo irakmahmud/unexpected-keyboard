@@ -660,6 +660,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                           isCtrlActive: widget.imeService.isCtrlActive,
                           isAltActive: widget.imeService.isAltActive,
                           researchColorsEnabled: _researchColorsEnabled,
+                          isBanglishLayout: _currentLayoutMode == 'right_hand',
                           height: effectiveRowHeight,
                           longPressMs: _effectiveLongPressMs,
                         );

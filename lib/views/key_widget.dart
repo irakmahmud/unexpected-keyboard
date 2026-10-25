@@ -18,6 +18,7 @@ class KeyWidget extends StatefulWidget {
   final bool isCtrlActive;
   final bool isAltActive;
   final bool researchColorsEnabled;
+  final bool isBanglishLayout;
   final double height;
   final int longPressMs;
 
@@ -32,6 +33,7 @@ class KeyWidget extends StatefulWidget {
     this.isCtrlActive = false,
     this.isAltActive = false,
     this.researchColorsEnabled = true,
+    this.isBanglishLayout = false,
     this.height = 48.0,
     this.longPressMs = 400,
   });
@@ -317,7 +319,7 @@ class _KeyWidgetState extends State<KeyWidget> {
     if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
     if (key.actionType == KeyActionType.switchVersion && key.primary == 'V1') isActiveModifier = true;
 
-    final int? researchColorVal = widget.researchColorsEnabled
+    final int? researchColorVal = (widget.researchColorsEnabled && widget.isBanglishLayout)
         ? KeyboardLayout.getResearchColorValue(key)
         : null;
     final Color? researchBg = researchColorVal != null ? Color(researchColorVal) : null;
@@ -422,7 +424,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                   child: IgnorePointer(
                     child: Icon(
                       Icons.language,
-                      size: 10.0,
+                      size: widget.isBanglishLayout ? 15.0 : 10.0,
                       color: effectiveCornerColor,
                     ),
                   ),
@@ -477,11 +479,12 @@ class _KeyWidgetState extends State<KeyWidget> {
     required String displayPrimary,
     required Color fgColor,
   }) {
+    final double iconScale = widget.isBanglishLayout ? 1.5 : 1.0;
 
     if (key.actionType == KeyActionType.openSettings) {
       return Icon(
         Icons.settings_outlined,
-        size: (widget.height * 0.52).clamp(16.0, 36.0),
+        size: (widget.height * 0.52 * iconScale).clamp(16.0, 48.0),
         color: fgColor,
       );
     }
@@ -496,18 +499,29 @@ class _KeyWidgetState extends State<KeyWidget> {
         ),
         style: TextStyle(
           fontFamily: 'sans-serif-thin',
-          fontSize: (widget.height * 0.68).clamp(22.0, 82.0),
+          fontSize: (widget.height * 0.68 * iconScale).clamp(22.0, 96.0),
           height: 1.0,
-          fontWeight: FontWeight.w100,
+          fontWeight: widget.isBanglishLayout ? FontWeight.bold : FontWeight.w100,
           color: fgColor,
         ),
       );
     }
 
+    final bool isIconAction = key.actionType == KeyActionType.backspace ||
+        key.actionType == KeyActionType.shift ||
+        key.actionType == KeyActionType.enter ||
+        key.actionType == KeyActionType.arrowLeft ||
+        key.actionType == KeyActionType.arrowRight ||
+        key.actionType == KeyActionType.arrowUp ||
+        key.actionType == KeyActionType.arrowDown;
+
     final bool isMultiCharLabel = displayPrimary.length > 1;
-    final double computedFontSize = isMultiCharLabel
+    final double baseSize = isMultiCharLabel
         ? (widget.height * 0.34).clamp(11.0, 26.0)
         : (widget.height * 0.72).clamp(24.0, 88.0);
+    final double computedFontSize = (widget.isBanglishLayout && isIconAction)
+        ? (baseSize * 1.5).clamp(24.0, 96.0)
+        : baseSize;
     final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
 
     Widget textWidget = Text(
