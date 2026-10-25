@@ -16,6 +16,111 @@ class KeyboardLayout {
     'both_hand': '5. Both Hand',
   };
 
+  /// Scientifically Tested 12-Color Palette from User's Research:
+  /// #1 Spacebar: Blue (নীল বোতাম — Journal of Marketing #1, 12.7% CTR)
+  /// #2 'a': Grey (ধূসর বোতাম — Journal of Marketing #2, 9.4% CTR)
+  /// #3..#12: 2022 Button-Press Preference Study Top 10:
+  ///   1. উজ্জ্বল সবুজ (Bright Green)
+  ///   2. গাঢ় উজ্জ্বল হলুদ (Deep Bright Yellow)
+  ///   3. উজ্জ্বল সবুজাভ নীল (Bright Teal-Blue)
+  ///   4. কালো (Pure Black)
+  ///   5. সাদা (Crisp White)
+  ///   6. হালকা নীল (Light Blue)
+  ///   7. তীব্র নীল (Intense Royal Blue)
+  ///   8. গাঢ় লাল (Dark Red)
+  ///   9. হালকা ধূসর (Light Grey)
+  ///  10. তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
+  static const List<int> researchColorPalette = [
+    0xFF1565C0, // #1: নীল বোতাম (Blue — Journal of Marketing #1)
+    0xFF607D8B, // #2: ধূসর বোতাম (Grey — Journal of Marketing #2)
+    0xFF00C853, // #3 (Study #1): উজ্জ্বল সবুজ (Bright Green)
+    0xFFFBC02D, // #4 (Study #2): গাঢ় উজ্জ্বল হলুদ (Deep Bright Yellow)
+    0xFF00ACC1, // #5 (Study #3): উজ্জ্বল সবুজাভ নীল (Bright Teal-Blue)
+    0xFF141414, // #6 (Study #4): কালো (Black)
+    0xFFF5F5F5, // #7 (Study #5): সাদা (White)
+    0xFF29B6F6, // #8 (Study #6): হালকা নীল (Light Blue)
+    0xFF1A237E, // #9 (Study #7): তীব্র নীল (Intense Blue)
+    0xFFC62828, // #10 (Study #8): গাঢ় লাল (Dark Red)
+    0xFF90A4AE, // #11 (Study #9): হালকা ধূসর (Light Grey)
+    0xFFFF6D00, // #12 (Study #10): তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
+  ];
+
+  static int getBanglishRank(KeyModel key) {
+    switch (key.actionType) {
+      case KeyActionType.space:
+        return 1;
+      case KeyActionType.backspace:
+        return 3;
+      case KeyActionType.shift:
+        return 19;
+      case KeyActionType.enter:
+        return 21;
+      case KeyActionType.inputChar:
+        switch (key.primary.toLowerCase()) {
+          case 'a': return 2;
+          case 'e': return 4;
+          case 'r': return 5;
+          case 'o': return 6;
+          case 'i': return 7;
+          case 'h': return 8;
+          case 'k': return 9;
+          case 'n': return 10;
+          case 't': return 11;
+          case 's': return 12;
+          case 'b': return 13;
+          case 'm': return 14;
+          case 'l': return 15;
+          case 'd': return 16;
+          case 'u': return 17;
+          case 'c': return 18;
+          case 'p': return 20;
+          case 'g': return 22;
+          case 'j': return 23;
+          case 'y': return 24;
+          case '.': return 25;
+          case ',': return 26;
+          case 'v': return 27;
+          case '?': return 28;
+          case 'f': return 29;
+          case "'": return 30;
+          case '!': return 31;
+          case 'w': return 32;
+          case '1': return 33;
+          case '2': return 34;
+          case 'z': return 35;
+          case '0': return 36;
+          case '-': return 37;
+          case 'x': return 38;
+          case '"': return 39;
+          case '3': return 40;
+          case '4': return 41;
+          case '5': return 42;
+          case 'q': return 43;
+          case ')': return 44;
+          case '(': return 45;
+          case ':': return 46;
+          case '6': return 47;
+          case '7': return 48;
+          case '/': return 49;
+          case '8': return 50;
+          case '9': return 51;
+          case ';': return 52;
+          case '@': return 53;
+          case '&': return 54;
+          case '%': return 55;
+          default: return 0;
+        }
+      default:
+        return 0;
+    }
+  }
+
+  static int? getResearchColorValue(KeyModel key) {
+    final rank = getBanglishRank(key);
+    if (rank <= 0) return null;
+    return researchColorPalette[(rank - 1) % researchColorPalette.length];
+  }
+
   /// Top Terminal Bar: ESC, CTRL, ALT, Arrow keys, and Layout Icon Button (⊞)
   static List<KeyModel> get terminalBarKeys => const [
     KeyModel(primary: 'ESC', actionType: KeyActionType.escape, flex: 1.0, androidKeyCode: 111),

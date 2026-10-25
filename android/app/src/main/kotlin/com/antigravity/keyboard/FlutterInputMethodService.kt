@@ -36,9 +36,11 @@ class FlutterInputMethodService : InputMethodService() {
         const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         const val KEY_LONG_PRESS_MS = "long_press_ms"
         const val KEY_LAYOUT_MODE = "layout_mode"
+        const val KEY_RESEARCH_COLORS = "research_colors_enabled"
         const val DEFAULT_KEY_HEIGHT_DP = 42.0f
         const val DEFAULT_LONG_PRESS_MS = 400
         const val DEFAULT_LAYOUT_MODE = "abcd"
+        const val DEFAULT_RESEARCH_COLORS = true
     }
 
     override fun onEvaluateFullscreenMode(): Boolean = false
@@ -128,6 +130,16 @@ class FlutterInputMethodService : InputMethodService() {
     fun saveLayoutMode(mode: String) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_LAYOUT_MODE, mode).apply()
+    }
+
+    fun isResearchColorsEnabled(): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_RESEARCH_COLORS, DEFAULT_RESEARCH_COLORS)
+    }
+
+    fun saveResearchColorsEnabled(enabled: Boolean) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_RESEARCH_COLORS, enabled).apply()
     }
 
     fun commitTextImmediate(text: String, metaState: Int, useModifiers: Boolean) {
@@ -286,6 +298,7 @@ enum class NativeActionType {
     SELECT_LAYOUT_LEFT,
     SELECT_LAYOUT_RIGHT,
     SELECT_LAYOUT_BOTH,
+    TOGGLE_RESEARCH_COLORS,
     SWITCH_IME,
     TOGGLE_RESIZE,
     OPEN_SETTINGS,
@@ -332,6 +345,7 @@ class NativeKeyboardView(
     private var isAltActive: Boolean = false
     private var isSymbolLayout: Boolean = false
     private var layoutMode: String = "abcd" // Default "abcd" => 2. ABCD Serially
+    private var researchColorsEnabled: Boolean = true
     private var isLayoutMenuOpen: Boolean = false
     private var isResizeBarOpen: Boolean = false
 
@@ -676,6 +690,7 @@ class NativeKeyboardView(
         themeMode = service.getSavedThemeMode()
         hapticsEnabled = service.isHapticsEnabled()
         layoutMode = service.getSavedLayoutMode()
+        researchColorsEnabled = service.isResearchColorsEnabled()
         applyThemePalette(themeMode)
         if (width > 0) {
             rebuildHitRects(width.toFloat())
@@ -754,10 +769,15 @@ class NativeKeyboardView(
         if (isResizeBarOpen) {
             val rowH = dp(36.0f)
             val resizeSpecs = listOf(
-                NativeKeySpec("− Height", action = NativeActionType.RESIZE_MINUS, flex = 1.0f),
-                NativeKeySpec("${keyHeightDp.toInt()}dp (Reset)", action = NativeActionType.RESIZE_RESET, flex = 1.4f),
-                NativeKeySpec("+ Height", action = NativeActionType.RESIZE_PLUS, flex = 1.0f),
-                NativeKeySpec("Done ✓", action = NativeActionType.RESIZE_DONE, flex = 1.0f)
+                NativeKeySpec("− Height", action = NativeActionType.RESIZE_MINUS, flex = 0.9f),
+                NativeKeySpec("${keyHeightDp.toInt()}dp", action = NativeActionType.RESIZE_RESET, flex = 1.0f),
+                NativeKeySpec("+ Height", action = NativeActionType.RESIZE_PLUS, flex = 0.9f),
+                NativeKeySpec(
+                    if (researchColorsEnabled) "🎨 Color: ON" else "🎨 Color: OFF",
+                    action = NativeActionType.TOGGLE_RESEARCH_COLORS,
+                    flex = 1.25f
+                ),
+                NativeKeySpec("Done ✓", action = NativeActionType.RESIZE_DONE, flex = 0.85f)
             )
             val totalFlex = resizeSpecs.fold(0f) { acc, s -> acc + s.flex }
             var left = 0f
@@ -829,12 +849,12 @@ class NativeKeyboardView(
         menuHitRects.clear()
         val bodyH = currentTop - bodyTop
         val cardW = min(viewWidth * 0.88f, dp(320f))
-        val cardH = min(bodyH - dp(10f), dp(248f))
+        val cardH = min(bodyH - dp(8f), dp(276f))
         val cardLeft = (viewWidth - cardW) / 2f
         val cardTop = bodyTop + max(dp(4f), (bodyH - cardH) / 2f)
         menuCardRect = RectF(cardLeft, cardTop, cardLeft + cardW, cardTop + cardH)
 
-        val headerH = dp(34f)
+        val headerH = dp(32f)
         val closeSpec = NativeKeySpec("✕", action = NativeActionType.CLOSE_LAYOUT_MENU)
         menuHitRects.add(
             HitRect(
@@ -849,7 +869,11 @@ class NativeKeyboardView(
             NativeKeySpec("2. ABCD Serially", action = NativeActionType.SELECT_LAYOUT_ABCD),
             NativeKeySpec("3. Left Hand", action = NativeActionType.SELECT_LAYOUT_LEFT),
             NativeKeySpec("4. Right Hand Banglish", action = NativeActionType.SELECT_LAYOUT_RIGHT),
-            NativeKeySpec("5. Both Hand", action = NativeActionType.SELECT_LAYOUT_BOTH)
+            NativeKeySpec("5. Both Hand", action = NativeActionType.SELECT_LAYOUT_BOTH),
+            NativeKeySpec(
+                if (researchColorsEnabled) "🎨 Button Color: ON (Tap to OFF)" else "🎨 Button Color: OFF (Tap to ON)",
+                action = NativeActionType.TOGGLE_RESEARCH_COLORS
+            )
         )
         val availItemsH = cardH - headerH - dp(8f)
         val itemH = availItemsH / menuItems.size
@@ -866,6 +890,114 @@ class NativeKeyboardView(
             )
             itemTop += itemH
         }
+    }
+
+    // Scientifically Tested 12-Color Palette from User's Research:
+    // #1 Spacebar: Blue (নীল বোতাম — Journal of Marketing #1, 12.7% CTR)
+    // #2 'a': Grey (ধূসর বোতাম — Journal of Marketing #2, 9.4% CTR)
+    // #3..#12: 2022 Button-Press Preference Study Top 10:
+    //   1. উজ্জ্বল সবুজ (Bright Green)
+    //   2. গাঢ় উজ্জ্বল হলুদ (Deep Bright Yellow)
+    //   3. উজ্জ্বল সবুজাভ নীল (Bright Teal-Blue)
+    //   4. কালো (Pure Black)
+    //   5. সাদা (Crisp White)
+    //   6. হালকা নীল (Light Blue)
+    //   7. তীব্র নীল (Intense Royal Blue)
+    //   8. গাঢ় লাল (Dark Red)
+    //   9. হালকা ধূসর (Light Grey)
+    //  10. তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
+    private val researchColorPalette = intArrayOf(
+        0xFF1565C0.toInt(), // #1: নীল বোতাম (Blue — Journal of Marketing #1)
+        0xFF607D8B.toInt(), // #2: ধূসর বোতাম (Grey — Journal of Marketing #2)
+        0xFF00C853.toInt(), // #3 (Study #1): উজ্জ্বল সবুজ (Bright Green)
+        0xFFFBC02D.toInt(), // #4 (Study #2): গাঢ় উজ্জ্বল হলুদ (Deep Bright Yellow)
+        0xFF00ACC1.toInt(), // #5 (Study #3): উজ্জ্বল সবুজাভ নীল (Bright Teal-Blue)
+        0xFF141414.toInt(), // #6 (Study #4): কালো (Black)
+        0xFFF5F5F5.toInt(), // #7 (Study #5): সাদা (White)
+        0xFF29B6F6.toInt(), // #8 (Study #6): হালকা নীল (Light Blue)
+        0xFF1A237E.toInt(), // #9 (Study #7): তীব্র নীল (Intense Blue)
+        0xFFC62828.toInt(), // #10 (Study #8): গাঢ় লাল (Dark Red)
+        0xFF90A4AE.toInt(), // #11 (Study #9): হালকা ধূসর (Light Grey)
+        0xFFFF6D00.toInt()  // #12 (Study #10): তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
+    )
+
+    private fun getBanglishRank(spec: NativeKeySpec): Int {
+        return when (spec.action) {
+            NativeActionType.SPACE -> 1
+            NativeActionType.BACKSPACE -> 3
+            NativeActionType.SHIFT -> 19
+            NativeActionType.ENTER -> 21
+            NativeActionType.INPUT_CHAR -> when (spec.primary.lowercase()) {
+                "a" -> 2
+                "e" -> 4
+                "r" -> 5
+                "o" -> 6
+                "i" -> 7
+                "h" -> 8
+                "k" -> 9
+                "n" -> 10
+                "t" -> 11
+                "s" -> 12
+                "b" -> 13
+                "m" -> 14
+                "l" -> 15
+                "d" -> 16
+                "u" -> 17
+                "c" -> 18
+                "p" -> 20
+                "g" -> 22
+                "j" -> 23
+                "y" -> 24
+                "." -> 25
+                "," -> 26
+                "v" -> 27
+                "?" -> 28
+                "f" -> 29
+                "'" -> 30
+                "!" -> 31
+                "w" -> 32
+                "1" -> 33
+                "2" -> 34
+                "z" -> 35
+                "0" -> 36
+                "-" -> 37
+                "x" -> 38
+                "\"" -> 39
+                "3" -> 40
+                "4" -> 41
+                "5" -> 42
+                "q" -> 43
+                ")" -> 44
+                "(" -> 45
+                ":" -> 46
+                "6" -> 47
+                "7" -> 48
+                "/" -> 49
+                "8" -> 50
+                "9" -> 51
+                ";" -> 52
+                "@" -> 53
+                "&" -> 54
+                "%" -> 55
+                else -> 0
+            }
+            else -> 0
+        }
+    }
+
+    private fun getResearchColorForSpec(spec: NativeKeySpec): Int? {
+        if (!researchColorsEnabled) return null
+        val rank = getBanglishRank(spec)
+        if (rank <= 0) return null
+        return researchColorPalette[(rank - 1) % researchColorPalette.size]
+    }
+
+    private fun isBrightColor(color: Int): Boolean {
+        val r = (color shr 16) and 0xFF
+        val g = (color shr 8) and 0xFF
+        val b = color and 0xFF
+        val lum = (0.299 * r + 0.587 * g + 0.114 * b)
+        return lum > 150.0
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -900,13 +1032,17 @@ class NativeKeyboardView(
                     (spec.action == NativeActionType.SWITCH_LAYOUT && spec.primary == "ABC") ||
                     (spec.action == NativeActionType.OPEN_LAYOUT_MENU && isLayoutMenuOpen) ||
                     (spec.action == NativeActionType.TOGGLE_RESIZE && isResizeBarOpen) ||
+                    (spec.action == NativeActionType.TOGGLE_RESEARCH_COLORS && researchColorsEnabled) ||
                     (spec.action == NativeActionType.RESIZE_DONE)
 
-            bgPaint.color = when {
+            val researchColor = if (!hit.isTopBar) getResearchColorForSpec(spec) else null
+            val effectiveBgColor = when {
                 isActiveMod -> modActiveColor
                 isPressed -> keyPressedColor
+                researchColor != null -> researchColor
                 else -> keyBgColor
             }
+            bgPaint.color = effectiveBgColor
             canvas.drawRect(r, bgPaint)
 
             borderPaint.color = if (isActiveMod) accentColor else modInactiveColor
@@ -938,9 +1074,12 @@ class NativeKeyboardView(
                 else -> spec.primary
             }
 
+            val isBrightKeyBg = (!isActiveMod && !isPressed && researchColor != null && isBrightColor(researchColor))
             val fgColor = when {
                 isActiveMod -> 0xFFFFFFFF.toInt()
                 spec.action == NativeActionType.SWITCH_IME -> accentColor
+                isBrightKeyBg -> 0xFF0A0A0A.toInt()
+                researchColor != null -> 0xFFFFFFFF.toInt()
                 else -> primaryTextColor
             }
 
@@ -974,24 +1113,29 @@ class NativeKeyboardView(
 
             // 4 Corner Symbols
             if (!hit.isTopBar) {
+                val defaultCornerCol = when {
+                    isBrightKeyBg -> 0xFF263238.toInt()
+                    researchColor != null -> 0xFFE0E0E0.toInt()
+                    else -> cornerTextColor
+                }
                 val cFm = cornerTextPaint.fontMetrics
                 if (spec.topLeft != null) {
-                    cornerTextPaint.color = if (isPressed && activeCornerDir == 1) accentColor else cornerTextColor
+                    cornerTextPaint.color = if (isPressed && activeCornerDir == 1) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.LEFT
                     canvas.drawText(spec.topLeft, r.left + cornerPaddingX, r.top + cornerPaddingY - cFm.ascent, cornerTextPaint)
                 }
                 if (spec.topRight != null) {
-                    cornerTextPaint.color = if (isPressed && activeCornerDir == 2) accentColor else cornerTextColor
+                    cornerTextPaint.color = if (isPressed && activeCornerDir == 2) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.RIGHT
                     canvas.drawText(spec.topRight, r.right - cornerPaddingX, r.top + cornerPaddingY - cFm.ascent, cornerTextPaint)
                 }
                 if (spec.bottomLeft != null) {
-                    cornerTextPaint.color = if (isPressed && activeCornerDir == 3) accentColor else cornerTextColor
+                    cornerTextPaint.color = if (isPressed && activeCornerDir == 3) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.LEFT
                     canvas.drawText(spec.bottomLeft, r.left + cornerPaddingX, r.bottom - cornerPaddingY - cFm.descent, cornerTextPaint)
                 }
                 if (spec.bottomRight != null) {
-                    cornerTextPaint.color = if (isPressed && activeCornerDir == 4) accentColor else cornerTextColor
+                    cornerTextPaint.color = if (isPressed && activeCornerDir == 4) accentColor else defaultCornerCol
                     cornerTextPaint.textAlign = Paint.Align.RIGHT
                     canvas.drawText(spec.bottomRight, r.right - cornerPaddingX, r.bottom - cornerPaddingY - cFm.descent, cornerTextPaint)
                 }
@@ -1032,7 +1176,8 @@ class NativeKeyboardView(
                         (mSpec.action == NativeActionType.SELECT_LAYOUT_ABCD && layoutMode == "abcd") ||
                         (mSpec.action == NativeActionType.SELECT_LAYOUT_LEFT && layoutMode == "left_hand") ||
                         (mSpec.action == NativeActionType.SELECT_LAYOUT_RIGHT && layoutMode == "right_hand") ||
-                        (mSpec.action == NativeActionType.SELECT_LAYOUT_BOTH && layoutMode == "both_hand")
+                        (mSpec.action == NativeActionType.SELECT_LAYOUT_BOTH && layoutMode == "both_hand") ||
+                        (mSpec.action == NativeActionType.TOGGLE_RESEARCH_COLORS && researchColorsEnabled)
 
                 val itemRad = dp(6f)
                 bgPaint.color = if (isSelected) modActiveColor else bgColor
@@ -1327,6 +1472,13 @@ class NativeKeyboardView(
             }
             NativeActionType.SELECT_LAYOUT_BOTH -> {
                 selectLayoutMode("both_hand")
+            }
+            NativeActionType.TOGGLE_RESEARCH_COLORS -> {
+                researchColorsEnabled = !researchColorsEnabled
+                service.saveResearchColorsEnabled(researchColorsEnabled)
+                rebuildHitRects(width.toFloat())
+                triggerHapticNow()
+                invalidate()
             }
             NativeActionType.SWITCH_IME -> {
                 triggerHapticNow()

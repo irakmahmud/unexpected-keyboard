@@ -114,6 +114,20 @@ void main() {
       expect(rhb[7].map((k) => k.primary).toList(), ['q', ')', "'", 'g', 'p', 'j']);
       expect(rhb[8].map((k) => k.primary).toList(), ['(', ':', '1', '2', 'f', 'v', ',']);
 
+      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, #3..#12 -> Top 10 Study Colors):
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 0xFF1565C0);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'a')), 0xFF607D8B);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFF00C853);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFFFBC02D);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'r')), 0xFF00ACC1);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFF141414);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'i')), 0xFFF5F5F5);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'h')), 0xFF29B6F6);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFF1A237E);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'n')), 0xFFC62828);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 't')), 0xFF90A4AE);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 's')), 0xFFFF6D00);
+
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows
       final symbols = KeyboardLayout.symbolLayout;
       expect(symbols.length, 7);

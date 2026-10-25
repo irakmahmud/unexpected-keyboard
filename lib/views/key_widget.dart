@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
+import '../models/keyboard_layout.dart';
 import '../themes/keyboard_theme.dart';
 
 typedef KeyPressCallback = void Function(KeyModel key, GestureDirection direction);
@@ -16,6 +17,7 @@ class KeyWidget extends StatefulWidget {
   final bool isShiftActive;
   final bool isCtrlActive;
   final bool isAltActive;
+  final bool researchColorsEnabled;
   final double height;
   final int longPressMs;
 
@@ -29,6 +31,7 @@ class KeyWidget extends StatefulWidget {
     this.isShiftActive = false,
     this.isCtrlActive = false,
     this.isAltActive = false,
+    this.researchColorsEnabled = true,
     this.height = 48.0,
     this.longPressMs = 400,
   });
@@ -314,9 +317,31 @@ class _KeyWidgetState extends State<KeyWidget> {
     if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
     if (key.actionType == KeyActionType.switchVersion && key.primary == 'V1') isActiveModifier = true;
 
+    final int? researchColorVal = widget.researchColorsEnabled
+        ? KeyboardLayout.getResearchColorValue(key)
+        : null;
+    final Color? researchBg = researchColorVal != null ? Color(researchColorVal) : null;
+
     final Color bgColor = isActiveModifier
         ? theme.modifierActiveColor
-        : (_isPressed ? theme.keyPressedColor : theme.keyBackgroundColor);
+        : (_isPressed
+            ? theme.keyPressedColor
+            : (researchBg ?? theme.keyBackgroundColor));
+
+    final bool isBrightBg = (!isActiveModifier &&
+        !_isPressed &&
+        researchBg != null &&
+        researchBg.computeLuminance() > 0.35);
+
+    final Color effectivePrimaryColor = isActiveModifier
+        ? Colors.white
+        : (isBrightBg
+            ? const Color(0xFF0A0A0A)
+            : (researchBg != null ? Colors.white : theme.primaryTextColor));
+
+    final Color effectiveCornerColor = isBrightBg
+        ? const Color(0xFF263238)
+        : (researchBg != null ? const Color(0xFFE0E0E0) : theme.cornerTextColor);
 
     final String displayPrimary = (widget.isShiftActive && key.primary.length == 1)
         ? key.primary.toUpperCase()
@@ -349,8 +374,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                 child: _buildMiddleAlignedPrimaryContent(
                   key: key,
                   displayPrimary: displayPrimary,
-                  theme: theme,
-                  isActiveModifier: isActiveModifier,
+                  fgColor: effectivePrimaryColor,
                 ),
               ),
 
@@ -367,7 +391,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : theme.cornerTextColor,
+                        color: _activeDirection == GestureDirection.topLeft ? theme.accentColor : effectiveCornerColor,
                       ),
                     ),
                   ),
@@ -386,7 +410,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        color: _activeDirection == GestureDirection.topRight ? theme.accentColor : theme.cornerTextColor,
+                        color: _activeDirection == GestureDirection.topRight ? theme.accentColor : effectiveCornerColor,
                       ),
                     ),
                   ),
@@ -399,7 +423,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                     child: Icon(
                       Icons.language,
                       size: 10.0,
-                      color: theme.cornerTextColor,
+                      color: effectiveCornerColor,
                     ),
                   ),
                 ),
@@ -417,7 +441,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : theme.cornerTextColor,
+                        color: _activeDirection == GestureDirection.bottomLeft ? theme.accentColor : effectiveCornerColor,
                       ),
                     ),
                   ),
@@ -436,7 +460,7 @@ class _KeyWidgetState extends State<KeyWidget> {
                         fontSize: 9.0,
                         height: 1.0,
                         fontWeight: FontWeight.w100,
-                        color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : theme.cornerTextColor,
+                        color: _activeDirection == GestureDirection.bottomRight ? theme.accentColor : effectiveCornerColor,
                       ),
                     ),
                   ),
@@ -451,10 +475,8 @@ class _KeyWidgetState extends State<KeyWidget> {
   Widget _buildMiddleAlignedPrimaryContent({
     required KeyModel key,
     required String displayPrimary,
-    required KeyboardThemeData theme,
-    required bool isActiveModifier,
+    required Color fgColor,
   }) {
-    final Color fgColor = isActiveModifier ? Colors.white : theme.primaryTextColor;
 
     if (key.actionType == KeyActionType.openSettings) {
       return Icon(

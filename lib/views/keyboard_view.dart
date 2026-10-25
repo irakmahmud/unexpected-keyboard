@@ -35,6 +35,7 @@ class KeyboardView extends StatefulWidget {
 class _KeyboardViewState extends State<KeyboardView> {
   LayoutType _currentLayout = LayoutType.qwerty;
   String _currentLayoutMode = 'abcd'; // Default 'abcd' => 2. ABCD Serially
+  bool _researchColorsEnabled = true;
   bool _isLayoutMenuOpen = false;
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
@@ -539,6 +540,43 @@ class _KeyboardViewState extends State<KeyboardView> {
                       ),
                     );
                   }),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: InkWell(
+                      onTap: () {
+                        widget.imeService.triggerHaptic();
+                        setState(() {
+                          _researchColorsEnabled = !_researchColorsEnabled;
+                        });
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 7.0),
+                        decoration: BoxDecoration(
+                          color: _researchColorsEnabled
+                              ? widget.theme.modifierActiveColor
+                              : widget.theme.backgroundColor,
+                          borderRadius: BorderRadius.circular(6.0),
+                          border: Border.all(
+                            color: _researchColorsEnabled
+                                ? widget.theme.accentColor
+                                : widget.theme.modifierInactiveColor,
+                            width: _researchColorsEnabled ? 1.2 : 0.6,
+                          ),
+                        ),
+                        child: Text(
+                          _researchColorsEnabled
+                              ? '✓  🎨 Button Color: ON (Tap to OFF)'
+                              : '    🎨 Button Color: OFF (Tap to ON)',
+                          style: TextStyle(
+                            color: _researchColorsEnabled ? Colors.white : widget.theme.primaryTextColor,
+                            fontSize: 12.5,
+                            fontWeight: _researchColorsEnabled ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -621,6 +659,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                           isShiftActive: widget.imeService.isShiftActive,
                           isCtrlActive: widget.imeService.isCtrlActive,
                           isAltActive: widget.imeService.isAltActive,
+                          researchColorsEnabled: _researchColorsEnabled,
                           height: effectiveRowHeight,
                           longPressMs: _effectiveLongPressMs,
                         );
