@@ -35,7 +35,7 @@ class FlutterInputMethodService : InputMethodService() {
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         const val KEY_LONG_PRESS_MS = "long_press_ms"
-        const val DEFAULT_KEY_HEIGHT_DP = 46.0f
+        const val DEFAULT_KEY_HEIGHT_DP = 42.0f
         const val DEFAULT_LONG_PRESS_MS = 400
     }
 
@@ -85,7 +85,7 @@ class FlutterInputMethodService : InputMethodService() {
         val clamped = keyHeightDp.coerceIn(34.0f, 136.0f)
         val modH = (clamped * 0.85f).coerceIn(36.0f, 68.0f)
         val resizeH = if (isResizeBarOpen) 72.0f else 0.0f
-        val totalDp = (6.0f * clamped + modH + resizeH + 4.0f).toInt().coerceIn(220, 960)
+        val totalDp = (7.0f * clamped + modH + resizeH + 4.0f).toInt().coerceIn(220, 1080)
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_ROW_HEIGHT_DP, clamped)
@@ -298,7 +298,7 @@ class NativeKeyboardView(
     private val service: FlutterInputMethodService
 ) : View(context) {
 
-    private var keyHeightDp: Float = 46.0f
+    private var keyHeightDp: Float = 42.0f
     private var longPressMs: Int = 400
     private var themeMode: String = "amoled"
     private var hapticsEnabled: Boolean = true
@@ -365,20 +365,32 @@ class NativeKeyboardView(
     private var charLongPressRunnable: Runnable? = null
 
     private val topBarSpecs = listOf(
-        NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 0.9f, keyCode = 111),
-        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f),
-        NativeKeySpec("CTRL", action = NativeActionType.CTRL, flex = 1.0f, keyCode = 113),
+        NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 1.0f, keyCode = 111),
+        NativeKeySpec("CTRL", action = NativeActionType.CTRL, flex = 1.1f, keyCode = 113),
         NativeKeySpec("ALT", action = NativeActionType.ALT, flex = 1.0f, keyCode = 57),
-        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 1.1f),
-        NativeKeySpec("◀", action = NativeActionType.ARROW_LEFT, flex = 0.8f, keyCode = 21),
-        NativeKeySpec("▼", action = NativeActionType.ARROW_DOWN, flex = 0.8f, keyCode = 20),
-        NativeKeySpec("▲", action = NativeActionType.ARROW_UP, flex = 0.8f, keyCode = 19),
-        NativeKeySpec("▶", action = NativeActionType.ARROW_RIGHT, flex = 0.8f, keyCode = 22),
-        NativeKeySpec("🌐", action = NativeActionType.SWITCH_IME, flex = 0.85f),
-        NativeKeySpec("↕", action = NativeActionType.TOGGLE_RESIZE, flex = 0.85f),
-        NativeKeySpec("⚙️", action = NativeActionType.OPEN_SETTINGS, flex = 0.85f)
+        NativeKeySpec("◀", action = NativeActionType.ARROW_LEFT, flex = 0.85f, keyCode = 21),
+        NativeKeySpec("▼", action = NativeActionType.ARROW_DOWN, flex = 0.85f, keyCode = 20),
+        NativeKeySpec("▲", action = NativeActionType.ARROW_UP, flex = 0.85f, keyCode = 19),
+        NativeKeySpec("▶", action = NativeActionType.ARROW_RIGHT, flex = 0.85f, keyCode = 22),
+        NativeKeySpec("🌐", action = NativeActionType.SWITCH_IME, flex = 0.9f),
+        NativeKeySpec("↕", action = NativeActionType.TOGGLE_RESIZE, flex = 0.9f),
+        NativeKeySpec("⚙️", action = NativeActionType.OPEN_SETTINGS, flex = 0.9f)
     )
 
+    // Row 0 (Directly above Number Row): Shift, ?123, ?, /, ,, ., Space, Backspace (Cross), Enter
+    private val actionSymbolRow = listOf(
+        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f),
+        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 1.0f),
+        NativeKeySpec("?", "!", "¿", "¡", "@", flex = 0.85f),
+        NativeKeySpec("/", "\\", "|", "-", "_", flex = 0.85f),
+        NativeKeySpec(",", "<", ";", "'", "\"", flex = 0.85f),
+        NativeKeySpec(".", ">", ":", "(", ")", flex = 0.85f),
+        NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.5f),
+        NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
+        NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+    )
+
+    // Row 1 (Number Row): 1 2 3 4 5 6 7 8 9 0
     private val numberRow = listOf(
         NativeKeySpec("1", "!", "~", "`", "¡"),
         NativeKeySpec("2", "@", "#", "<", ">"),
@@ -442,94 +454,90 @@ class NativeKeyboardView(
      * )
      * ============================================================================ */
 
-    // VERSION 2 ACTIVE ALIGNMENT: Sequential Alphabetical (a, b, c, d ... y, z)
+    // VERSION 2 ACTIVE ALIGNMENT:
+    // Row 0: Action & Symbol Row above Number Row (⇧, ?123, ?, /, ,, ., Space, ⌫, ↵)
+    // Row 1: Number Row (1..0)
+    // Rows 2..5: 5-letter sequential rows (a..e, f..j, k..o, p..t)
+    // Row 6 (Bottom Row): Only letters — u, v, w, x (flex 1.0) + compact y, z (flex 0.55)
     private val qwertyRows = listOf(
+        actionSymbolRow,
         numberRow,
         listOf(
-            NativeKeySpec("a", "1", "`", "~", "\\"),
-            NativeKeySpec("b", "2", "|", "<", ">"),
-            NativeKeySpec("c", "3", "€", "{", "}"),
-            NativeKeySpec("d", "4", "₹", "[", "]"),
-            NativeKeySpec("e", "5", "%", "(", ")"),
-            NativeKeySpec("f", "6", "^", "=", "+")
+            NativeKeySpec("a", "1", "`", "~", "\\", flex = 1.0f),
+            NativeKeySpec("b", "2", "|", "<", ">", flex = 1.0f),
+            NativeKeySpec("c", "3", "€", "{", "}", flex = 1.0f),
+            NativeKeySpec("d", "4", "₹", "[", "]", flex = 1.0f),
+            NativeKeySpec("e", "5", "%", "(", ")", flex = 1.0f)
         ),
         listOf(
-            NativeKeySpec("g", "@", "!", "#", "$"),
-            NativeKeySpec("h", "#", "$", "%", "^"),
-            NativeKeySpec("i", "$", "%", "&", "*"),
-            NativeKeySpec("j", "%", "^", "_", "+"),
-            NativeKeySpec("k", "&", "*", "-", "="),
-            NativeKeySpec("l", "-", "_", ":", ";")
+            NativeKeySpec("f", "6", "^", "=", "+", flex = 1.0f),
+            NativeKeySpec("g", "@", "!", "#", "$", flex = 1.0f),
+            NativeKeySpec("h", "#", "$", "%", "^", flex = 1.0f),
+            NativeKeySpec("i", "$", "%", "&", "*", flex = 1.0f),
+            NativeKeySpec("j", "%", "^", "_", "+", flex = 1.0f)
         ),
         listOf(
-            NativeKeySpec("m", "*", "/", "\\", "|"),
-            NativeKeySpec("n", "\"", "'", "`", "~"),
-            NativeKeySpec("o", "'", "`", "©", "¢"),
-            NativeKeySpec("p", ":", ";", "•", "°"),
-            NativeKeySpec("q", ";", ":", "§", "¶"),
-            NativeKeySpec("r", "!", "?", "¿", "¡")
+            NativeKeySpec("k", "&", "*", "-", "=", flex = 1.0f),
+            NativeKeySpec("l", "-", "_", ":", ";", flex = 1.0f),
+            NativeKeySpec("m", "*", "/", "\\", "|", flex = 1.0f),
+            NativeKeySpec("n", "\"", "'", "`", "~", flex = 1.0f),
+            NativeKeySpec("o", "'", "`", "©", "¢", flex = 1.0f)
         ),
         listOf(
-            NativeKeySpec("s", "7", "&", "-", "_"),
-            NativeKeySpec("t", "8", "*", "/", "*"),
-            NativeKeySpec("u", "+", "=", "\"", "'"),
-            NativeKeySpec("v", "(", ")", "<", ">"),
-            NativeKeySpec("w", "?", "!", "«", "»"),
-            NativeKeySpec("x", "9", "(", "[", "]")
+            NativeKeySpec("p", ":", ";", "•", "°", flex = 1.0f),
+            NativeKeySpec("q", ";", ":", "§", "¶", flex = 1.0f),
+            NativeKeySpec("r", "!", "?", "¿", "¡", flex = 1.0f),
+            NativeKeySpec("s", "7", "&", "-", "_", flex = 1.0f),
+            NativeKeySpec("t", "8", "*", "/", "*", flex = 1.0f)
         ),
         listOf(
-            NativeKeySpec(",", "<", ";", "[", "{"),
-            NativeKeySpec(".", ":", ">", "}", "]"),
-            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
-            NativeKeySpec("y", "0", ")", "{", "}"),
-            NativeKeySpec("z", ")", ":", "[", "]"),
-            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
-            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+            NativeKeySpec("u", "+", "=", "\"", "'", flex = 1.0f),
+            NativeKeySpec("v", "(", ")", "<", ">", flex = 1.0f),
+            NativeKeySpec("w", "?", "!", "«", "»", flex = 1.0f),
+            NativeKeySpec("x", "9", "(", "[", "]", flex = 1.0f),
+            NativeKeySpec("y", "0", ")", "{", "}", flex = 0.55f),
+            NativeKeySpec("z", ")", ":", "[", "]", flex = 0.55f)
         )
     )
 
     private val symbolRows = listOf(
+        actionSymbolRow,
         numberRow,
         listOf(
             NativeKeySpec("!", "~", "`"),
             NativeKeySpec("@", "#", "$"),
             NativeKeySpec("#", "$", "€"),
             NativeKeySpec("$", "€", "₹"),
-            NativeKeySpec("%", "‰", "^"),
-            NativeKeySpec("^", "&", "*")
+            NativeKeySpec("%", "‰", "^")
+        ),
+        listOf(
+            NativeKeySpec("^", "&", "*"),
+            NativeKeySpec("&", "*", "("),
+            NativeKeySpec("*", "(", ")"),
+            NativeKeySpec("(", "[", "{"),
+            NativeKeySpec(")", "]", "}")
         ),
         listOf(
             NativeKeySpec("+", "±", "×"),
             NativeKeySpec("-", "÷", "—"),
             NativeKeySpec("=", "≠", "≈"),
-            NativeKeySpec("/", "\\", "|"),
-            NativeKeySpec("<", "≤", "«"),
-            NativeKeySpec(">", "≥", "»")
+            NativeKeySpec("_", "—", "-"),
+            NativeKeySpec("|", "¦", "§")
         ),
         listOf(
-            NativeKeySpec("|", "¦", "§"),
-            NativeKeySpec("_", "—", "-"),
             NativeKeySpec("\\", "/", "|"),
             NativeKeySpec("~", "`", "^"),
             NativeKeySpec("`", "\"", "'"),
-            NativeKeySpec(":", ";", ".")
-        ),
-        listOf(
-            NativeKeySpec("&", "*", "("),
-            NativeKeySpec("*", "(", ")"),
             NativeKeySpec("{", "[", "("),
-            NativeKeySpec("}", "]", ")"),
-            NativeKeySpec(";", ":", ","),
-            NativeKeySpec("\"", "'", "`")
+            NativeKeySpec("}", "]", ")")
         ),
         listOf(
-            NativeKeySpec("ABC", action = NativeActionType.SWITCH_LAYOUT, flex = 1.0f),
-            NativeKeySpec(",", "<"),
-            NativeKeySpec(".", ">"),
-            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
-            NativeKeySpec("ABC", action = NativeActionType.SWITCH_LAYOUT, flex = 1.0f),
-            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
-            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+            NativeKeySpec("[", "{", "("),
+            NativeKeySpec("]", "}", ")"),
+            NativeKeySpec("<", "≤", "«"),
+            NativeKeySpec(">", "≥", "»"),
+            NativeKeySpec(";", ":", ",", flex = 0.55f),
+            NativeKeySpec(":", ";", ".", flex = 0.55f)
         )
     )
 
@@ -599,7 +607,7 @@ class NativeKeyboardView(
     private fun calculateTotalHeightPx(): Int {
         val modH = (keyHeightDp * 0.85f).coerceIn(36.0f, 68.0f)
         val resizeH = if (isResizeBarOpen) 72.0f else 0.0f
-        val totalDp = 6.0f * keyHeightDp + modH + resizeH + 8.0f
+        val totalDp = 7.0f * keyHeightDp + modH + resizeH + 8.0f
         return dp(totalDp).toInt()
     }
 
@@ -663,13 +671,18 @@ class NativeKeyboardView(
         }
         currentTop += modH
 
-        // 6 Main Keyboard Rows
+        // 7 Main Keyboard Rows (Row 0 Action/Symbol Row + Row 1 Number Row + 5 Letter/Symbol Rows)
         val rows = if (isSymbolLayout) symbolRows else qwertyRows
         val rowH = dp(keyHeightDp)
         for (row in rows) {
             val totalRowFlex = row.fold(0f) { acc, s -> acc + s.flex }
             var left = 0f
-            for (spec in row) {
+            for (rawSpec in row) {
+                val spec = if (rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout) {
+                    rawSpec.copy(primary = "ABC")
+                } else {
+                    rawSpec
+                }
                 val kw = viewWidth * (spec.flex / totalRowFlex)
                 hitRects.add(HitRect(spec, RectF(left, currentTop, left + kw, currentTop + rowH), isTopBar = false))
                 left += kw

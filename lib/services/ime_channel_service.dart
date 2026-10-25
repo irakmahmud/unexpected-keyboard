@@ -5,7 +5,7 @@ class ImeChannelService {
 
   static const double minKeyHeight = 34.0;
   static const double maxKeyHeight = 136.0;
-  static const double defaultKeyHeight = 46.0;
+  static const double defaultKeyHeight = 42.0;
 
   static const int minLongPressMs = 0;
   static const int maxLongPressMs = 3000;
@@ -97,10 +97,10 @@ class ImeChannelService {
     bool showResizeBar = false,
   }) {
     final clamped = clampKeyHeight(keyHeight);
-    // 6 rows (Row 0 Number Row + 4 Letter Rows + 1 Bottom Row) with zero vertical gaps
-    final rowsHeight = 6.0 * clamped;
+    // 7 rows (Row 0 Action/Symbol Row + Row 1 Number Row + 5 Letter Rows) with zero vertical gaps
+    final rowsHeight = 7.0 * clamped;
     final modifierBarHeight = showTerminalBar ? (clamped * 0.85).clamp(36.0, 68.0) : 0.0;
-    final resizeBarHeight = showResizeBar ? 40.0 : 0.0;
+    final resizeBarHeight = showResizeBar ? 72.0 : 0.0;
     return (rowsHeight + modifierBarHeight + resizeBarHeight + 4.0).round();
   }
 

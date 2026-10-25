@@ -323,7 +323,7 @@ class _KeyWidgetState extends State<KeyWidget> {
 
     // Zero gaps between keys + raw Listener for 0.0ms touch-down latency (no RepaintBoundary/FittedBox texture stall)
     return Expanded(
-      flex: (key.flex * 10).round(),
+      flex: (key.flex * 100).round(),
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,

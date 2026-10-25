@@ -16,11 +16,12 @@ When the user asks to revert to **Version 1** or uncomment Version 1, restore th
 
 ---
 
-## 🧪 Version 2 (Experimental Alphabetical Layout — `a, b, c, d ... y, z`, Release: `v1.2.0`)
-Sequential `a` through `z` layout across the 6-key rows, ending with `y, z` on the bottom row:
-- **Row 0 (Numbers):** `1  2  3  4  5  6  7  8  9  0`
-- **Row 1 (6 keys):** `a  b  c  d  e  f`
-- **Row 2 (6 keys):** `g  h  i  j  k  l`
-- **Row 3 (6 keys):** `m  n  o  p  q  r`
-- **Row 4 (6 keys):** `s  t  u  v  w  x`
-- **Row 5 (Bottom):** `,  .  Space  y  z  ⌫  ↵`
+## 🧪 Version 2 (Experimental Alphabetical 5-Key Layout + Top Action/Symbol Row — Release: `v1.2.2`)
+Sequential `a` through `z` layout with 5 letters per row, a dedicated Action & Symbol Row directly above the Number Row, and only letters in the bottom row (`u, v, w, x` + compact `y, z`):
+- **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  ?  /  ,  .  Space  ⌫  ↵`
+- **Row 1 (Numbers):** `1  2  3  4  5  6  7  8  9  0`
+- **Row 2 (5 keys):** `a  b  c  d  e`
+- **Row 3 (5 keys):** `f  g  h  i  j`
+- **Row 4 (5 keys):** `k  l  m  n  o`
+- **Row 5 (5 keys):** `p  q  r  s  t`
+- **Row 6 (Bottom Row — ONLY letters):** `u (1.0)  v (1.0)  w (1.0)  x (1.0)  y (0.55)  z (0.55)`
