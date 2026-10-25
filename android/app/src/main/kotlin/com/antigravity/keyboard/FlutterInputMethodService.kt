@@ -548,14 +548,14 @@ class NativeKeyboardView(
 
     // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
     // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
-    // Row 2: [ #50/#51 (8/9) | #49/#50 (//8) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
+    // Row 2: [ #50/#51 (8/9) | #49 (/) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
     // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #5 (r — moved up!) ]
     // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #7 (i — moved up!) ]
-    // Row 5: [ #39/#40 ("/3) | #21 (↵) | #6 (o) | #1 (Space — wider!) | #3 (⌫ — right of Space!) ]
-    // Row 6: [ #35/#36 (z/0) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
-    // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #19 (⇧) ]
+    // Row 5: [ #34/#40 (2/3) | #21 (↵) | #19 (⇧ — in o's place!) | #1 (Space — wider!) | #3 (⌫ — right of Space!) ]
+    // Row 6: [ #36/#33 (0/1) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
+    // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #6 (o — below h!) ]
     // Row 8: [ #43/#44 (q/)) | #30 (') | #22 (g) | #20 (p) | #23 (j) ]
-    // Row 9: [ #45/#46 ((/:) | #33/#34 (1/2) | #29 (f) | #27 (v) | #26 (,) ]
+    // Row 9: [ #45/#46 ((/:) | #35/#39 (z/") | #29 (f) | #27 (v) | #26 (,) ]
     private val rightHandBanglishRows = listOf(
         // Row 1: [ 55(%) | 54(&) | 53(@) | 52(;) | 17(u) ]
         listOf(
@@ -565,18 +565,17 @@ class NativeKeyboardView(
             NativeKeySpec(";", flex = 1.0f),
             NativeKeySpec("u", "7", "&", "-", "_", flex = 1.0f)
         ),
-        // Row 2: [ 50/51 | 49/50 | 31/32 | 14 | 10 ]
+        // Row 2: [ 50/51 (8/9) | 49 (/) | 31/32 (!/w) | 14 (m) | 10 (n) ]
         listOf(
             NativeKeySpec("8", "9", flex = 0.5f),
             NativeKeySpec("9", flex = 0.5f),
-            NativeKeySpec("/", "8", flex = 0.5f),
-            NativeKeySpec("8", flex = 0.5f),
+            NativeKeySpec("/", "?", "\\", "|", flex = 1.0f),
             NativeKeySpec("!", "w", flex = 0.5f),
             NativeKeySpec("w", "!", flex = 0.5f),
             NativeKeySpec("m", "?", "!", "«", "»", flex = 1.0f),
             NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.0f)
         ),
-        // Row 3: [ 47/48 | 28 | 13 | 9 | 5 (r moved up!) ]
+        // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 5 (r moved up!) ]
         listOf(
             NativeKeySpec("6", "7", flex = 0.5f),
             NativeKeySpec("7", flex = 0.5f),
@@ -585,7 +584,7 @@ class NativeKeyboardView(
             NativeKeySpec("k", "(", ")", "<", ">", flex = 1.0f),
             NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.0f)
         ),
-        // Row 4: [ 41/42 | 24 | 11 | 2 | 7 (i moved up!) ]
+        // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 7 (i moved up!) ]
         listOf(
             NativeKeySpec("4", "5", flex = 0.5f),
             NativeKeySpec("5", flex = 0.5f),
@@ -594,34 +593,34 @@ class NativeKeyboardView(
             NativeKeySpec("a", "@", "!", "#", "$", flex = 1.0f),
             NativeKeySpec("i", "8", "*", "/", "*", flex = 1.0f)
         ),
-        // Row 5: [ 39/40 | 21 | 6 | 1 (wider Space!) | 3 (⌫ Cross to the right of Space!) ]
+        // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧ in o's place!) | 1 (wider Space!) | 3 (⌫ Cross right of Space!) ]
         listOf(
-            NativeKeySpec("\"", "3", flex = 0.44f),
+            NativeKeySpec("2", "3", flex = 0.44f),
             NativeKeySpec("3", flex = 0.44f),
             NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.88f, keyCode = 66),
-            NativeKeySpec("o", "9", "(", "[", "]", flex = 0.88f),
+            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 0.88f),
             NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.48f),
             NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.88f, keyCode = 67)
         ),
-        // Row 6: [ 35/36 | 18 | 12 | 4 | 8 ]
+        // Row 6: [ 36/33 (0/1) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
         listOf(
-            NativeKeySpec("z", "0", flex = 0.5f),
-            NativeKeySpec("0", flex = 0.5f),
+            NativeKeySpec("0", "1", flex = 0.5f),
+            NativeKeySpec("1", flex = 0.5f),
             NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.0f),
             NativeKeySpec("s", "#", "$", "%", "^", flex = 1.0f),
             NativeKeySpec("e", "3", "€", "{", "}", flex = 1.0f),
             NativeKeySpec("h", "-", "_", ":", ";", flex = 1.0f)
         ),
-        // Row 7: [ 37/38 | 25 | 16 | 15 | 19 ]
+        // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 6 (o below h!) ]
         listOf(
             NativeKeySpec("-", "x", flex = 0.5f),
             NativeKeySpec("x", "-", flex = 0.5f),
             NativeKeySpec(".", ">", ":", "(", ")", flex = 1.0f),
             NativeKeySpec("d", "$", "%", "&", "*", flex = 1.0f),
             NativeKeySpec("l", ")", ":", "[", "]", flex = 1.0f),
-            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f)
+            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.0f)
         ),
-        // Row 8: [ 43/44 | 30 | 22 | 20 | 23 ]
+        // Row 8: [ 43/44 (q/)) | 30 (') | 22 (g) | 20 (p) | 23 (j) ]
         listOf(
             NativeKeySpec("q", ")", flex = 0.5f),
             NativeKeySpec(")", flex = 0.5f),
@@ -630,12 +629,12 @@ class NativeKeyboardView(
             NativeKeySpec("p", "0", ")", "{", "}", flex = 1.0f),
             NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.0f)
         ),
-        // Row 9: [ 45/46 | 33/34 | 29 | 27 | 26 ]
+        // Row 9: [ 45/46 ((/:) | 35/39 (z/") | 29 (f) | 27 (v) | 26 (,) ]
         listOf(
             NativeKeySpec("(", ":", flex = 0.5f),
             NativeKeySpec(":", flex = 0.5f),
-            NativeKeySpec("1", "2", flex = 0.5f),
-            NativeKeySpec("2", flex = 0.5f),
+            NativeKeySpec("z", "\"", flex = 0.5f),
+            NativeKeySpec("\"", flex = 0.5f),
             NativeKeySpec("f", "%", "^", "_", "+", flex = 1.0f),
             NativeKeySpec("v", ":", ";", "•", "°", flex = 1.0f),
             NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.0f)

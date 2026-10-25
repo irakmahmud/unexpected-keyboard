@@ -290,12 +290,11 @@ class KeyboardLayout {
       KeyModel(primary: ';', flex: 1.0),
       KeyModel(primary: 'u', topLeft: '7', topRight: '&', bottomLeft: '-', bottomRight: '_', swipeUp: '7', flex: 1.0),
     ],
-    // Row 2: [ 50/51 (8/9) | 49/50 (//8) | 31/32 (!/w) | 14 (m) | 10 (n) ]
+    // Row 2: [ 50/51 (8/9) | 49 (/) | 31/32 (!/w) | 14 (m) | 10 (n) ]
     [
       KeyModel(primary: '8', topLeft: '9', flex: 0.5),
       KeyModel(primary: '9', flex: 0.5),
-      KeyModel(primary: '/', topLeft: '8', flex: 0.5),
-      KeyModel(primary: '8', flex: 0.5),
+      KeyModel(primary: '/', topLeft: '?', topRight: '\\', bottomLeft: '|', flex: 1.0),
       KeyModel(primary: '!', topLeft: 'w', flex: 0.5),
       KeyModel(primary: 'w', topLeft: '!', flex: 0.5),
       KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.0),
@@ -319,32 +318,32 @@ class KeyboardLayout {
       KeyModel(primary: 'a', topLeft: '@', topRight: '!', bottomLeft: '#', bottomRight: '\$', swipeUp: '@', flex: 1.0),
       KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.0),
     ],
-    // Row 5: [ 39/40 ("/3) | 21 (↵) | 6 (o) | 1 (Space — wider!) | 3 (⌫ Cross right of Space!) ]
+    // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧ in o's place!) | 1 (Space — wider!) | 3 (⌫ Cross right of Space!) ]
     [
-      KeyModel(primary: '"', topLeft: '3', flex: 0.44),
+      KeyModel(primary: '2', topLeft: '3', flex: 0.44),
       KeyModel(primary: '3', flex: 0.44),
       KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.88, androidKeyCode: 66),
-      KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 0.88),
+      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.88),
       KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.48),
       KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.88, androidKeyCode: 67),
     ],
-    // Row 6: [ 35/36 (z/0) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
+    // Row 6: [ 36/33 (0/1) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
     [
-      KeyModel(primary: 'z', topLeft: '0', flex: 0.5),
-      KeyModel(primary: '0', flex: 0.5),
+      KeyModel(primary: '0', topLeft: '1', flex: 0.5),
+      KeyModel(primary: '1', flex: 0.5),
       KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.0),
       KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.0),
       KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.0),
       KeyModel(primary: 'h', topLeft: '-', topRight: '_', bottomLeft: ':', bottomRight: ';', swipeUp: '-', flex: 1.0),
     ],
-    // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 19 (⇧) ]
+    // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 6 (o below h!) ]
     [
       KeyModel(primary: '-', topLeft: 'x', flex: 0.5),
       KeyModel(primary: 'x', topLeft: '-', flex: 0.5),
       KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 1.0),
       KeyModel(primary: 'd', topLeft: '\$', topRight: '%', bottomLeft: '&', bottomRight: '*', swipeUp: '\$', flex: 1.0),
       KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.0),
-      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.0),
+      KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.0),
     ],
     // Row 8: [ 43/44 (q/)) | 30 (') | 22 (g) | 20 (p) | 23 (j) ]
     [
@@ -355,12 +354,12 @@ class KeyboardLayout {
       KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.0),
       KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.0),
     ],
-    // Row 9: [ 45/46 ((/:) | 33/34 (1/2) | 29 (f) | 27 (v) | 26 (,) ]
+    // Row 9: [ 45/46 ((/:) | 35/39 (z/") | 29 (f) | 27 (v) | 26 (,) ]
     [
       KeyModel(primary: '(', topLeft: ':', flex: 0.5),
       KeyModel(primary: ':', flex: 0.5),
-      KeyModel(primary: '1', topLeft: '2', flex: 0.5),
-      KeyModel(primary: '2', flex: 0.5),
+      KeyModel(primary: 'z', topLeft: '"', flex: 0.5),
+      KeyModel(primary: '"', flex: 0.5),
       KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.0),
       KeyModel(primary: 'v', topLeft: ':', topRight: ';', bottomLeft: '•', bottomRight: '°', swipeUp: ':', flex: 1.0),
       KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 1.0),
