@@ -7,40 +7,43 @@ enum LayoutType {
 }
 
 class KeyboardLayout {
-  /// Top Terminal Bar: ESC, CTRL, ALT, and Arrow keys (Shift and ?123 are in the dedicated Action/Symbol Row directly above the Number Row)
+  /// Top Terminal Bar: ESC, CTRL, ALT, V2/V1 Layer Switch, and Arrow keys
   static List<KeyModel> get terminalBarKeys => const [
-    KeyModel(primary: 'ESC', actionType: KeyActionType.escape, flex: 1.0, androidKeyCode: 111),
-    KeyModel(primary: 'CTRL', actionType: KeyActionType.ctrl, flex: 1.1, androidKeyCode: 113),
-    KeyModel(primary: 'ALT', actionType: KeyActionType.alt, flex: 1.0, androidKeyCode: 57),
-    KeyModel(primary: '◀', actionType: KeyActionType.arrowLeft, flex: 0.85, androidKeyCode: 21),
-    KeyModel(primary: '▼', actionType: KeyActionType.arrowDown, flex: 0.85, androidKeyCode: 20),
-    KeyModel(primary: '▲', actionType: KeyActionType.arrowUp, flex: 0.85, androidKeyCode: 19),
-    KeyModel(primary: '▶', actionType: KeyActionType.arrowRight, flex: 0.85, androidKeyCode: 22),
+    KeyModel(primary: 'ESC', actionType: KeyActionType.escape, flex: 0.95, androidKeyCode: 111),
+    KeyModel(primary: 'CTRL', actionType: KeyActionType.ctrl, flex: 1.05, androidKeyCode: 113),
+    KeyModel(primary: 'ALT', actionType: KeyActionType.alt, flex: 0.95, androidKeyCode: 57),
+    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 1.15),
+    KeyModel(primary: '◀', actionType: KeyActionType.arrowLeft, flex: 0.8, androidKeyCode: 21),
+    KeyModel(primary: '▼', actionType: KeyActionType.arrowDown, flex: 0.8, androidKeyCode: 20),
+    KeyModel(primary: '▲', actionType: KeyActionType.arrowUp, flex: 0.8, androidKeyCode: 19),
+    KeyModel(primary: '▶', actionType: KeyActionType.arrowRight, flex: 0.8, androidKeyCode: 22),
   ];
 
-  /// Row 0 (Directly above Number Row): Shift (⇧), ?123, ?, /, ,, ., Space, Backspace (Cross ⌫), Enter (↵)
+  /// Row 0 (Directly above Number Row): Shift (⇧), ?123, V2/V1 Layer, ?, /, ,, ., Space, Backspace (Cross ⌫), Enter (↵)
   static List<KeyModel> get actionSymbolRow => const [
-    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.0),
-    KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 1.0),
-    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.85),
-    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.85),
-    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.85),
-    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.85),
-    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.5),
-    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
-    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
+    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.95),
+    KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 0.95),
+    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 0.85),
+    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.8),
+    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.8),
+    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.8),
+    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.8),
+    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.35),
+    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.95, androidKeyCode: 67),
+    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.95, androidKeyCode: 66),
   ];
 
   static List<KeyModel> get symbolActionRow => const [
-    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.0),
-    KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 1.0),
-    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.85),
-    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.85),
-    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.85),
-    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.85),
-    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.5),
-    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
-    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
+    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.95),
+    KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 0.95),
+    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 0.85),
+    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.8),
+    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.8),
+    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.8),
+    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.8),
+    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.35),
+    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.95, androidKeyCode: 67),
+    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.95, androidKeyCode: 66),
   ];
 
   /// Row 1: Dedicated Number Row positioned directly below Action/Symbol Row
@@ -57,69 +60,68 @@ class KeyboardLayout {
     KeyModel(primary: '0', topLeft: ')', topRight: ']', bottomLeft: '}', bottomRight: '»', swipeUp: ')', flex: 1.0),
   ];
 
-  /* ============================================================================
-   * VERSION 1 SAVED ALIGNMENT (Tag: version-1 / v1.1.5)
-   * Uncomment this block and comment out VERSION 2 below to revert to Version 1:
-   *
-   * static List<List<KeyModel>> get qwertyLayout => [
-   *   // Row 0: 1 2 3 4 5 6 7 8 9 0
-   *   numberRow,
-   *   // First row (q to y): q w e r t y
-   *   const [
-   *     KeyModel(primary: 'q', topLeft: '1', topRight: '`', bottomLeft: '~', bottomRight: '\\', swipeUp: '1', flex: 1.0),
-   *     KeyModel(primary: 'w', topLeft: '2', topRight: '|', bottomLeft: '<', bottomRight: '>', swipeUp: '2', flex: 1.0),
-   *     KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.0),
-   *     KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.0),
-   *     KeyModel(primary: 't', topLeft: '5', topRight: '%', bottomLeft: '(', bottomRight: ')', swipeUp: '5', flex: 1.0),
-   *     KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.0),
-   *   ],
-   *   // Second row (a to h): a s d f g h
-   *   const [
-   *     KeyModel(primary: 'a', topLeft: '@', topRight: '!', bottomLeft: '#', bottomRight: '\$', swipeUp: '@', flex: 1.0),
-   *     KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.0),
-   *     KeyModel(primary: 'd', topLeft: '\$', topRight: '%', bottomLeft: '&', bottomRight: '*', swipeUp: '\$', flex: 1.0),
-   *     KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.0),
-   *     KeyModel(primary: 'g', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '=', swipeUp: '&', flex: 1.0),
-   *     KeyModel(primary: 'h', topLeft: '-', topRight: '_', bottomLeft: ':', bottomRight: ';', swipeUp: '-', flex: 1.0),
-   *   ],
-   *   // Third row (z to n): z x c v b n
-   *   const [
-   *     KeyModel(primary: 'z', topLeft: '*', topRight: '/', bottomLeft: '\\', bottomRight: '|', swipeUp: '*', flex: 1.0),
-   *     KeyModel(primary: 'x', topLeft: '"', topRight: "'", bottomLeft: '`', bottomRight: '~', swipeUp: '"', flex: 1.0),
-   *     KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.0),
-   *     KeyModel(primary: 'v', topLeft: ':', topRight: ';', bottomLeft: '•', bottomRight: '°', swipeUp: ':', flex: 1.0),
-   *     KeyModel(primary: 'b', topLeft: ';', topRight: ':', bottomLeft: '§', bottomRight: '¶', swipeUp: ';', flex: 1.0),
-   *     KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.0),
-   *   ],
-   *   // Fourth row (u i j k m o): u i j k m o
-   *   const [
-   *     KeyModel(primary: 'u', topLeft: '7', topRight: '&', bottomLeft: '-', bottomRight: '_', swipeUp: '7', flex: 1.0),
-   *     KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.0),
-   *     KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.0),
-   *     KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.0),
-   *     KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.0),
-   *     KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.0),
-   *   ],
-   *   // Fifth row: , . Space p l ⌫ ↵
-   *   const [
-   *     KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: '[', bottomRight: '{', flex: 1.0),
-   *     KeyModel(primary: '.', topLeft: ':', topRight: '>', bottomLeft: '}', bottomRight: ']', flex: 1.0),
-   *     KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.0),
-   *     KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.0),
-   *     KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.0),
-   *     KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
-   *     KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
-   *   ],
-   * ];
-   * ============================================================================ */
+  /// VERSION 1 LAYER ALIGNMENT (Activated by clicking the V2/V1 Layer button):
+  /// Row 0: Action & Symbol Row directly above Number Row
+  /// Row 1: Number Row (1..0)
+  /// Rows 2..6: Version 1 Letter Alignment (q..y, a..h, z..n, u i j k m o, and , . Space p l ⌫ ↵)
+  static List<List<KeyModel>> get version1Layout => [
+    actionSymbolRow,
+    numberRow,
+    // First row (q to y): q w e r t y
+    const [
+      KeyModel(primary: 'q', topLeft: '1', topRight: '`', bottomLeft: '~', bottomRight: '\\', swipeUp: '1', flex: 1.0),
+      KeyModel(primary: 'w', topLeft: '2', topRight: '|', bottomLeft: '<', bottomRight: '>', swipeUp: '2', flex: 1.0),
+      KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.0),
+      KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.0),
+      KeyModel(primary: 't', topLeft: '5', topRight: '%', bottomLeft: '(', bottomRight: ')', swipeUp: '5', flex: 1.0),
+      KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.0),
+    ],
+    // Second row (a to h): a s d f g h
+    const [
+      KeyModel(primary: 'a', topLeft: '@', topRight: '!', bottomLeft: '#', bottomRight: '\$', swipeUp: '@', flex: 1.0),
+      KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.0),
+      KeyModel(primary: 'd', topLeft: '\$', topRight: '%', bottomLeft: '&', bottomRight: '*', swipeUp: '\$', flex: 1.0),
+      KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.0),
+      KeyModel(primary: 'g', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '=', swipeUp: '&', flex: 1.0),
+      KeyModel(primary: 'h', topLeft: '-', topRight: '_', bottomLeft: ':', bottomRight: ';', swipeUp: '-', flex: 1.0),
+    ],
+    // Third row (z to n): z x c v b n
+    const [
+      KeyModel(primary: 'z', topLeft: '*', topRight: '/', bottomLeft: '\\', bottomRight: '|', swipeUp: '*', flex: 1.0),
+      KeyModel(primary: 'x', topLeft: '"', topRight: "'", bottomLeft: '`', bottomRight: '~', swipeUp: '"', flex: 1.0),
+      KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.0),
+      KeyModel(primary: 'v', topLeft: ':', topRight: ';', bottomLeft: '•', bottomRight: '°', swipeUp: ':', flex: 1.0),
+      KeyModel(primary: 'b', topLeft: ';', topRight: ':', bottomLeft: '§', bottomRight: '¶', swipeUp: ';', flex: 1.0),
+      KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.0),
+    ],
+    // Fourth row (u i j k m o): u i j k m o
+    const [
+      KeyModel(primary: 'u', topLeft: '7', topRight: '&', bottomLeft: '-', bottomRight: '_', swipeUp: '7', flex: 1.0),
+      KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.0),
+      KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.0),
+      KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.0),
+      KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.0),
+      KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.0),
+    ],
+    // Fifth row: , . Space p l ⌫ ↵
+    const [
+      KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: '[', bottomRight: '{', flex: 1.0),
+      KeyModel(primary: '.', topLeft: ':', topRight: '>', bottomLeft: '}', bottomRight: ']', flex: 1.0),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 2.0),
+      KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.0),
+      KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.0),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
+    ],
+  ];
 
-  /// VERSION 2 ACTIVE ALIGNMENT:
-  /// Row 0: Action & Symbol Row directly above Number Row (⇧, ?123, ?, /, ,, ., Space, ⌫, ↵)
+  /// VERSION 2 DEFAULT ALIGNMENT:
+  /// Row 0: Action & Symbol Row directly above Number Row (⇧, ?123, V2, ?, /, ,, ., Space, ⌫, ↵)
   /// Row 1: Number Row (1..0)
   /// Rows 2..5: 5-letter sequential rows (a..e, f..j, k..o, p..t)
   /// Row 6 (Bottom Row): Only letters — u, v, w, x (flex 1.0) + compact y, z (flex 0.55)
-  static List<List<KeyModel>> get qwertyLayout => [
-    // Row 0 (Above Number Row): ⇧ ?123 ? / , . Space ⌫ ↵
+  static List<List<KeyModel>> get version2Layout => [
+    // Row 0 (Above Number Row): ⇧ ?123 V2 ? / , . Space ⌫ ↵
     actionSymbolRow,
     // Row 1 (Number Row): 1 2 3 4 5 6 7 8 9 0
     numberRow,
@@ -165,6 +167,9 @@ class KeyboardLayout {
       KeyModel(primary: 'z', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 0.55),
     ],
   ];
+
+  /// Default layout is Version 2 (as requested: "Maane version 2 is default")
+  static List<List<KeyModel>> get qwertyLayout => version2Layout;
 
   static List<List<KeyModel>> get symbolLayout => [
     // Row 0 (Above Number Row): ⇧ ABC ? / , . Space ⌫ ↵

@@ -16,6 +16,7 @@ enum KeyActionType {
   arrowUp,
   arrowDown,
   switchLayout,
+  switchVersion,
   openSettings,
 }
 

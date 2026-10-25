@@ -35,8 +35,10 @@ class FlutterInputMethodService : InputMethodService() {
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         const val KEY_LONG_PRESS_MS = "long_press_ms"
+        const val KEY_LAYOUT_VERSION = "layout_version"
         const val DEFAULT_KEY_HEIGHT_DP = 42.0f
         const val DEFAULT_LONG_PRESS_MS = 400
+        const val DEFAULT_LAYOUT_VERSION = 2
     }
 
     override fun onEvaluateFullscreenMode(): Boolean = false
@@ -112,6 +114,18 @@ class FlutterInputMethodService : InputMethodService() {
     fun getSavedThemeMode(): String {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"
+    }
+
+    fun getSavedLayoutVersion(): Int {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val v = prefs.getInt(KEY_LAYOUT_VERSION, DEFAULT_LAYOUT_VERSION)
+        return if (v == 1) 1 else 2
+    }
+
+    fun saveLayoutVersion(version: Int) {
+        val v = if (version == 1) 1 else 2
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_LAYOUT_VERSION, v).apply()
     }
 
     fun commitTextImmediate(text: String, metaState: Int, useModifiers: Boolean) {
@@ -263,6 +277,7 @@ enum class NativeActionType {
     ARROW_UP,
     ARROW_RIGHT,
     SWITCH_LAYOUT,
+    SWITCH_VERSION,
     SWITCH_IME,
     TOGGLE_RESIZE,
     OPEN_SETTINGS,
@@ -308,6 +323,7 @@ class NativeKeyboardView(
     private var isCtrlActive: Boolean = false
     private var isAltActive: Boolean = false
     private var isSymbolLayout: Boolean = false
+    private var isVersion1Layout: Boolean = false // Default false => Version 2 is default
     private var isResizeBarOpen: Boolean = false
 
     // Theme colors
@@ -365,29 +381,31 @@ class NativeKeyboardView(
     private var charLongPressRunnable: Runnable? = null
 
     private val topBarSpecs = listOf(
-        NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 1.0f, keyCode = 111),
-        NativeKeySpec("CTRL", action = NativeActionType.CTRL, flex = 1.1f, keyCode = 113),
-        NativeKeySpec("ALT", action = NativeActionType.ALT, flex = 1.0f, keyCode = 57),
-        NativeKeySpec("◀", action = NativeActionType.ARROW_LEFT, flex = 0.85f, keyCode = 21),
-        NativeKeySpec("▼", action = NativeActionType.ARROW_DOWN, flex = 0.85f, keyCode = 20),
-        NativeKeySpec("▲", action = NativeActionType.ARROW_UP, flex = 0.85f, keyCode = 19),
-        NativeKeySpec("▶", action = NativeActionType.ARROW_RIGHT, flex = 0.85f, keyCode = 22),
-        NativeKeySpec("🌐", action = NativeActionType.SWITCH_IME, flex = 0.9f),
-        NativeKeySpec("↕", action = NativeActionType.TOGGLE_RESIZE, flex = 0.9f),
-        NativeKeySpec("⚙️", action = NativeActionType.OPEN_SETTINGS, flex = 0.9f)
+        NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 0.95f, keyCode = 111),
+        NativeKeySpec("CTRL", action = NativeActionType.CTRL, flex = 1.05f, keyCode = 113),
+        NativeKeySpec("ALT", action = NativeActionType.ALT, flex = 0.95f, keyCode = 57),
+        NativeKeySpec("V2", action = NativeActionType.SWITCH_VERSION, flex = 1.15f),
+        NativeKeySpec("◀", action = NativeActionType.ARROW_LEFT, flex = 0.8f, keyCode = 21),
+        NativeKeySpec("▼", action = NativeActionType.ARROW_DOWN, flex = 0.8f, keyCode = 20),
+        NativeKeySpec("▲", action = NativeActionType.ARROW_UP, flex = 0.8f, keyCode = 19),
+        NativeKeySpec("▶", action = NativeActionType.ARROW_RIGHT, flex = 0.8f, keyCode = 22),
+        NativeKeySpec("🌐", action = NativeActionType.SWITCH_IME, flex = 0.85f),
+        NativeKeySpec("↕", action = NativeActionType.TOGGLE_RESIZE, flex = 0.85f),
+        NativeKeySpec("⚙️", action = NativeActionType.OPEN_SETTINGS, flex = 0.85f)
     )
 
-    // Row 0 (Directly above Number Row): Shift, ?123, ?, /, ,, ., Space, Backspace (Cross), Enter
+    // Row 0 (Directly above Number Row): Shift, ?123, V2/V1 Layer, ?, /, ,, ., Space, Backspace (Cross), Enter
     private val actionSymbolRow = listOf(
-        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f),
-        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 1.0f),
-        NativeKeySpec("?", "!", "¿", "¡", "@", flex = 0.85f),
-        NativeKeySpec("/", "\\", "|", "-", "_", flex = 0.85f),
-        NativeKeySpec(",", "<", ";", "'", "\"", flex = 0.85f),
-        NativeKeySpec(".", ">", ":", "(", ")", flex = 0.85f),
-        NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.5f),
-        NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
-        NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 0.95f),
+        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 0.95f),
+        NativeKeySpec("V2", action = NativeActionType.SWITCH_VERSION, flex = 0.85f),
+        NativeKeySpec("?", "!", "¿", "¡", "@", flex = 0.8f),
+        NativeKeySpec("/", "\\", "|", "-", "_", flex = 0.8f),
+        NativeKeySpec(",", "<", ";", "'", "\"", flex = 0.8f),
+        NativeKeySpec(".", ">", ":", "(", ")", flex = 0.8f),
+        NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.35f),
+        NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.95f, keyCode = 67),
+        NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.95f, keyCode = 66)
     )
 
     // Row 1 (Number Row): 1 2 3 4 5 6 7 8 9 0
@@ -404,62 +422,62 @@ class NativeKeyboardView(
         NativeKeySpec("0", ")", "]", "}", "»")
     )
 
-    /* ============================================================================
-     * VERSION 1 SAVED ALIGNMENT (Tag: version-1 / v1.1.5)
-     * Uncomment this block and comment out VERSION 2 below to revert to Version 1:
-     *
-     * private val qwertyRows = listOf(
-     *     numberRow,
-     *     listOf(
-     *         NativeKeySpec("q", "1", "`", "~", "\\"),
-     *         NativeKeySpec("w", "2", "|", "<", ">"),
-     *         NativeKeySpec("e", "3", "€", "{", "}"),
-     *         NativeKeySpec("r", "4", "₹", "[", "]"),
-     *         NativeKeySpec("t", "5", "%", "(", ")"),
-     *         NativeKeySpec("y", "6", "^", "=", "+")
-     *     ),
-     *     listOf(
-     *         NativeKeySpec("a", "@", "!", "#", "$"),
-     *         NativeKeySpec("s", "#", "$", "%", "^"),
-     *         NativeKeySpec("d", "$", "%", "&", "*"),
-     *         NativeKeySpec("f", "%", "^", "_", "+"),
-     *         NativeKeySpec("g", "&", "*", "-", "="),
-     *         NativeKeySpec("h", "-", "_", ":", ";")
-     *     ),
-     *     listOf(
-     *         NativeKeySpec("z", "*", "/", "\\", "|"),
-     *         NativeKeySpec("x", "\"", "'", "`", "~"),
-     *         NativeKeySpec("c", "'", "`", "©", "¢"),
-     *         NativeKeySpec("v", ":", ";", "•", "°"),
-     *         NativeKeySpec("b", ";", ":", "§", "¶"),
-     *         NativeKeySpec("n", "!", "?", "¿", "¡")
-     *     ),
-     *     listOf(
-     *         NativeKeySpec("u", "7", "&", "-", "_"),
-     *         NativeKeySpec("i", "8", "*", "/", "*"),
-     *         NativeKeySpec("j", "+", "=", "\"", "'"),
-     *         NativeKeySpec("k", "(", ")", "<", ">"),
-     *         NativeKeySpec("m", "?", "!", "«", "»"),
-     *         NativeKeySpec("o", "9", "(", "[", "]")
-     *     ),
-     *     listOf(
-     *         NativeKeySpec(",", "<", ";", "[", "{"),
-     *         NativeKeySpec(".", ":", ">", "}", "]"),
-     *         NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
-     *         NativeKeySpec("p", "0", ")", "{", "}"),
-     *         NativeKeySpec("l", ")", ":", "[", "]"),
-     *         NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
-     *         NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
-     *     )
-     * )
-     * ============================================================================ */
+    // VERSION 1 LAYER ALIGNMENT (Activated by clicking the V2/V1 Layer button):
+    // Row 0: Action & Symbol Row above Number Row (⇧, ?123, ?, /, ,, ., Space, ⌫, ↵)
+    // Row 1: Number Row (1..0)
+    // Rows 2..6: Version 1 Letter Alignment (q..y, a..h, z..n, u i j k m o, and , . Space p l ⌫ ↵)
+    private val version1Rows = listOf(
+        actionSymbolRow,
+        numberRow,
+        listOf(
+            NativeKeySpec("q", "1", "`", "~", "\\"),
+            NativeKeySpec("w", "2", "|", "<", ">"),
+            NativeKeySpec("e", "3", "€", "{", "}"),
+            NativeKeySpec("r", "4", "₹", "[", "]"),
+            NativeKeySpec("t", "5", "%", "(", ")"),
+            NativeKeySpec("y", "6", "^", "=", "+")
+        ),
+        listOf(
+            NativeKeySpec("a", "@", "!", "#", "$"),
+            NativeKeySpec("s", "#", "$", "%", "^"),
+            NativeKeySpec("d", "$", "%", "&", "*"),
+            NativeKeySpec("f", "%", "^", "_", "+"),
+            NativeKeySpec("g", "&", "*", "-", "="),
+            NativeKeySpec("h", "-", "_", ":", ";")
+        ),
+        listOf(
+            NativeKeySpec("z", "*", "/", "\\", "|"),
+            NativeKeySpec("x", "\"", "'", "`", "~"),
+            NativeKeySpec("c", "'", "`", "©", "¢"),
+            NativeKeySpec("v", ":", ";", "•", "°"),
+            NativeKeySpec("b", ";", ":", "§", "¶"),
+            NativeKeySpec("n", "!", "?", "¿", "¡")
+        ),
+        listOf(
+            NativeKeySpec("u", "7", "&", "-", "_"),
+            NativeKeySpec("i", "8", "*", "/", "*"),
+            NativeKeySpec("j", "+", "=", "\"", "'"),
+            NativeKeySpec("k", "(", ")", "<", ">"),
+            NativeKeySpec("m", "?", "!", "«", "»"),
+            NativeKeySpec("o", "9", "(", "[", "]")
+        ),
+        listOf(
+            NativeKeySpec(",", "<", ";", "[", "{"),
+            NativeKeySpec(".", ":", ">", "}", "]"),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 2.0f),
+            NativeKeySpec("p", "0", ")", "{", "}"),
+            NativeKeySpec("l", ")", ":", "[", "]"),
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
+            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
+        )
+    )
 
-    // VERSION 2 ACTIVE ALIGNMENT:
+    // VERSION 2 DEFAULT ALIGNMENT (Default on startup):
     // Row 0: Action & Symbol Row above Number Row (⇧, ?123, ?, /, ,, ., Space, ⌫, ↵)
     // Row 1: Number Row (1..0)
     // Rows 2..5: 5-letter sequential rows (a..e, f..j, k..o, p..t)
     // Row 6 (Bottom Row): Only letters — u, v, w, x (flex 1.0) + compact y, z (flex 0.55)
-    private val qwertyRows = listOf(
+    private val version2Rows = listOf(
         actionSymbolRow,
         numberRow,
         listOf(
@@ -547,6 +565,7 @@ class NativeKeyboardView(
         longPressMs = service.getSavedLongPressMs()
         themeMode = service.getSavedThemeMode()
         hapticsEnabled = service.isHapticsEnabled()
+        isVersion1Layout = (service.getSavedLayoutVersion() == 1)
         applyThemePalette(themeMode)
         if (width > 0) {
             rebuildHitRects(width.toFloat())
@@ -660,10 +679,10 @@ class NativeKeyboardView(
         val totalModFlex = topBarSpecs.fold(0f) { acc, s -> acc + s.flex }
         var modLeft = 0f
         for (rawSpec in topBarSpecs) {
-            val spec = if (rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout) {
-                rawSpec.copy(primary = "ABC")
-            } else {
-                rawSpec
+            val spec = when {
+                rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout -> rawSpec.copy(primary = "ABC")
+                rawSpec.action == NativeActionType.SWITCH_VERSION -> rawSpec.copy(primary = if (isVersion1Layout) "V1" else "V2")
+                else -> rawSpec
             }
             val kw = viewWidth * (spec.flex / totalModFlex)
             hitRects.add(HitRect(spec, RectF(modLeft, currentTop, modLeft + kw, currentTop + modH), isTopBar = true))
@@ -672,16 +691,20 @@ class NativeKeyboardView(
         currentTop += modH
 
         // 7 Main Keyboard Rows (Row 0 Action/Symbol Row + Row 1 Number Row + 5 Letter/Symbol Rows)
-        val rows = if (isSymbolLayout) symbolRows else qwertyRows
+        val rows = when {
+            isSymbolLayout -> symbolRows
+            isVersion1Layout -> version1Rows
+            else -> version2Rows
+        }
         val rowH = dp(keyHeightDp)
         for (row in rows) {
             val totalRowFlex = row.fold(0f) { acc, s -> acc + s.flex }
             var left = 0f
             for (rawSpec in row) {
-                val spec = if (rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout) {
-                    rawSpec.copy(primary = "ABC")
-                } else {
-                    rawSpec
+                val spec = when {
+                    rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout -> rawSpec.copy(primary = "ABC")
+                    rawSpec.action == NativeActionType.SWITCH_VERSION -> rawSpec.copy(primary = if (isVersion1Layout) "V1" else "V2")
+                    else -> rawSpec
                 }
                 val kw = viewWidth * (spec.flex / totalRowFlex)
                 hitRects.add(HitRect(spec, RectF(left, currentTop, left + kw, currentTop + rowH), isTopBar = false))
@@ -721,6 +744,7 @@ class NativeKeyboardView(
                     (spec.action == NativeActionType.CTRL && isCtrlActive) ||
                     (spec.action == NativeActionType.ALT && isAltActive) ||
                     (spec.action == NativeActionType.SWITCH_LAYOUT && spec.primary == "ABC") ||
+                    (spec.action == NativeActionType.SWITCH_VERSION && isVersion1Layout) ||
                     (spec.action == NativeActionType.TOGGLE_RESIZE && isResizeBarOpen) ||
                     (spec.action == NativeActionType.RESIZE_DONE)
 
@@ -745,7 +769,7 @@ class NativeKeyboardView(
 
             val fgColor = when {
                 isActiveMod -> 0xFFFFFFFF.toInt()
-                spec.action == NativeActionType.SWITCH_IME -> accentColor
+                spec.action == NativeActionType.SWITCH_IME || spec.action == NativeActionType.SWITCH_VERSION -> accentColor
                 else -> primaryTextColor
             }
 
@@ -1027,6 +1051,16 @@ class NativeKeyboardView(
             NativeActionType.SWITCH_LAYOUT -> {
                 isSymbolLayout = !isSymbolLayout
                 rebuildHitRects(width.toFloat())
+                triggerHapticNow()
+                invalidate()
+            }
+            NativeActionType.SWITCH_VERSION -> {
+                isVersion1Layout = !isVersion1Layout
+                isSymbolLayout = false
+                service.saveLayoutVersion(if (isVersion1Layout) 1 else 2)
+                rebuildHitRects(width.toFloat())
+                popupLabel = if (isVersion1Layout) "V1" else "V2"
+                popupAnchorRect = hit.rect
                 triggerHapticNow()
                 invalidate()
             }

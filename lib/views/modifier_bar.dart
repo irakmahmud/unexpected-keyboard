@@ -12,6 +12,7 @@ class ModifierBar extends StatelessWidget {
   final bool isCtrlActive;
   final bool isAltActive;
   final bool isSymbolLayout;
+  final bool isVersion1Layout;
   final double keyHeight;
   final bool isResizeBarOpen;
   final VoidCallback? onToggleResizeBar;
@@ -27,6 +28,7 @@ class ModifierBar extends StatelessWidget {
     required this.isCtrlActive,
     required this.isAltActive,
     this.isSymbolLayout = false,
+    this.isVersion1Layout = false,
     this.keyHeight = 46.0,
     this.isResizeBarOpen = false,
     this.onToggleResizeBar,
@@ -48,19 +50,27 @@ class ModifierBar extends StatelessWidget {
         children: [
           ...keys.map((key) {
             final bool isLayoutSwitch = key.actionType == KeyActionType.switchLayout;
+            final bool isVersionSwitch = key.actionType == KeyActionType.switchVersion;
             final KeyModel effectiveKey = (isLayoutSwitch && isSymbolLayout)
                 ? KeyModel(
                     primary: 'ABC',
                     actionType: KeyActionType.switchLayout,
                     flex: key.flex,
                   )
-                : key;
+                : (isVersionSwitch
+                    ? KeyModel(
+                        primary: isVersion1Layout ? 'V1' : 'V2',
+                        actionType: KeyActionType.switchVersion,
+                        flex: key.flex,
+                      )
+                    : key);
 
             bool isActive = false;
             if (effectiveKey.actionType == KeyActionType.shift && isShiftActive) isActive = true;
             if (effectiveKey.actionType == KeyActionType.ctrl && isCtrlActive) isActive = true;
             if (effectiveKey.actionType == KeyActionType.alt && isAltActive) isActive = true;
             if (isLayoutSwitch && isSymbolLayout) isActive = true;
+            if (isVersionSwitch && isVersion1Layout) isActive = true;
 
             return Expanded(
               flex: (effectiveKey.flex * 10).round(),

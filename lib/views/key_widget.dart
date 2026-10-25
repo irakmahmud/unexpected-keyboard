@@ -312,6 +312,7 @@ class _KeyWidgetState extends State<KeyWidget> {
     if (key.actionType == KeyActionType.ctrl && widget.isCtrlActive) isActiveModifier = true;
     if (key.actionType == KeyActionType.alt && widget.isAltActive) isActiveModifier = true;
     if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
+    if (key.actionType == KeyActionType.switchVersion && key.primary == 'V1') isActiveModifier = true;
 
     final Color bgColor = isActiveModifier
         ? theme.modifierActiveColor

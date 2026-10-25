@@ -34,6 +34,7 @@ class KeyboardView extends StatefulWidget {
 
 class _KeyboardViewState extends State<KeyboardView> {
   LayoutType _currentLayout = LayoutType.qwerty;
+  bool _isVersion1Layout = false; // Default false => Version 2 is default
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
   late double _localKeyHeight;
@@ -260,6 +261,15 @@ class _KeyboardViewState extends State<KeyboardView> {
         widget.imeService.triggerHaptic();
         break;
 
+      case KeyActionType.switchVersion:
+        setState(() {
+          _isVersion1Layout = !_isVersion1Layout;
+          _currentLayout = LayoutType.qwerty;
+        });
+        _forceImmediateFrame();
+        widget.imeService.triggerHaptic();
+        break;
+
       case KeyActionType.openSettings:
         widget.imeService.triggerHaptic();
         widget.onOpenSettings();
@@ -432,7 +442,7 @@ class _KeyboardViewState extends State<KeyboardView> {
   @override
   Widget build(BuildContext context) {
     final List<List<KeyModel>> rows = (_currentLayout == LayoutType.qwerty)
-        ? KeyboardLayout.qwertyLayout
+        ? (_isVersion1Layout ? KeyboardLayout.version1Layout : KeyboardLayout.version2Layout)
         : KeyboardLayout.symbolLayout;
     final currentKeyHeight = _effectiveKeyHeight;
 
@@ -454,6 +464,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                 isCtrlActive: widget.imeService.isCtrlActive,
                 isAltActive: widget.imeService.isAltActive,
                 isSymbolLayout: _currentLayout == LayoutType.symbols,
+                isVersion1Layout: _isVersion1Layout,
                 keyHeight: currentKeyHeight,
                 isResizeBarOpen: _isResizeBarOpen,
                 onToggleResizeBar: _toggleResizeBar,
@@ -478,7 +489,14 @@ class _KeyboardViewState extends State<KeyboardView> {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
-                  children: row.map((key) {
+                  children: row.map((rawKey) {
+                    final KeyModel key = (rawKey.actionType == KeyActionType.switchVersion && _isVersion1Layout)
+                        ? KeyModel(
+                            primary: 'V1',
+                            actionType: KeyActionType.switchVersion,
+                            flex: rawKey.flex,
+                          )
+                        : rawKey;
                     return KeyWidget(
                       keyModel: key,
                       theme: widget.theme,

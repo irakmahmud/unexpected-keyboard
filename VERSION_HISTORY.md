@@ -16,12 +16,13 @@ When the user asks to revert to **Version 1** or uncomment Version 1, restore th
 
 ---
 
-## 🧪 Version 2 (Experimental Alphabetical 5-Key Layout + Top Action/Symbol Row — Release: `v1.2.2`)
-Sequential `a` through `z` layout with 5 letters per row, a dedicated Action & Symbol Row directly above the Number Row, and only letters in the bottom row (`u, v, w, x` + compact `y, z`):
-- **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  ?  /  ,  .  Space  ⌫  ↵`
+## 🧪 Version 2 (Default Layout) + Live `V2`/`V1` Layer Button (Release: `v1.2.3`)
+- **Default Layout (`V2`):** Sequential `a` through `z` layout with 5 letters per row (`a..e`, `f..j`, `k..o`, `p..t`), a dedicated Action & Symbol Row directly above the Number Row (`⇧  ?123  V2  ?  /  ,  .  Space  ⌫  ↵`), and only letters in the bottom row (`u, v, w, x` + compact `y, z`).
+- **Live Layer Switch (`V2` ⇄ `V1` Button):** Placed in both the Top Terminal Bar (right after `ALT`) and in Row 0 (right next to `?123`). Clicking **`V2`** immediately switches the letter alignment to **Version 1 (`V1`)** (`q..y`, `a..h`, `z..n`, `u i j k m o`, `, . Space p l ⌫ ↵`) and highlights the button as **`V1`**. Clicking **`V1`** again switches right back to **Version 2 (`V2` Default)**.
+- **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  V2/V1  ?  /  ,  .  Space  ⌫  ↵`
 - **Row 1 (Numbers):** `1  2  3  4  5  6  7  8  9  0`
-- **Row 2 (5 keys):** `a  b  c  d  e`
-- **Row 3 (5 keys):** `f  g  h  i  j`
-- **Row 4 (5 keys):** `k  l  m  n  o`
-- **Row 5 (5 keys):** `p  q  r  s  t`
-- **Row 6 (Bottom Row — ONLY letters):** `u (1.0)  v (1.0)  w (1.0)  x (1.0)  y (0.55)  z (0.55)`
+- **Row 2 (5 keys in V2 / 6 keys in V1):** `a  b  c  d  e` (V2) / `q  w  e  r  t  y` (V1)
+- **Row 3 (5 keys in V2 / 6 keys in V1):** `f  g  h  i  j` (V2) / `a  s  d  f  g  h` (V1)
+- **Row 4 (5 keys in V2 / 6 keys in V1):** `k  l  m  n  o` (V2) / `z  x  c  v  b  n` (V1)
+- **Row 5 (5 keys in V2 / 6 keys in V1):** `p  q  r  s  t` (V2) / `u  i  j  k  m  o` (V1)
+- **Row 6 (Bottom Row):** `u (1.0)  v (1.0)  w (1.0)  x (1.0)  y (0.55)  z (0.55)` (V2) / `,  .  Space  p  l  ⌫  ↵` (V1)
