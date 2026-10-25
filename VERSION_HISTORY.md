@@ -16,12 +16,12 @@ When the user asks to revert to **Version 1** or uncomment Version 1, restore th
 
 ---
 
-## 🧪 Version 2 (`2. ABCD Serially` Default) + Layout Icon Button (`⊞`) Popup Menu (Release: `v1.2.4`)
+## 🧪 Version 2 (`2. ABCD Serially` Default) + `4. Right Hand Banglish` 55-Key Layout (Release: `v1.2.5`)
 - **Single Layout Icon Button (`⊞`):** Placed in the Top Terminal Bar (`ESC  CTRL  ALT  ◀  ▼  ▲  ▶  ⊞  🌐  ↕  ⚙️`). Clicking the **`⊞` Layout Icon Button** opens a floating **Popup Menu** over the keyboard with 5 selectable layout options:
   1. **`1. QWERTY Type`** (`"qwerty"` — Version 1 alignment: `q..y`, `a..h`, `z..n`, `u i j k m o`, `, . Space p l ⌫ ↵`)
   2. **`2. ABCD Serially`** (`"abcd"` — **Default** Version 2 alignment: 5 letters per row `a..e`, `f..j`, `k..o`, `p..t`, and bottom row `u, v, w, x` + compact `y, z`)
   3. **`3. Left Hand`** (`"left_hand"` — ready for custom left-handed design)
-  4. **`4. Right Hand`** (`"right_hand"` — ready for custom right-handed design)
+  4. **`4. Right Hand Banglish`** (`"right_hand"` — 9×5 Ergonomic Grid mapped from the 55 Banglish Mobile Keys Rank `#1`..`#55`)
   5. **`5. Both Hand`** (`"both_hand"` — ready for custom two-handed design)
 - **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  ?  /  ,  .  Space  ⌫  ↵`
 - **Row 1 (Numbers):** `1  2  3  4  5  6  7  8  9  0`

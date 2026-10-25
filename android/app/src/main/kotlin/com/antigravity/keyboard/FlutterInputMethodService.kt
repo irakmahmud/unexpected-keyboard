@@ -532,6 +532,102 @@ class NativeKeyboardView(
         )
     )
 
+    // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
+    // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
+    // Row 2: [ #50/#51 (8/9) | #49/#50 (//8) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
+    // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #3 (⌫) ]
+    // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #5 (r) ]
+    // Row 5: [ #39/#40 ("/3) | #21 (↵) | #6 (o) | #1 (Space) | #7 (i) ]
+    // Row 6: [ #35/#36 (z/0) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
+    // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #19 (⇧) ]
+    // Row 8: [ #43/#44 (q/)) | #30 (') | #22 (g) | #20 (p) | #23 (j) ]
+    // Row 9: [ #45/#46 ((/:) | #33/#34 (1/2) | #29 (f) | #27 (v) | #26 (,) ]
+    private val rightHandBanglishRows = listOf(
+        // Row 1: [ 55(%) | 54(&) | 53(@) | 52(;) | 17(u) ]
+        listOf(
+            NativeKeySpec("%", flex = 1.0f),
+            NativeKeySpec("&", flex = 1.0f),
+            NativeKeySpec("@", flex = 1.0f),
+            NativeKeySpec(";", flex = 1.0f),
+            NativeKeySpec("u", "7", "&", "-", "_", flex = 1.0f)
+        ),
+        // Row 2: [ 50/51 | 49/50 | 31/32 | 14 | 10 ]
+        listOf(
+            NativeKeySpec("8", "9", flex = 0.5f),
+            NativeKeySpec("9", flex = 0.5f),
+            NativeKeySpec("/", "8", flex = 0.5f),
+            NativeKeySpec("8", flex = 0.5f),
+            NativeKeySpec("!", "w", flex = 0.5f),
+            NativeKeySpec("w", "!", flex = 0.5f),
+            NativeKeySpec("m", "?", "!", "«", "»", flex = 1.0f),
+            NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.0f)
+        ),
+        // Row 3: [ 47/48 | 28 | 13 | 9 | 3 ]
+        listOf(
+            NativeKeySpec("6", "7", flex = 0.5f),
+            NativeKeySpec("7", flex = 0.5f),
+            NativeKeySpec("?", "!", "¿", "¡", "@", flex = 1.0f),
+            NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.0f),
+            NativeKeySpec("k", "(", ")", "<", ">", flex = 1.0f),
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67)
+        ),
+        // Row 4: [ 41/42 | 24 | 11 | 2 | 5 ]
+        listOf(
+            NativeKeySpec("4", "5", flex = 0.5f),
+            NativeKeySpec("5", flex = 0.5f),
+            NativeKeySpec("y", "6", "^", "=", "+", flex = 1.0f),
+            NativeKeySpec("t", "5", "%", "(", ")", flex = 1.0f),
+            NativeKeySpec("a", "@", "!", "#", "$", flex = 1.0f),
+            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.0f)
+        ),
+        // Row 5: [ 39/40 | 21 | 6 | 1 | 7 ]
+        listOf(
+            NativeKeySpec("\"", "3", flex = 0.5f),
+            NativeKeySpec("3", flex = 0.5f),
+            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66),
+            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.0f),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.0f),
+            NativeKeySpec("i", "8", "*", "/", "*", flex = 1.0f)
+        ),
+        // Row 6: [ 35/36 | 18 | 12 | 4 | 8 ]
+        listOf(
+            NativeKeySpec("z", "0", flex = 0.5f),
+            NativeKeySpec("0", flex = 0.5f),
+            NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.0f),
+            NativeKeySpec("s", "#", "$", "%", "^", flex = 1.0f),
+            NativeKeySpec("e", "3", "€", "{", "}", flex = 1.0f),
+            NativeKeySpec("h", "-", "_", ":", ";", flex = 1.0f)
+        ),
+        // Row 7: [ 37/38 | 25 | 16 | 15 | 19 ]
+        listOf(
+            NativeKeySpec("-", "x", flex = 0.5f),
+            NativeKeySpec("x", "-", flex = 0.5f),
+            NativeKeySpec(".", ">", ":", "(", ")", flex = 1.0f),
+            NativeKeySpec("d", "$", "%", "&", "*", flex = 1.0f),
+            NativeKeySpec("l", ")", ":", "[", "]", flex = 1.0f),
+            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f)
+        ),
+        // Row 8: [ 43/44 | 30 | 22 | 20 | 23 ]
+        listOf(
+            NativeKeySpec("q", ")", flex = 0.5f),
+            NativeKeySpec(")", flex = 0.5f),
+            NativeKeySpec("'", "\"", "`", "~", flex = 1.0f),
+            NativeKeySpec("g", "&", "*", "-", "=", flex = 1.0f),
+            NativeKeySpec("p", "0", ")", "{", "}", flex = 1.0f),
+            NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.0f)
+        ),
+        // Row 9: [ 45/46 | 33/34 | 29 | 27 | 26 ]
+        listOf(
+            NativeKeySpec("(", ":", flex = 0.5f),
+            NativeKeySpec(":", flex = 0.5f),
+            NativeKeySpec("1", "2", flex = 0.5f),
+            NativeKeySpec("2", flex = 0.5f),
+            NativeKeySpec("f", "%", "^", "_", "+", flex = 1.0f),
+            NativeKeySpec("v", ":", ";", "•", "°", flex = 1.0f),
+            NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.0f)
+        )
+    )
+
     private val symbolRows = listOf(
         actionSymbolRow,
         numberRow,
@@ -705,13 +801,14 @@ class NativeKeyboardView(
         currentTop += modH
         val bodyTop = currentTop
 
-        // 7 Main Keyboard Rows (Row 0 Action/Symbol Row + Row 1 Number Row + 5 Letter/Symbol Rows)
+        // Main Keyboard Rows (7 rows for QWERTY/ABCD/Symbols, or 9 rows for Right Hand Banglish)
         val rows = when {
             isSymbolLayout -> symbolRows
             layoutMode == "qwerty" -> version1Rows
+            layoutMode == "right_hand" -> rightHandBanglishRows
             else -> version2Rows
         }
-        val rowH = dp(keyHeightDp)
+        val rowH = dp(keyHeightDp * 7.0f / rows.size.toFloat())
         for (row in rows) {
             val totalRowFlex = row.fold(0f) { acc, s -> acc + s.flex }
             var left = 0f
@@ -751,7 +848,7 @@ class NativeKeyboardView(
             NativeKeySpec("1. QWERTY Type", action = NativeActionType.SELECT_LAYOUT_QWERTY),
             NativeKeySpec("2. ABCD Serially", action = NativeActionType.SELECT_LAYOUT_ABCD),
             NativeKeySpec("3. Left Hand", action = NativeActionType.SELECT_LAYOUT_LEFT),
-            NativeKeySpec("4. Right Hand", action = NativeActionType.SELECT_LAYOUT_RIGHT),
+            NativeKeySpec("4. Right Hand Banglish", action = NativeActionType.SELECT_LAYOUT_RIGHT),
             NativeKeySpec("5. Both Hand", action = NativeActionType.SELECT_LAYOUT_BOTH)
         )
         val availItemsH = cardH - headerH - dp(8f)

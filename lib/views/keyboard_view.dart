@@ -553,9 +553,12 @@ class _KeyboardViewState extends State<KeyboardView> {
     final List<List<KeyModel>> rows = (_currentLayout == LayoutType.qwerty)
         ? (_currentLayoutMode == 'qwerty'
             ? KeyboardLayout.version1Layout
-            : KeyboardLayout.version2Layout)
+            : (_currentLayoutMode == 'right_hand'
+                ? KeyboardLayout.rightHandBanglishLayout
+                : KeyboardLayout.version2Layout))
         : KeyboardLayout.symbolLayout;
     final currentKeyHeight = _effectiveKeyHeight;
+    final effectiveRowHeight = currentKeyHeight * (7.0 / rows.length);
 
     return Container(
       color: widget.theme.backgroundColor,
@@ -618,7 +621,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                           isShiftActive: widget.imeService.isShiftActive,
                           isCtrlActive: widget.imeService.isCtrlActive,
                           isAltActive: widget.imeService.isAltActive,
-                          height: currentKeyHeight,
+                          height: effectiveRowHeight,
                           longPressMs: _effectiveLongPressMs,
                         );
                       }).toList(),

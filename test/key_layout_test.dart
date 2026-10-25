@@ -97,9 +97,22 @@ void main() {
         '1. QWERTY Type',
         '2. ABCD Serially',
         '3. Left Hand',
-        '4. Right Hand',
+        '4. Right Hand Banglish',
         '5. Both Hand',
       ]);
+
+      // 4. Right Hand Banglish Layout (9x5 ergonomic grid with 55 Banglish keys #1..#55):
+      final rhb = KeyboardLayout.rightHandBanglishLayout;
+      expect(rhb.length, 9);
+      expect(rhb[0].map((k) => k.primary).toList(), ['%', '&', '@', ';', 'u']);
+      expect(rhb[1].map((k) => k.primary).toList(), ['8', '9', '/', '8', '!', 'w', 'm', 'n']);
+      expect(rhb[2].map((k) => k.primary).toList(), ['6', '7', '?', 'b', 'k', '⌫']);
+      expect(rhb[3].map((k) => k.primary).toList(), ['4', '5', 'y', 't', 'a', 'r']);
+      expect(rhb[4].map((k) => k.primary).toList(), ['"', '3', '↵', 'o', ' ', 'i']);
+      expect(rhb[5].map((k) => k.primary).toList(), ['z', '0', 'c', 's', 'e', 'h']);
+      expect(rhb[6].map((k) => k.primary).toList(), ['-', 'x', '.', 'd', 'l', '⇧']);
+      expect(rhb[7].map((k) => k.primary).toList(), ['q', ')', "'", 'g', 'p', 'j']);
+      expect(rhb[8].map((k) => k.primary).toList(), ['(', ':', '1', '2', 'f', 'v', ',']);
 
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows
       final symbols = KeyboardLayout.symbolLayout;
