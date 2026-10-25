@@ -18,6 +18,7 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
   bool _hapticsEnabled = true;
   bool _isSettingsOpen = false;
   double _keyHeight = ImeChannelService.defaultKeyHeight;
+  int _longPressMs = ImeChannelService.defaultLongPressMs;
   bool _isKeyboardEnabled = false;
   bool _isKeyboardSelected = false;
 
@@ -56,6 +57,14 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
       if (mounted) {
         setState(() {
           _hapticsEnabled = enabled;
+        });
+      }
+    };
+
+    _imeService.onLongPressUpdatedFromNative = (ms) {
+      if (mounted) {
+        setState(() {
+          _longPressMs = ImeChannelService.clampLongPressMs(ms);
         });
       }
     };
@@ -160,6 +169,10 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
         if (rawHaptics is bool) {
           _hapticsEnabled = rawHaptics;
         }
+        final rawLongPress = config['longPressMs'];
+        if (rawLongPress is num) {
+          _longPressMs = ImeChannelService.clampLongPressMs(rawLongPress.round());
+        }
         if (config['openSettings'] == true) {
           _isSettingsOpen = true;
         }
@@ -173,6 +186,14 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
       _keyHeight = clamped;
     });
     _imeService.setKeyboardHeight(clamped);
+  }
+
+  void _updateLongPressMs(int newMs) {
+    final clamped = ImeChannelService.clampLongPressMs(newMs);
+    setState(() {
+      _longPressMs = clamped;
+    });
+    _imeService.setKeyboardConfig(longPressMs: clamped);
   }
 
   void _updateThemeMode(KeyboardThemeMode mode) {
@@ -215,6 +236,8 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
               onHapticsChanged: _updateHaptics,
               keyHeight: _keyHeight,
               onKeyHeightChanged: _updateKeyHeight,
+              longPressMs: _longPressMs,
+              onLongPressMsChanged: _updateLongPressMs,
               onEnableKeyboard: () => _imeService.enableKeyboardInSystemSettings(),
               onSwitchKeyboard: () => _imeService.showInputMethodPicker(),
               onBackToKeyboard: () async {
@@ -353,6 +376,8 @@ class _UnexpectedKeyboardAppState extends State<UnexpectedKeyboardApp> {
                     theme: themeData,
                     keyHeight: _keyHeight,
                     onKeyHeightChanged: _updateKeyHeight,
+                    longPressMs: _longPressMs,
+                    onLongPressMsChanged: _updateLongPressMs,
                     onOpenSettings: () {
                       setState(() => _isSettingsOpen = true);
                     },

@@ -9,6 +9,8 @@ class SettingsScreen extends StatelessWidget {
   final ValueChanged<bool> onHapticsChanged;
   final double keyHeight;
   final ValueChanged<double> onKeyHeightChanged;
+  final int longPressMs;
+  final ValueChanged<int>? onLongPressMsChanged;
   final VoidCallback onBackToKeyboard;
   final VoidCallback? onEnableKeyboard;
   final VoidCallback? onSwitchKeyboard;
@@ -21,6 +23,8 @@ class SettingsScreen extends StatelessWidget {
     required this.onHapticsChanged,
     this.keyHeight = ImeChannelService.defaultKeyHeight,
     required this.onKeyHeightChanged,
+    this.longPressMs = ImeChannelService.defaultLongPressMs,
+    this.onLongPressMsChanged,
     required this.onBackToKeyboard,
     this.onEnableKeyboard,
     this.onSwitchKeyboard,
@@ -30,6 +34,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeData = KeyboardThemeData.fromMode(currentThemeMode);
     final clampedHeight = ImeChannelService.clampKeyHeight(keyHeight);
+    final clampedLongPress = ImeChannelService.clampLongPressMs(longPressMs);
     final totalHeightDp = ImeChannelService.calculateTotalKeyboardHeightDp(clampedHeight);
 
     return Scaffold(
@@ -161,6 +166,130 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const Divider(height: 32),
+          _buildSectionHeader('Long Press Delay (0 ms – 3000 ms)', themeData),
+          Card(
+            color: themeData.keyBackgroundColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Long Press Duration: $clampedLongPress ms',
+                        style: TextStyle(
+                          color: themeData.primaryTextColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeData.accentColor.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: themeData.accentColor, width: 1),
+                        ),
+                        child: Text(
+                          'Range: 0 – 3000 ms',
+                          style: TextStyle(
+                            color: themeData.accentColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => onLongPressMsChanged?.call(
+                          ImeChannelService.clampLongPressMs(clampedLongPress - 50),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: themeData.backgroundColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: themeData.modifierInactiveColor),
+                          ),
+                          child: Text(
+                            '−50ms',
+                            style: TextStyle(
+                              color: themeData.primaryTextColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: clampedLongPress.toDouble(),
+                          min: ImeChannelService.minLongPressMs.toDouble(),
+                          max: ImeChannelService.maxLongPressMs.toDouble(),
+                          divisions: 300,
+                          label: '$clampedLongPress ms',
+                          activeColor: themeData.accentColor,
+                          inactiveColor: themeData.modifierInactiveColor,
+                          onChanged: (val) => onLongPressMsChanged?.call(
+                            ImeChannelService.clampLongPressMs(val.round()),
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => onLongPressMsChanged?.call(
+                          ImeChannelService.clampLongPressMs(clampedLongPress + 50),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: themeData.backgroundColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: themeData.modifierInactiveColor),
+                          ),
+                          child: Text(
+                            '+50ms',
+                            style: TextStyle(
+                              color: themeData.primaryTextColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      _buildLongPressPresetChip('0 ms (Instant)', 0, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('150 ms', 150, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('300 ms', 300, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('400 ms (Default)', 400, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('600 ms', 600, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('1000 ms (1s)', 1000, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('1500 ms (1.5s)', 1500, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('2000 ms (2s)', 2000, clampedLongPress, themeData),
+                      _buildLongPressPresetChip('3000 ms (3s)', 3000, clampedLongPress, themeData),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Controls hold duration (0 ms to 3000 ms) for secondary key symbols, Backspace/Arrow hold-to-repeat, and Spacebar hold-to-switch keyboard. You can also adjust this live via the ↕ button on the keyboard.',
+                    style: TextStyle(color: themeData.cornerTextColor, fontSize: 12.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 32),
           _buildSectionHeader('Appearance & Theme', themeData),
           _buildThemeTile(
             title: 'AMOLED Pure Dark',
@@ -279,6 +408,29 @@ class SettingsScreen extends StatelessWidget {
       selectedColor: themeData.accentColor,
       backgroundColor: themeData.backgroundColor,
       onSelected: (_) => onKeyHeightChanged(targetHeight),
+    );
+  }
+
+  Widget _buildLongPressPresetChip(
+    String label,
+    int targetMs,
+    int currentMs,
+    KeyboardThemeData themeData,
+  ) {
+    final isSelected = (currentMs - targetMs).abs() < 15;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? themeData.backgroundColor : themeData.primaryTextColor,
+          fontSize: 12.0,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: themeData.accentColor,
+      backgroundColor: themeData.backgroundColor,
+      onSelected: (_) => onLongPressMsChanged?.call(targetMs),
     );
   }
 

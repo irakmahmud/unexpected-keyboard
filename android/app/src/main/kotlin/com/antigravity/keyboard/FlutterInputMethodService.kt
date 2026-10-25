@@ -34,7 +34,9 @@ class FlutterInputMethodService : InputMethodService() {
         const val KEY_TOTAL_HEIGHT_DP = "total_height_dp"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_HAPTICS_ENABLED = "haptics_enabled"
+        const val KEY_LONG_PRESS_MS = "long_press_ms"
         const val DEFAULT_KEY_HEIGHT_DP = 46.0f
+        const val DEFAULT_LONG_PRESS_MS = 400
     }
 
     override fun onCreateInputView(): View {
@@ -62,13 +64,24 @@ class FlutterInputMethodService : InputMethodService() {
     fun saveKeyHeightDp(keyHeightDp: Float, isResizeBarOpen: Boolean) {
         val clamped = keyHeightDp.coerceIn(34.0f, 136.0f)
         val modH = (clamped * 0.85f).coerceIn(36.0f, 68.0f)
-        val resizeH = if (isResizeBarOpen) 40.0f else 0.0f
+        val resizeH = if (isResizeBarOpen) 72.0f else 0.0f
         val totalDp = (6.0f * clamped + modH + resizeH + 4.0f).toInt().coerceIn(220, 960)
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_ROW_HEIGHT_DP, clamped)
             .putInt(KEY_TOTAL_HEIGHT_DP, totalDp)
             .apply()
+    }
+
+    fun getSavedLongPressMs(): Int {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_LONG_PRESS_MS, DEFAULT_LONG_PRESS_MS).coerceIn(0, 3000)
+    }
+
+    fun saveLongPressMs(ms: Int) {
+        val clamped = ms.coerceIn(0, 3000)
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_LONG_PRESS_MS, clamped).apply()
     }
 
     fun isHapticsEnabled(): Boolean {
@@ -210,7 +223,11 @@ enum class NativeActionType {
     RESIZE_MINUS,
     RESIZE_PLUS,
     RESIZE_RESET,
-    RESIZE_DONE
+    RESIZE_DONE,
+    LONG_PRESS_MINUS,
+    LONG_PRESS_PLUS,
+    LONG_PRESS_RESET,
+    LONG_PRESS_ZERO
 }
 
 data class NativeKeySpec(
@@ -236,6 +253,7 @@ class NativeKeyboardView(
 ) : View(context) {
 
     private var keyHeightDp: Float = 46.0f
+    private var longPressMs: Int = 400
     private var themeMode: String = "amoled"
     private var hapticsEnabled: Boolean = true
 
@@ -298,6 +316,7 @@ class NativeKeyboardView(
     private val handler = Handler(Looper.getMainLooper())
     private var repeatRunnable: Runnable? = null
     private var spaceLongPressRunnable: Runnable? = null
+    private var charLongPressRunnable: Runnable? = null
 
     private val topBarSpecs = listOf(
         NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 0.9f, keyCode = 111),
@@ -419,9 +438,13 @@ class NativeKeyboardView(
 
     fun reloadConfigFromPrefs() {
         keyHeightDp = service.getSavedKeyHeightDp()
+        longPressMs = service.getSavedLongPressMs()
         themeMode = service.getSavedThemeMode()
         hapticsEnabled = service.isHapticsEnabled()
         applyThemePalette(themeMode)
+        if (width > 0) {
+            rebuildHitRects(width.toFloat())
+        }
         requestLayout()
         invalidate()
     }
@@ -475,7 +498,7 @@ class NativeKeyboardView(
 
     private fun calculateTotalHeightPx(): Int {
         val modH = (keyHeightDp * 0.85f).coerceIn(36.0f, 68.0f)
-        val resizeH = if (isResizeBarOpen) 40.0f else 0.0f
+        val resizeH = if (isResizeBarOpen) 72.0f else 0.0f
         val totalDp = 6.0f * keyHeightDp + modH + resizeH + 2.0f
         return dp(totalDp).toInt()
     }
@@ -490,9 +513,9 @@ class NativeKeyboardView(
         hitRects.clear()
         var currentTop = 0f
 
-        // Optional inline resize control bar
+        // Optional inline resize & long-press (0ms..3000ms) control bar
         if (isResizeBarOpen) {
-            val resizeH = dp(40.0f)
+            val rowH = dp(36.0f)
             val resizeSpecs = listOf(
                 NativeKeySpec("− Height", action = NativeActionType.RESIZE_MINUS, flex = 1.0f),
                 NativeKeySpec("${keyHeightDp.toInt()}dp (Reset)", action = NativeActionType.RESIZE_RESET, flex = 1.4f),
@@ -503,10 +526,25 @@ class NativeKeyboardView(
             var left = 0f
             for (spec in resizeSpecs) {
                 val kw = viewWidth * (spec.flex / totalFlex)
-                hitRects.add(HitRect(spec, RectF(left, currentTop, left + kw, currentTop + resizeH), isTopBar = true))
+                hitRects.add(HitRect(spec, RectF(left, currentTop, left + kw, currentTop + rowH), isTopBar = true))
                 left += kw
             }
-            currentTop += resizeH
+            currentTop += rowH
+
+            val longPressSpecs = listOf(
+                NativeKeySpec("− LongPress", action = NativeActionType.LONG_PRESS_MINUS, flex = 1.0f),
+                NativeKeySpec("Hold: ${longPressMs}ms", action = NativeActionType.LONG_PRESS_RESET, flex = 1.4f),
+                NativeKeySpec("+ LongPress", action = NativeActionType.LONG_PRESS_PLUS, flex = 1.0f),
+                NativeKeySpec(if (longPressMs == 0) "400ms" else "0ms", action = NativeActionType.LONG_PRESS_ZERO, flex = 1.0f)
+            )
+            val totalLpFlex = longPressSpecs.fold(0f) { acc, s -> acc + s.flex }
+            var lpLeft = 0f
+            for (spec in longPressSpecs) {
+                val kw = viewWidth * (spec.flex / totalLpFlex)
+                hitRects.add(HitRect(spec, RectF(lpLeft, currentTop, lpLeft + kw, currentTop + rowH), isTopBar = true))
+                lpLeft += kw
+            }
+            currentTop += rowH
         }
 
         // Top Terminal Modifier Bar
@@ -718,6 +756,8 @@ class NativeKeyboardView(
         repeatRunnable = null
         spaceLongPressRunnable?.let { handler.removeCallbacks(it) }
         spaceLongPressRunnable = null
+        charLongPressRunnable?.let { handler.removeCallbacks(it) }
+        charLongPressRunnable = null
     }
 
     private fun updateKeyHeightLive(newHeightDp: Float) {
@@ -725,6 +765,13 @@ class NativeKeyboardView(
         service.saveKeyHeightDp(keyHeightDp, isResizeBarOpen)
         rebuildHitRects(width.toFloat())
         requestLayout()
+        invalidate()
+    }
+
+    private fun updateLongPressMsLive(newMs: Int) {
+        longPressMs = newMs.coerceIn(0, 3000)
+        service.saveLongPressMs(longPressMs)
+        rebuildHitRects(width.toFloat())
         invalidate()
     }
 
@@ -750,6 +797,25 @@ class NativeKeyboardView(
                 popupAnchorRect = hit.rect
                 triggerHapticNow()
                 invalidate()
+
+                // Customizable Long Press (0ms..3000ms): Hold key to replace with topLeft symbol
+                if (!useMods && longPressMs > 0 && spec.topLeft != null) {
+                    val lpRunnable = Runnable {
+                        if (activeHit === hit && activeCornerDir == 0) {
+                            activeCornerDir = 1
+                            val lpOut = spec.topLeft
+                            if (lpOut != currentCommittedOutput) {
+                                currentCommittedOutput = lpOut
+                                service.replaceLastTextImmediate(lpOut)
+                                popupLabel = lpOut
+                                triggerHapticNow()
+                                invalidate()
+                            }
+                        }
+                    }
+                    charLongPressRunnable = lpRunnable
+                    handler.postDelayed(lpRunnable, longPressMs.toLong())
+                }
             }
             NativeActionType.SPACE -> {
                 if (isShiftActive && !isCapsLock) isShiftActive = false
@@ -759,7 +825,8 @@ class NativeKeyboardView(
                 triggerHapticNow()
                 invalidate()
 
-                // Hold Spacebar 450ms to switch keyboard (Ridmik / Gboard style)
+                // Hold Spacebar (customizable 0ms..3000ms) to switch keyboard
+                val spaceDelay = if (longPressMs <= 0) 80L else longPressMs.toLong()
                 val runnable = Runnable {
                     if (activeHit === hit) {
                         service.sendBackspaceImmediate()
@@ -768,12 +835,13 @@ class NativeKeyboardView(
                     }
                 }
                 spaceLongPressRunnable = runnable
-                handler.postDelayed(runnable, 450L)
+                handler.postDelayed(runnable, spaceDelay)
             }
             NativeActionType.BACKSPACE -> {
                 service.sendBackspaceImmediate()
                 triggerHapticNow()
                 invalidate()
+                val initialDelay = if (longPressMs <= 0) 35L else longPressMs.toLong()
                 val runnable = object : Runnable {
                     override fun run() {
                         if (activeHit === hit) {
@@ -783,7 +851,7 @@ class NativeKeyboardView(
                     }
                 }
                 repeatRunnable = runnable
-                handler.postDelayed(runnable, 350L)
+                handler.postDelayed(runnable, initialDelay)
             }
             NativeActionType.ENTER -> {
                 service.sendEnterImmediate()
@@ -831,6 +899,7 @@ class NativeKeyboardView(
                 service.sendKeyCodeImmediate(spec.keyCode, meta)
                 triggerHapticNow()
                 invalidate()
+                val initialDelay = if (longPressMs <= 0) 35L else longPressMs.toLong()
                 val runnable = object : Runnable {
                     override fun run() {
                         if (activeHit === hit) {
@@ -840,7 +909,7 @@ class NativeKeyboardView(
                     }
                 }
                 repeatRunnable = runnable
-                handler.postDelayed(runnable, 350L)
+                handler.postDelayed(runnable, initialDelay)
             }
             NativeActionType.SWITCH_LAYOUT -> {
                 isSymbolLayout = !isSymbolLayout
@@ -885,6 +954,24 @@ class NativeKeyboardView(
                 requestLayout()
                 triggerHapticNow()
                 invalidate()
+            }
+            NativeActionType.LONG_PRESS_MINUS -> {
+                triggerHapticNow()
+                val step = if (longPressMs <= 300) 50 else 100
+                updateLongPressMsLive(longPressMs - step)
+            }
+            NativeActionType.LONG_PRESS_PLUS -> {
+                triggerHapticNow()
+                val step = if (longPressMs < 300) 50 else 100
+                updateLongPressMsLive(longPressMs + step)
+            }
+            NativeActionType.LONG_PRESS_RESET -> {
+                triggerHapticNow()
+                updateLongPressMsLive(FlutterInputMethodService.DEFAULT_LONG_PRESS_MS)
+            }
+            NativeActionType.LONG_PRESS_ZERO -> {
+                triggerHapticNow()
+                updateLongPressMsLive(if (longPressMs == 0) FlutterInputMethodService.DEFAULT_LONG_PRESS_MS else 0)
             }
         }
     }
@@ -949,6 +1036,10 @@ class NativeKeyboardView(
                     }
 
                     if (newDir != activeCornerDir) {
+                        if (newDir != 0) {
+                            charLongPressRunnable?.let { handler.removeCallbacks(it) }
+                            charLongPressRunnable = null
+                        }
                         activeCornerDir = newDir
                         val newOut = resolveCharOutput(hit.spec, newDir, wasShiftedOnDown)
                         if (newOut != currentCommittedOutput) {

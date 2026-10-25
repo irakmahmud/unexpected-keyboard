@@ -14,6 +14,8 @@ class KeyboardView extends StatefulWidget {
   final VoidCallback onOpenSettings;
   final double? keyHeight;
   final ValueChanged<double>? onKeyHeightChanged;
+  final int? longPressMs;
+  final ValueChanged<int>? onLongPressMsChanged;
 
   const KeyboardView({
     super.key,
@@ -22,6 +24,8 @@ class KeyboardView extends StatefulWidget {
     required this.onOpenSettings,
     this.keyHeight,
     this.onKeyHeightChanged,
+    this.longPressMs,
+    this.onLongPressMsChanged,
   });
 
   @override
@@ -33,6 +37,7 @@ class _KeyboardViewState extends State<KeyboardView> {
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
   late double _localKeyHeight;
+  late int _localLongPressMs;
 
   void _forceImmediateFrame() {
     SchedulerBinding.instance.ensureVisualUpdate();
@@ -42,10 +47,14 @@ class _KeyboardViewState extends State<KeyboardView> {
   double get _effectiveKeyHeight =>
       ImeChannelService.clampKeyHeight(widget.keyHeight ?? _localKeyHeight);
 
+  int get _effectiveLongPressMs =>
+      ImeChannelService.clampLongPressMs(widget.longPressMs ?? _localLongPressMs);
+
   @override
   void initState() {
     super.initState();
     _localKeyHeight = widget.keyHeight ?? ImeChannelService.defaultKeyHeight;
+    _localLongPressMs = widget.longPressMs ?? widget.imeService.longPressMs;
     if (widget.keyHeight == null) {
       _loadSavedHeight();
     }
@@ -71,6 +80,15 @@ class _KeyboardViewState extends State<KeyboardView> {
       showTerminalBar: _showTerminalBar,
       showResizeBar: _isResizeBarOpen,
     );
+  }
+
+  void _updateLongPressMs(int newMs) {
+    final clamped = ImeChannelService.clampLongPressMs(newMs);
+    setState(() {
+      _localLongPressMs = clamped;
+    });
+    widget.onLongPressMsChanged?.call(clamped);
+    widget.imeService.setKeyboardConfig(longPressMs: clamped);
   }
 
   void _toggleResizeBar() {
@@ -251,6 +269,7 @@ class _KeyboardViewState extends State<KeyboardView> {
 
   Widget _buildInlineResizeBar() {
     final currentH = _effectiveKeyHeight;
+    final currentLp = _effectiveLongPressMs;
     final totalDp = ImeChannelService.calculateTotalKeyboardHeightDp(
       currentH,
       showTerminalBar: _showTerminalBar,
@@ -258,79 +277,151 @@ class _KeyboardViewState extends State<KeyboardView> {
     );
 
     return Container(
-      height: 40.0,
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
       decoration: BoxDecoration(
         color: widget.theme.keyBackgroundColor.withOpacity(0.95),
         border: Border(
           bottom: BorderSide(color: widget.theme.accentColor.withOpacity(0.4), width: 1.0),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.height, size: 16, color: widget.theme.accentColor),
-          const SizedBox(width: 4),
-          Text(
-            '${currentH.round()}dp (${totalDp}dp)',
-            style: TextStyle(
-              color: widget.theme.primaryTextColor,
-              fontSize: 11.5,
-              fontWeight: FontWeight.bold,
+          SizedBox(
+            height: 34.0,
+            child: Row(
+              children: [
+                Icon(Icons.height, size: 15, color: widget.theme.accentColor),
+                const SizedBox(width: 4),
+                Text(
+                  '${currentH.round()}dp (${totalDp}dp)',
+                  style: TextStyle(
+                    color: widget.theme.primaryTextColor,
+                    fontSize: 11.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _updateKeyHeight(currentH - 2.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: widget.theme.backgroundColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('−', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                    ),
+                    child: Slider(
+                      value: currentH,
+                      min: ImeChannelService.minKeyHeight,
+                      max: ImeChannelService.maxKeyHeight,
+                      activeColor: widget.theme.accentColor,
+                      inactiveColor: widget.theme.modifierInactiveColor,
+                      onChanged: _updateKeyHeight,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _updateKeyHeight(currentH + 2.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: widget.theme.backgroundColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('+', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _updateKeyHeight(ImeChannelService.defaultKeyHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    child: Icon(Icons.restart_alt, size: 17, color: widget.theme.cornerTextColor),
+                  ),
+                ),
+                InkWell(
+                  onTap: _toggleResizeBar,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    child: Icon(Icons.check_circle, size: 18, color: widget.theme.accentColor),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          InkWell(
-            onTap: () => _updateKeyHeight(currentH - 2.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: widget.theme.backgroundColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text('−', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3.0,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-              ),
-              child: Slider(
-                value: currentH,
-                min: ImeChannelService.minKeyHeight,
-                max: ImeChannelService.maxKeyHeight,
-                activeColor: widget.theme.accentColor,
-                inactiveColor: widget.theme.modifierInactiveColor,
-                onChanged: _updateKeyHeight,
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: () => _updateKeyHeight(currentH + 2.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: widget.theme.backgroundColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text('+', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(width: 6),
-          InkWell(
-            onTap: () => _updateKeyHeight(ImeChannelService.defaultKeyHeight),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Icon(Icons.restart_alt, size: 17, color: widget.theme.cornerTextColor),
-            ),
-          ),
-          InkWell(
-            onTap: _toggleResizeBar,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Icon(Icons.check_circle, size: 18, color: widget.theme.accentColor),
+          SizedBox(
+            height: 34.0,
+            child: Row(
+              children: [
+                Icon(Icons.timer_outlined, size: 15, color: widget.theme.accentColor),
+                const SizedBox(width: 4),
+                Text(
+                  'Hold: ${currentLp}ms',
+                  style: TextStyle(
+                    color: widget.theme.primaryTextColor,
+                    fontSize: 11.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _updateLongPressMs(currentLp - 50),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: widget.theme.backgroundColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('−', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                    ),
+                    child: Slider(
+                      value: currentLp.toDouble(),
+                      min: ImeChannelService.minLongPressMs.toDouble(),
+                      max: ImeChannelService.maxLongPressMs.toDouble(),
+                      activeColor: widget.theme.accentColor,
+                      inactiveColor: widget.theme.modifierInactiveColor,
+                      onChanged: (val) => _updateLongPressMs(val.round()),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _updateLongPressMs(currentLp + 50),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: widget.theme.backgroundColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('+', style: TextStyle(color: widget.theme.primaryTextColor, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _updateLongPressMs(ImeChannelService.defaultLongPressMs),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    child: Icon(Icons.restart_alt, size: 17, color: widget.theme.cornerTextColor),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -404,6 +495,7 @@ class _KeyboardViewState extends State<KeyboardView> {
                       isCtrlActive: widget.imeService.isCtrlActive,
                       isAltActive: widget.imeService.isAltActive,
                       height: currentKeyHeight,
+                      longPressMs: _effectiveLongPressMs,
                     );
                   }).toList(),
                 );

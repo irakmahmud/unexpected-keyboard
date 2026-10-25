@@ -17,6 +17,7 @@ class KeyWidget extends StatefulWidget {
   final bool isCtrlActive;
   final bool isAltActive;
   final double height;
+  final int longPressMs;
 
   const KeyWidget({
     super.key,
@@ -29,6 +30,7 @@ class KeyWidget extends StatefulWidget {
     this.isCtrlActive = false,
     this.isAltActive = false,
     this.height = 48.0,
+    this.longPressMs = 400,
   });
 
   @override
@@ -201,9 +203,11 @@ class _KeyWidgetState extends State<KeyWidget> {
     });
     _showOrUpdatePopup();
 
-    // 3. If backspace or arrow key is held down, repeat smoothly
+    // 3. Customizable Long Press (0ms..3000ms) for repeatable keys, Spacebar switcher, and secondary topLeft symbols
+    final int lpMs = widget.longPressMs.clamp(0, 3000);
     if (_isRepeatableAction) {
-      _repeatDelayTimer = Timer(const Duration(milliseconds: 350), () {
+      final int initialDelay = lpMs <= 0 ? 35 : lpMs;
+      _repeatDelayTimer = Timer(Duration(milliseconds: initialDelay), () {
         _repeatTimer = Timer.periodic(const Duration(milliseconds: 45), (_) {
           if (mounted && _isPressed) {
             widget.onKeyPress(widget.keyModel, GestureDirection.center);
@@ -211,10 +215,25 @@ class _KeyWidgetState extends State<KeyWidget> {
         });
       });
     } else if (widget.keyModel.actionType == KeyActionType.space && widget.onSpaceLongPress != null) {
-      // Holding Spacebar opens Android system keyboard switcher (like Ridmik / Gboard)
-      _repeatDelayTimer = Timer(const Duration(milliseconds: 450), () {
+      final int spaceDelay = lpMs <= 0 ? 80 : lpMs;
+      _repeatDelayTimer = Timer(Duration(milliseconds: spaceDelay), () {
         if (mounted && _isPressed) {
           widget.onSpaceLongPress?.call();
+        }
+      });
+    } else if (widget.keyModel.actionType == KeyActionType.inputChar &&
+        lpMs > 0 &&
+        widget.keyModel.topLeft != null) {
+      _repeatDelayTimer = Timer(Duration(milliseconds: lpMs), () {
+        if (mounted && _isPressed && _activeDirection == GestureDirection.center) {
+          final String lpOut = widget.keyModel.topLeft!;
+          setState(() {
+            _activeDirection = GestureDirection.topLeft;
+          });
+          _showOrUpdatePopup();
+          if (lpOut != '⚙️') {
+            widget.onCornerSwipeReplace?.call(lpOut);
+          }
         }
       });
     }
@@ -227,6 +246,10 @@ class _KeyWidgetState extends State<KeyWidget> {
     final Offset delta = event.localPosition - _startOffset!;
     final GestureDirection dir = GestureDirection.fromDelta(delta, threshold: 14.0);
     if (dir != _activeDirection) {
+      if (dir != GestureDirection.center) {
+        _repeatDelayTimer?.cancel();
+        _repeatDelayTimer = null;
+      }
       final String prevOutput = widget.keyModel.resolveOutput(
         _activeDirection,
         isShifted: _wasShiftedOnDown,

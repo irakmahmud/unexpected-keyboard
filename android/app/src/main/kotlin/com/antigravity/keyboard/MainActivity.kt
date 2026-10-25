@@ -16,6 +16,8 @@ class MainActivity: FlutterActivity() {
     private val KEY_TOTAL_HEIGHT_DP = "total_height_dp"
     private val KEY_THEME_MODE = "theme_mode"
     private val KEY_HAPTICS_ENABLED = "haptics_enabled"
+    private val KEY_LONG_PRESS_MS = "long_press_ms"
+    private val DEFAULT_LONG_PRESS_MS = 400
 
     private var methodChannel: MethodChannel? = null
     private var openedFromKeyboardSettings: Boolean = false
@@ -36,13 +38,30 @@ class MainActivity: FlutterActivity() {
     override fun onResume() {
         super.onResume()
         notifyKeyboardStatus()
+        syncSavedConfigToFlutter()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             notifyKeyboardStatus()
+            syncSavedConfigToFlutter()
         }
+    }
+
+    private fun syncSavedConfigToFlutter() {
+        try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            methodChannel?.invokeMethod(
+                "onConfigChanged",
+                mapOf(
+                    "keyHeight" to prefs.getFloat(KEY_ROW_HEIGHT_DP, 46.0f).coerceIn(34.0f, 136.0f).toDouble(),
+                    "themeMode" to (prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"),
+                    "hapticsEnabled" to prefs.getBoolean(KEY_HAPTICS_ENABLED, true),
+                    "longPressMs" to prefs.getInt(KEY_LONG_PRESS_MS, DEFAULT_LONG_PRESS_MS).coerceIn(0, 3000)
+                )
+            )
+        } catch (_: Exception) {}
     }
 
     private fun notifyKeyboardStatus() {
@@ -96,6 +115,7 @@ class MainActivity: FlutterActivity() {
                             "keyHeight" to prefs.getFloat(KEY_ROW_HEIGHT_DP, 46.0f).coerceIn(34.0f, 136.0f).toDouble(),
                             "themeMode" to (prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"),
                             "hapticsEnabled" to prefs.getBoolean(KEY_HAPTICS_ENABLED, true),
+                            "longPressMs" to prefs.getInt(KEY_LONG_PRESS_MS, DEFAULT_LONG_PRESS_MS).coerceIn(0, 3000),
                             "openSettings" to shouldOpenSettings
                         )
                     )
@@ -104,6 +124,7 @@ class MainActivity: FlutterActivity() {
                     val editor = prefs.edit()
                     call.argument<String>("themeMode")?.let { editor.putString(KEY_THEME_MODE, it) }
                     call.argument<Boolean>("hapticsEnabled")?.let { editor.putBoolean(KEY_HAPTICS_ENABLED, it) }
+                    call.argument<Int>("longPressMs")?.let { editor.putInt(KEY_LONG_PRESS_MS, it.coerceIn(0, 3000)) }
                     editor.apply()
                     result.success(true)
                 }

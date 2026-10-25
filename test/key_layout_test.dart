@@ -113,5 +113,16 @@ void main() {
       expect(normalTotal < tallTotal, true);
       expect(tallTotal < doubleTotal, true);
     });
+
+    test('Long press delay clamping supports 0ms to 3000ms user customization', () {
+      expect(ImeChannelService.minLongPressMs, 0);
+      expect(ImeChannelService.maxLongPressMs, 3000);
+      expect(ImeChannelService.clampLongPressMs(-100), 0);
+      expect(ImeChannelService.clampLongPressMs(0), 0);
+      expect(ImeChannelService.clampLongPressMs(400), 400);
+      expect(ImeChannelService.clampLongPressMs(1500), 1500);
+      expect(ImeChannelService.clampLongPressMs(3000), 3000);
+      expect(ImeChannelService.clampLongPressMs(5000), 3000);
+    });
   });
 }

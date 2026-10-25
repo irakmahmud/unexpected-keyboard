@@ -7,12 +7,17 @@ class ImeChannelService {
   static const double maxKeyHeight = 136.0;
   static const double defaultKeyHeight = 46.0;
 
+  static const int minLongPressMs = 0;
+  static const int maxLongPressMs = 3000;
+  static const int defaultLongPressMs = 400;
+
   bool isShiftActive = false;
   bool isCapsLock = false;
   bool isCtrlActive = false;
   bool isAltActive = false;
   bool isMetaActive = false;
   bool hapticsEnabled = true;
+  int longPressMs = defaultLongPressMs;
 
   /// Callbacks for in-app preview typing & dynamic config updates
   void Function(String text)? onLocalTextInput;
@@ -22,6 +27,7 @@ class ImeChannelService {
   void Function(double keyHeight)? onHeightUpdatedFromNative;
   void Function(String themeName)? onThemeUpdatedFromNative;
   void Function(bool enabled)? onHapticsUpdatedFromNative;
+  void Function(int longPressMs)? onLongPressUpdatedFromNative;
   void Function()? onOpenSettingsFromNative;
   void Function(bool isEnabled, bool isSelected)? onKeyboardStatusUpdatedFromNative;
 
@@ -58,6 +64,11 @@ class ImeChannelService {
           hapticsEnabled = rawHaptics;
           onHapticsUpdatedFromNative?.call(rawHaptics);
         }
+        final rawLongPress = args['longPressMs'];
+        if (rawLongPress is num) {
+          longPressMs = clampLongPressMs(rawLongPress.round());
+          onLongPressUpdatedFromNative?.call(longPressMs);
+        }
         if (args['openSettings'] == true) {
           onOpenSettingsFromNative?.call();
         }
@@ -72,6 +83,12 @@ class ImeChannelService {
     if (height < minKeyHeight) return minKeyHeight;
     if (height > maxKeyHeight) return maxKeyHeight;
     return height;
+  }
+
+  static int clampLongPressMs(int ms) {
+    if (ms < minLongPressMs) return minLongPressMs;
+    if (ms > maxLongPressMs) return maxLongPressMs;
+    return ms;
   }
 
   static int calculateTotalKeyboardHeightDp(
@@ -128,6 +145,9 @@ class ImeChannelService {
         if (map['hapticsEnabled'] is bool) {
           hapticsEnabled = map['hapticsEnabled'] as bool;
         }
+        if (map['longPressMs'] is num) {
+          longPressMs = clampLongPressMs((map['longPressMs'] as num).round());
+        }
         return map;
       }
     } on PlatformException catch (e) {
@@ -137,6 +157,7 @@ class ImeChannelService {
       'keyHeight': defaultKeyHeight,
       'themeMode': 'amoled',
       'hapticsEnabled': true,
+      'longPressMs': defaultLongPressMs,
       'openSettings': false,
     };
   }
@@ -144,14 +165,19 @@ class ImeChannelService {
   Future<void> setKeyboardConfig({
     String? themeMode,
     bool? haptics,
+    int? longPressMs,
   }) async {
     if (haptics != null) {
       hapticsEnabled = haptics;
+    }
+    if (longPressMs != null) {
+      this.longPressMs = clampLongPressMs(longPressMs);
     }
     try {
       await _channel.invokeMethod('setKeyboardConfig', {
         if (themeMode != null) 'themeMode': themeMode,
         if (haptics != null) 'hapticsEnabled': haptics,
+        if (longPressMs != null) 'longPressMs': clampLongPressMs(longPressMs),
       });
     } on PlatformException catch (e) {
       print('IME Channel setKeyboardConfig error: ${e.message}');
