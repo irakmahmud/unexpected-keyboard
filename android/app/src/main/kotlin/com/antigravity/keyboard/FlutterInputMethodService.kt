@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.inputmethodservice.InputMethodService
@@ -547,11 +548,12 @@ class NativeKeyboardView(
     )
 
     // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
+    // Leftmost 2 narrow columns take exact 0.44f + 0.44f = 0.88f width (matching 2,3 horizontally across the entire column):
     // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
     // Row 2: [ #50/#51 (8/9) | #49 (/) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
     // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #5 (r — moved up!) ]
     // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #7 (i — moved up!) ]
-    // Row 5: [ #34/#40 (2/3) | #21 (↵) | #19 (⇧ — in o's place!) | #1 (Space — wider!) | #3 (⌫ — right of Space!) ]
+    // Row 5: [ #34/#40 (2/3) | #21 (↵) | #19 (⇧) | #3 (⌫ Cross — Red, left of Space!) | #1 (Space — most right!) ]
     // Row 6: [ #36/#33 (0/1) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
     // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #6 (o — below h!) ]
     // Row 8: [ #43/#44 (q/)) | #30 (') | #22 (g) | #20 (p) | #23 (j) ]
@@ -559,85 +561,85 @@ class NativeKeyboardView(
     private val rightHandBanglishRows = listOf(
         // Row 1: [ 55(%) | 54(&) | 53(@) | 52(;) | 17(u) ]
         listOf(
-            NativeKeySpec("%", flex = 1.0f),
-            NativeKeySpec("&", flex = 1.0f),
-            NativeKeySpec("@", flex = 1.0f),
-            NativeKeySpec(";", flex = 1.0f),
-            NativeKeySpec("u", "7", "&", "-", "_", flex = 1.0f)
+            NativeKeySpec("%", flex = 0.88f),
+            NativeKeySpec("&", flex = 1.03f),
+            NativeKeySpec("@", flex = 1.03f),
+            NativeKeySpec(";", flex = 1.03f),
+            NativeKeySpec("u", "7", "&", "-", "_", flex = 1.03f)
         ),
         // Row 2: [ 50/51 (8/9) | 49 (/) | 31/32 (!/w) | 14 (m) | 10 (n) ]
         listOf(
-            NativeKeySpec("8", "9", flex = 0.5f),
-            NativeKeySpec("9", flex = 0.5f),
-            NativeKeySpec("/", "?", "\\", "|", flex = 1.0f),
-            NativeKeySpec("!", "w", flex = 0.5f),
-            NativeKeySpec("w", "!", flex = 0.5f),
-            NativeKeySpec("m", "?", "!", "«", "»", flex = 1.0f),
-            NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.0f)
+            NativeKeySpec("8", "9", flex = 0.44f),
+            NativeKeySpec("9", flex = 0.44f),
+            NativeKeySpec("/", "?", "\\", "|", flex = 1.03f),
+            NativeKeySpec("!", "w", flex = 0.515f),
+            NativeKeySpec("w", "!", flex = 0.515f),
+            NativeKeySpec("m", "?", "!", "«", "»", flex = 1.03f),
+            NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.03f)
         ),
         // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 5 (r moved up!) ]
         listOf(
-            NativeKeySpec("6", "7", flex = 0.5f),
-            NativeKeySpec("7", flex = 0.5f),
-            NativeKeySpec("?", "!", "¿", "¡", "@", flex = 1.0f),
-            NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.0f),
-            NativeKeySpec("k", "(", ")", "<", ">", flex = 1.0f),
-            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.0f)
+            NativeKeySpec("6", "7", flex = 0.44f),
+            NativeKeySpec("7", flex = 0.44f),
+            NativeKeySpec("?", "!", "¿", "¡", "@", flex = 1.03f),
+            NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.03f),
+            NativeKeySpec("k", "(", ")", "<", ">", flex = 1.03f),
+            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.03f)
         ),
         // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 7 (i moved up!) ]
         listOf(
-            NativeKeySpec("4", "5", flex = 0.5f),
-            NativeKeySpec("5", flex = 0.5f),
-            NativeKeySpec("y", "6", "^", "=", "+", flex = 1.0f),
-            NativeKeySpec("t", "5", "%", "(", ")", flex = 1.0f),
-            NativeKeySpec("a", "@", "!", "#", "$", flex = 1.0f),
-            NativeKeySpec("i", "8", "*", "/", "*", flex = 1.0f)
+            NativeKeySpec("4", "5", flex = 0.44f),
+            NativeKeySpec("5", flex = 0.44f),
+            NativeKeySpec("y", "6", "^", "=", "+", flex = 1.03f),
+            NativeKeySpec("t", "5", "%", "(", ")", flex = 1.03f),
+            NativeKeySpec("a", "@", "!", "#", "$", flex = 1.03f),
+            NativeKeySpec("i", "8", "*", "/", "*", flex = 1.03f)
         ),
-        // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧ in o's place!) | 1 (wider Space!) | 3 (⌫ Cross right of Space!) ]
+        // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧) | 3 (⌫ Cross — Red, left of Space!) | 1 (Space — most right!) ]
         listOf(
             NativeKeySpec("2", "3", flex = 0.44f),
             NativeKeySpec("3", flex = 0.44f),
             NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.88f, keyCode = 66),
             NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 0.88f),
-            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.48f),
-            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.88f, keyCode = 67)
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.88f, keyCode = 67),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.48f)
         ),
         // Row 6: [ 36/33 (0/1) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
         listOf(
-            NativeKeySpec("0", "1", flex = 0.5f),
-            NativeKeySpec("1", flex = 0.5f),
-            NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.0f),
-            NativeKeySpec("s", "#", "$", "%", "^", flex = 1.0f),
-            NativeKeySpec("e", "3", "€", "{", "}", flex = 1.0f),
-            NativeKeySpec("h", "-", "_", ":", ";", flex = 1.0f)
+            NativeKeySpec("0", "1", flex = 0.44f),
+            NativeKeySpec("1", flex = 0.44f),
+            NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.03f),
+            NativeKeySpec("s", "#", "$", "%", "^", flex = 1.03f),
+            NativeKeySpec("e", "3", "€", "{", "}", flex = 1.03f),
+            NativeKeySpec("h", "-", "_", ":", ";", flex = 1.03f)
         ),
         // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 6 (o below h!) ]
         listOf(
-            NativeKeySpec("-", "x", flex = 0.5f),
-            NativeKeySpec("x", "-", flex = 0.5f),
-            NativeKeySpec(".", ">", ":", "(", ")", flex = 1.0f),
-            NativeKeySpec("d", "$", "%", "&", "*", flex = 1.0f),
-            NativeKeySpec("l", ")", ":", "[", "]", flex = 1.0f),
-            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.0f)
+            NativeKeySpec("-", "x", flex = 0.44f),
+            NativeKeySpec("x", "-", flex = 0.44f),
+            NativeKeySpec(".", ">", ":", "(", ")", flex = 1.03f),
+            NativeKeySpec("d", "$", "%", "&", "*", flex = 1.03f),
+            NativeKeySpec("l", ")", ":", "[", "]", flex = 1.03f),
+            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.03f)
         ),
         // Row 8: [ 43/44 (q/)) | 30 (') | 22 (g) | 20 (p) | 23 (j) ]
         listOf(
-            NativeKeySpec("q", ")", flex = 0.5f),
-            NativeKeySpec(")", flex = 0.5f),
-            NativeKeySpec("'", "\"", "`", "~", flex = 1.0f),
-            NativeKeySpec("g", "&", "*", "-", "=", flex = 1.0f),
-            NativeKeySpec("p", "0", ")", "{", "}", flex = 1.0f),
-            NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.0f)
+            NativeKeySpec("q", ")", flex = 0.44f),
+            NativeKeySpec(")", flex = 0.44f),
+            NativeKeySpec("'", "\"", "`", "~", flex = 1.03f),
+            NativeKeySpec("g", "&", "*", "-", "=", flex = 1.03f),
+            NativeKeySpec("p", "0", ")", "{", "}", flex = 1.03f),
+            NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.03f)
         ),
         // Row 9: [ 45/46 ((/:) | 35/39 (z/") | 29 (f) | 27 (v) | 26 (,) ]
         listOf(
-            NativeKeySpec("(", ":", flex = 0.5f),
-            NativeKeySpec(":", flex = 0.5f),
-            NativeKeySpec("z", "\"", flex = 0.5f),
-            NativeKeySpec("\"", flex = 0.5f),
-            NativeKeySpec("f", "%", "^", "_", "+", flex = 1.0f),
-            NativeKeySpec("v", ":", ";", "•", "°", flex = 1.0f),
-            NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.0f)
+            NativeKeySpec("(", ":", flex = 0.44f),
+            NativeKeySpec(":", flex = 0.44f),
+            NativeKeySpec("z", "\"", flex = 0.515f),
+            NativeKeySpec("\"", flex = 0.515f),
+            NativeKeySpec("f", "%", "^", "_", "+", flex = 1.03f),
+            NativeKeySpec("v", ":", ";", "•", "°", flex = 1.03f),
+            NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.03f)
         )
     )
 
@@ -984,8 +986,103 @@ class NativeKeyboardView(
         }
     }
 
+    private val iconPath = Path()
+    private val iconStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    private fun drawVectorActionIcon(
+        canvas: Canvas,
+        action: NativeActionType,
+        r: RectF,
+        color: Int,
+        isBanglish: Boolean,
+        isShiftFilled: Boolean
+    ) {
+        val w = r.width()
+        val h = r.height()
+        val cx = r.centerX()
+        val cy = r.centerY()
+        val scale = if (isBanglish) 1.35f else 1.0f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.style = Paint.Style.STROKE
+
+        when (action) {
+            NativeActionType.SHIFT -> {
+                val iconH = (h * 0.42f * scale).coerceIn(dp(14f), h * 0.64f)
+                val iconW = (iconH * 0.96f).coerceIn(dp(14f), w * 0.68f)
+                iconStrokePaint.strokeWidth = max(dp(2.2f), h * 0.048f)
+                iconPath.reset()
+                iconPath.moveTo(cx, cy - iconH * 0.50f)
+                iconPath.lineTo(cx + iconW * 0.50f, cy - iconH * 0.02f)
+                iconPath.lineTo(cx + iconW * 0.22f, cy - iconH * 0.02f)
+                iconPath.lineTo(cx + iconW * 0.22f, cy + iconH * 0.48f)
+                iconPath.lineTo(cx - iconW * 0.22f, cy + iconH * 0.48f)
+                iconPath.lineTo(cx - iconW * 0.22f, cy - iconH * 0.02f)
+                iconPath.lineTo(cx - iconW * 0.50f, cy - iconH * 0.02f)
+                iconPath.close()
+                if (isShiftFilled) {
+                    iconStrokePaint.style = Paint.Style.FILL_AND_STROKE
+                }
+                canvas.drawPath(iconPath, iconStrokePaint)
+            }
+            NativeActionType.SPACE -> {
+                val trayW = (w * 0.52f).coerceIn(dp(18f), min(w * 0.76f, h * 0.95f * scale))
+                val trayH = (h * 0.22f * scale).coerceIn(dp(7f), h * 0.34f)
+                val midY = cy + trayH * 0.10f
+                iconStrokePaint.strokeWidth = max(dp(2.5f), h * 0.055f)
+                iconPath.reset()
+                iconPath.moveTo(cx - trayW * 0.5f, midY - trayH * 0.5f)
+                iconPath.lineTo(cx - trayW * 0.5f, midY + trayH * 0.5f)
+                iconPath.lineTo(cx + trayW * 0.5f, midY + trayH * 0.5f)
+                iconPath.lineTo(cx + trayW * 0.5f, midY - trayH * 0.5f)
+                canvas.drawPath(iconPath, iconStrokePaint)
+            }
+            NativeActionType.BACKSPACE -> {
+                val boxW = (h * 0.52f * scale).coerceIn(dp(16f), min(w * 0.72f, h * 0.70f))
+                val boxH = (boxW * 0.66f).coerceIn(dp(12f), h * 0.56f)
+                iconStrokePaint.strokeWidth = max(dp(2.2f), h * 0.048f)
+                iconPath.reset()
+                iconPath.moveTo(cx - boxW * 0.50f, cy)
+                iconPath.lineTo(cx - boxW * 0.20f, cy - boxH * 0.50f)
+                iconPath.lineTo(cx + boxW * 0.50f, cy - boxH * 0.50f)
+                iconPath.lineTo(cx + boxW * 0.50f, cy + boxH * 0.50f)
+                iconPath.lineTo(cx - boxW * 0.20f, cy + boxH * 0.50f)
+                iconPath.close()
+                canvas.drawPath(iconPath, iconStrokePaint)
+
+                val xCenter = cx + boxW * 0.14f
+                val rX = boxH * 0.22f
+                canvas.drawLine(xCenter - rX, cy - rX, xCenter + rX, cy + rX, iconStrokePaint)
+                canvas.drawLine(xCenter + rX, cy - rX, xCenter - rX, cy + rX, iconStrokePaint)
+            }
+            NativeActionType.ENTER -> {
+                val ew = (h * 0.48f * scale).coerceIn(dp(15f), min(w * 0.68f, h * 0.68f))
+                val eh = (ew * 0.74f).coerceIn(dp(12f), h * 0.56f)
+                iconStrokePaint.strokeWidth = max(dp(2.3f), h * 0.050f)
+                iconPath.reset()
+                iconPath.moveTo(cx + ew * 0.42f, cy - eh * 0.46f)
+                iconPath.lineTo(cx + ew * 0.42f, cy + eh * 0.14f)
+                iconPath.lineTo(cx - ew * 0.42f, cy + eh * 0.14f)
+                canvas.drawPath(iconPath, iconStrokePaint)
+
+                iconPath.reset()
+                iconPath.moveTo(cx - ew * 0.12f, cy - eh * 0.18f)
+                iconPath.lineTo(cx - ew * 0.42f, cy + eh * 0.14f)
+                iconPath.lineTo(cx - ew * 0.12f, cy + eh * 0.46f)
+                canvas.drawPath(iconPath, iconStrokePaint)
+            }
+            else -> {}
+        }
+    }
+
     private fun getResearchColorForSpec(spec: NativeKeySpec): Int? {
-        if (!researchColorsEnabled || layoutMode != "right_hand") return null
+        if (layoutMode != "right_hand") return null
+        if (spec.action == NativeActionType.BACKSPACE) return 0xFFD32F2F.toInt() // Cross (⌫) button explicitly Red
+        if (!researchColorsEnabled) return null
         val rank = getBanglishRank(spec)
         if (rank <= 0) return null
         return researchColorPalette[(rank - 1) % researchColorPalette.size]
@@ -1087,46 +1184,56 @@ class NativeKeyboardView(
 
             val cellH = r.height()
             val cellW = r.width()
-            val isMulti = displayPrimary.length > 1
-            val isIconKey = spec.action == NativeActionType.SPACE ||
-                    spec.action == NativeActionType.BACKSPACE ||
-                    spec.action == NativeActionType.SHIFT ||
-                    spec.action == NativeActionType.ENTER ||
-                    spec.action == NativeActionType.SWITCH_IME ||
-                    spec.action == NativeActionType.TOGGLE_RESIZE ||
-                    spec.action == NativeActionType.OPEN_SETTINGS ||
-                    spec.action == NativeActionType.ARROW_LEFT ||
-                    spec.action == NativeActionType.ARROW_DOWN ||
-                    spec.action == NativeActionType.ARROW_UP ||
-                    spec.action == NativeActionType.ARROW_RIGHT
+            val isVectorActionKey = (spec.action == NativeActionType.SPACE) ||
+                    (spec.action == NativeActionType.BACKSPACE) ||
+                    (spec.action == NativeActionType.ENTER) ||
+                    (spec.action == NativeActionType.SHIFT && !isCapsLock)
 
-            val paint = if (hit.isTopBar || isMulti || (isBanglish && isIconKey)) multiCharTextPaint else primaryTextPaint
-            paint.color = fgColor
+            if (isVectorActionKey) {
+                drawVectorActionIcon(
+                    canvas = canvas,
+                    action = spec.action,
+                    r = r,
+                    color = fgColor,
+                    isBanglish = isBanglish,
+                    isShiftFilled = isShiftActive || isCapsLock
+                )
+            } else {
+                val isMulti = displayPrimary.length > 1
+                val isIconKey = spec.action == NativeActionType.SWITCH_IME ||
+                        spec.action == NativeActionType.TOGGLE_RESIZE ||
+                        spec.action == NativeActionType.OPEN_SETTINGS ||
+                        spec.action == NativeActionType.ARROW_LEFT ||
+                        spec.action == NativeActionType.ARROW_DOWN ||
+                        spec.action == NativeActionType.ARROW_UP ||
+                        spec.action == NativeActionType.ARROW_RIGHT
 
-            var targetTextSize = when {
-                hit.isTopBar -> if (isMulti) cellH * 0.34f else cellH * 0.46f
-                isMulti -> cellH * 0.34f
-                spec.action == NativeActionType.SPACE -> cellH * 0.65f
-                else -> cellH * 0.72f
-            }
-            if (isBanglish && isIconKey) {
-                // Increase all icons by 50% in Banglish layout
-                targetTextSize *= 1.5f
-            }
-            val maxAllowedW = if (isBanglish && isIconKey) cellW * 0.96f else cellW * 0.86f
-            paint.textSize = targetTextSize
-            val measuredW = paint.measureText(displayPrimary)
-            if (measuredW > maxAllowedW && measuredW > 0f) {
-                targetTextSize *= (maxAllowedW / measuredW)
+                val paint = if (hit.isTopBar || isMulti || (isBanglish && isIconKey)) multiCharTextPaint else primaryTextPaint
+                paint.color = fgColor
+
+                var targetTextSize = when {
+                    hit.isTopBar -> if (isMulti) cellH * 0.34f else cellH * 0.46f
+                    isMulti -> cellH * 0.34f
+                    else -> cellH * 0.68f
+                }
+                if (isBanglish && isIconKey) {
+                    targetTextSize = (targetTextSize * 1.35f).coerceAtMost(cellH * 0.72f)
+                }
+                val maxAllowedW = if (isBanglish && isIconKey) cellW * 0.92f else cellW * 0.86f
                 paint.textSize = targetTextSize
-            }
+                val measuredW = paint.measureText(displayPrimary)
+                if (measuredW > maxAllowedW && measuredW > 0f) {
+                    targetTextSize *= (maxAllowedW / measuredW)
+                    paint.textSize = targetTextSize
+                }
 
-            val fm = paint.fontMetrics
-            var centerY = r.centerY() - (fm.ascent + fm.descent) / 2f
-            if (displayPrimary == "," || displayPrimary == ".") {
-                centerY -= cellH * 0.16f
+                val fm = paint.fontMetrics
+                var centerY = r.centerY() - (fm.ascent + fm.descent) / 2f
+                if (displayPrimary == "," || displayPrimary == ".") {
+                    centerY -= cellH * 0.16f
+                }
+                canvas.drawText(displayPrimary, r.centerX(), centerY, paint)
             }
-            canvas.drawText(displayPrimary, r.centerX(), centerY, paint)
 
             // 4 Corner Symbols (with 50% larger 🌐 icon on Spacebar in Banglish layout)
             if (!hit.isTopBar) {

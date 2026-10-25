@@ -108,20 +108,26 @@ void main() {
       expect(rhb[1].map((k) => k.primary).toList(), ['8', '9', '/', '!', 'w', 'm', 'n']);
       expect(rhb[2].map((k) => k.primary).toList(), ['6', '7', '?', 'b', 'k', 'r']);
       expect(rhb[3].map((k) => k.primary).toList(), ['4', '5', 'y', 't', 'a', 'i']);
-      expect(rhb[4].map((k) => k.primary).toList(), ['2', '3', '↵', '⇧', ' ', '⌫']);
+      expect(rhb[4].map((k) => k.primary).toList(), ['2', '3', '↵', '⇧', '⌫', ' ']);
       expect(rhb[4][3].actionType, KeyActionType.shift);
-      expect(rhb[4][4].actionType, KeyActionType.space);
-      expect(rhb[4][5].actionType, KeyActionType.backspace);
-      expect(rhb[4][4].flex > rhb[4][3].flex, true); // Space button occupies more horizontal width
+      expect(rhb[4][4].actionType, KeyActionType.backspace); // Cross left of Space
+      expect(rhb[4][5].actionType, KeyActionType.space); // Space at most right
+      expect(rhb[4][5].flex > rhb[4][4].flex, true); // Space button occupies more horizontal width
       expect(rhb[5].map((k) => k.primary).toList(), ['0', '1', 'c', 's', 'e', 'h']);
       expect(rhb[6].map((k) => k.primary).toList(), ['-', 'x', '.', 'd', 'l', 'o']);
       expect(rhb[7].map((k) => k.primary).toList(), ['q', ')', "'", 'g', 'p', 'j']);
       expect(rhb[8].map((k) => k.primary).toList(), ['(', ':', 'z', '"', 'f', 'v', ',']);
 
-      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, #3..#12 -> Top 10 Study Colors):
+      // Verify leftmost 2 columns take the exact same horizontal width as 2, 3 (0.44 each) across Rows 2..9:
+      for (int r = 1; r < 9; r++) {
+        expect(rhb[r][0].flex, 0.44);
+        expect(rhb[r][1].flex, 0.44);
+      }
+
+      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, Cross (⌫) -> Red 0xFFD32F2F, #4..#12 -> Study Colors):
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 0xFF1565C0);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'a')), 0xFF607D8B);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFF00C853);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFFD32F2F);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFFFBC02D);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'r')), 0xFF00ACC1);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFF141414);

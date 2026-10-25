@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/gesture_direction.dart';
 import '../models/key_model.dart';
@@ -319,8 +320,10 @@ class _KeyWidgetState extends State<KeyWidget> {
     if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
     if (key.actionType == KeyActionType.switchVersion && key.primary == 'V1') isActiveModifier = true;
 
-    final int? researchColorVal = (widget.researchColorsEnabled && widget.isBanglishLayout)
-        ? KeyboardLayout.getResearchColorValue(key)
+    final int? researchColorVal = widget.isBanglishLayout
+        ? (key.actionType == KeyActionType.backspace
+            ? 0xFFD32F2F // Cross (⌫) button explicitly Red in Banglish layout
+            : (widget.researchColorsEnabled ? KeyboardLayout.getResearchColorValue(key) : null))
         : null;
     final Color? researchBg = researchColorVal != null ? Color(researchColorVal) : null;
 
@@ -351,7 +354,7 @@ class _KeyWidgetState extends State<KeyWidget> {
 
     // Zero gaps between keys + raw Listener for 0.0ms touch-down latency (no RepaintBoundary/FittedBox texture stall)
     return Expanded(
-      flex: (key.flex * 100).round(),
+      flex: (key.flex * 1000).round(),
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
@@ -489,28 +492,23 @@ class _KeyWidgetState extends State<KeyWidget> {
       );
     }
 
-    if (key.actionType == KeyActionType.space) {
-      return Text(
-        '␣',
-        textAlign: TextAlign.center,
-        textHeightBehavior: const TextHeightBehavior(
-          applyHeightToFirstAscent: false,
-          applyHeightToLastDescent: false,
-        ),
-        style: TextStyle(
-          fontFamily: 'sans-serif-thin',
-          fontSize: (widget.height * 0.68 * iconScale).clamp(22.0, 96.0),
-          height: 1.0,
-          fontWeight: widget.isBanglishLayout ? FontWeight.bold : FontWeight.w100,
-          color: fgColor,
+    if (key.actionType == KeyActionType.space ||
+        key.actionType == KeyActionType.shift ||
+        key.actionType == KeyActionType.backspace ||
+        key.actionType == KeyActionType.enter) {
+      return SizedBox.expand(
+        child: CustomPaint(
+          painter: _KeyActionIconPainter(
+            actionType: key.actionType,
+            color: fgColor,
+            isBanglish: widget.isBanglishLayout,
+            isShiftFilled: widget.isShiftActive,
+          ),
         ),
       );
     }
 
-    final bool isIconAction = key.actionType == KeyActionType.backspace ||
-        key.actionType == KeyActionType.shift ||
-        key.actionType == KeyActionType.enter ||
-        key.actionType == KeyActionType.arrowLeft ||
+    final bool isIconAction = key.actionType == KeyActionType.arrowLeft ||
         key.actionType == KeyActionType.arrowRight ||
         key.actionType == KeyActionType.arrowUp ||
         key.actionType == KeyActionType.arrowDown;
@@ -518,9 +516,9 @@ class _KeyWidgetState extends State<KeyWidget> {
     final bool isMultiCharLabel = displayPrimary.length > 1;
     final double baseSize = isMultiCharLabel
         ? (widget.height * 0.34).clamp(11.0, 26.0)
-        : (widget.height * 0.72).clamp(24.0, 88.0);
+        : (widget.height * 0.64).clamp(18.0, widget.height * 0.68);
     final double computedFontSize = (widget.isBanglishLayout && isIconAction)
-        ? (baseSize * 1.5).clamp(24.0, 96.0)
+        ? (baseSize * 1.35).clamp(18.0, widget.height * 0.72)
         : baseSize;
     final bool isLowPunctuation = displayPrimary == ',' || displayPrimary == '.';
 
@@ -550,5 +548,122 @@ class _KeyWidgetState extends State<KeyWidget> {
     }
 
     return textWidget;
+  }
+}
+
+class _KeyActionIconPainter extends CustomPainter {
+  final KeyActionType actionType;
+  final Color color;
+  final bool isBanglish;
+  final bool isShiftFilled;
+
+  const _KeyActionIconPainter({
+    required this.actionType,
+    required this.color,
+    required this.isBanglish,
+    required this.isShiftFilled,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    if (w <= 0 || h <= 0) return;
+
+    final double cx = w / 2.0;
+    final double cy = h / 2.0;
+    final double scale = isBanglish ? 1.35 : 1.0;
+
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
+
+    switch (actionType) {
+      case KeyActionType.shift:
+        final double iconH = (h * 0.42 * scale).clamp(14.0, h * 0.64);
+        final double iconW = (iconH * 0.96).clamp(14.0, w * 0.68);
+        paint.strokeWidth = math.max(2.2, h * 0.048);
+        final Path path = Path()
+          ..moveTo(cx, cy - iconH * 0.50)
+          ..lineTo(cx + iconW * 0.50, cy - iconH * 0.02)
+          ..lineTo(cx + iconW * 0.22, cy - iconH * 0.02)
+          ..lineTo(cx + iconW * 0.22, cy + iconH * 0.48)
+          ..lineTo(cx - iconW * 0.22, cy + iconH * 0.48)
+          ..lineTo(cx - iconW * 0.22, cy - iconH * 0.02)
+          ..lineTo(cx - iconW * 0.50, cy - iconH * 0.02)
+          ..close();
+        if (isShiftFilled) {
+          final Paint fillPaint = Paint()
+            ..color = color
+            ..style = PaintingStyle.fill
+            ..isAntiAlias = true;
+          canvas.drawPath(path, fillPaint);
+        }
+        canvas.drawPath(path, paint);
+        break;
+
+      case KeyActionType.space:
+        final double trayW = (w * 0.52).clamp(18.0, math.min(w * 0.76, h * 0.95 * scale));
+        final double trayH = (h * 0.22 * scale).clamp(7.0, h * 0.34);
+        final double midY = cy + trayH * 0.10;
+        paint.strokeWidth = math.max(2.5, h * 0.055);
+        final Path path = Path()
+          ..moveTo(cx - trayW * 0.5, midY - trayH * 0.5)
+          ..lineTo(cx - trayW * 0.5, midY + trayH * 0.5)
+          ..lineTo(cx + trayW * 0.5, midY + trayH * 0.5)
+          ..lineTo(cx + trayW * 0.5, midY - trayH * 0.5);
+        canvas.drawPath(path, paint);
+        break;
+
+      case KeyActionType.backspace:
+        final double boxW = (h * 0.52 * scale).clamp(16.0, math.min(w * 0.72, h * 0.70));
+        final double boxH = (boxW * 0.66).clamp(12.0, h * 0.56);
+        paint.strokeWidth = math.max(2.2, h * 0.048);
+        final Path path = Path()
+          ..moveTo(cx - boxW * 0.50, cy)
+          ..lineTo(cx - boxW * 0.20, cy - boxH * 0.50)
+          ..lineTo(cx + boxW * 0.50, cy - boxH * 0.50)
+          ..lineTo(cx + boxW * 0.50, cy + boxH * 0.50)
+          ..lineTo(cx - boxW * 0.20, cy + boxH * 0.50)
+          ..close();
+        canvas.drawPath(path, paint);
+
+        final double xCenter = cx + boxW * 0.14;
+        final double rX = boxH * 0.22;
+        canvas.drawLine(Offset(xCenter - rX, cy - rX), Offset(xCenter + rX, cy + rX), paint);
+        canvas.drawLine(Offset(xCenter + rX, cy - rX), Offset(xCenter - rX, cy + rX), paint);
+        break;
+
+      case KeyActionType.enter:
+        final double ew = (h * 0.48 * scale).clamp(15.0, math.min(w * 0.68, h * 0.68));
+        final double eh = (ew * 0.74).clamp(12.0, h * 0.56);
+        paint.strokeWidth = math.max(2.3, h * 0.050);
+        final Path stem = Path()
+          ..moveTo(cx + ew * 0.42, cy - eh * 0.46)
+          ..lineTo(cx + ew * 0.42, cy + eh * 0.14)
+          ..lineTo(cx - ew * 0.42, cy + eh * 0.14);
+        canvas.drawPath(stem, paint);
+
+        final Path head = Path()
+          ..moveTo(cx - ew * 0.12, cy - eh * 0.18)
+          ..lineTo(cx - ew * 0.42, cy + eh * 0.14)
+          ..lineTo(cx - ew * 0.12, cy + eh * 0.46);
+        canvas.drawPath(head, paint);
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _KeyActionIconPainter oldDelegate) {
+    return oldDelegate.actionType != actionType ||
+        oldDelegate.color != color ||
+        oldDelegate.isBanglish != isBanglish ||
+        oldDelegate.isShiftFilled != isShiftFilled;
   }
 }

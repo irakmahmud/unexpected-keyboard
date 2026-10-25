@@ -149,7 +149,7 @@ class ModifierBar extends StatelessWidget {
                 child: Icon(
                   Icons.unfold_more,
                   size: 18.0,
-                  color: isResizeBarOpen ? theme.accentColor : theme.primaryTextColor,
+                  color: isResizeBarOpen ? Colors.white : theme.primaryTextColor,
                 ),
               ),
             ),
