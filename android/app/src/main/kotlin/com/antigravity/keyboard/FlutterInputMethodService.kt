@@ -1053,7 +1053,7 @@ class NativeKeyboardView(
     }
 
     private fun selectLayoutMode(mode: String) {
-        currentLayoutMode = mode
+        layoutMode = mode
         isSymbolLayout = false
         isLayoutMenuOpen = false
         service.saveLayoutMode(mode)
