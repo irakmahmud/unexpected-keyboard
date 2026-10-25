@@ -35,10 +35,10 @@ class FlutterInputMethodService : InputMethodService() {
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         const val KEY_LONG_PRESS_MS = "long_press_ms"
-        const val KEY_LAYOUT_VERSION = "layout_version"
+        const val KEY_LAYOUT_MODE = "layout_mode"
         const val DEFAULT_KEY_HEIGHT_DP = 42.0f
         const val DEFAULT_LONG_PRESS_MS = 400
-        const val DEFAULT_LAYOUT_VERSION = 2
+        const val DEFAULT_LAYOUT_MODE = "abcd"
     }
 
     override fun onEvaluateFullscreenMode(): Boolean = false
@@ -116,16 +116,18 @@ class FlutterInputMethodService : InputMethodService() {
         return prefs.getString(KEY_THEME_MODE, "amoled") ?: "amoled"
     }
 
-    fun getSavedLayoutVersion(): Int {
+    fun getSavedLayoutMode(): String {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val v = prefs.getInt(KEY_LAYOUT_VERSION, DEFAULT_LAYOUT_VERSION)
-        return if (v == 1) 1 else 2
+        val raw = prefs.getString(KEY_LAYOUT_MODE, DEFAULT_LAYOUT_MODE) ?: DEFAULT_LAYOUT_MODE
+        return when (raw) {
+            "qwerty", "abcd", "left_hand", "right_hand", "both_hand" -> raw
+            else -> DEFAULT_LAYOUT_MODE
+        }
     }
 
-    fun saveLayoutVersion(version: Int) {
-        val v = if (version == 1) 1 else 2
+    fun saveLayoutMode(mode: String) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putInt(KEY_LAYOUT_VERSION, v).apply()
+        prefs.edit().putString(KEY_LAYOUT_MODE, mode).apply()
     }
 
     fun commitTextImmediate(text: String, metaState: Int, useModifiers: Boolean) {
@@ -277,7 +279,13 @@ enum class NativeActionType {
     ARROW_UP,
     ARROW_RIGHT,
     SWITCH_LAYOUT,
-    SWITCH_VERSION,
+    OPEN_LAYOUT_MENU,
+    CLOSE_LAYOUT_MENU,
+    SELECT_LAYOUT_QWERTY,
+    SELECT_LAYOUT_ABCD,
+    SELECT_LAYOUT_LEFT,
+    SELECT_LAYOUT_RIGHT,
+    SELECT_LAYOUT_BOTH,
     SWITCH_IME,
     TOGGLE_RESIZE,
     OPEN_SETTINGS,
@@ -323,7 +331,8 @@ class NativeKeyboardView(
     private var isCtrlActive: Boolean = false
     private var isAltActive: Boolean = false
     private var isSymbolLayout: Boolean = false
-    private var isVersion1Layout: Boolean = false // Default false => Version 2 is default
+    private var layoutMode: String = "abcd" // Default "abcd" => 2. ABCD Serially
+    private var isLayoutMenuOpen: Boolean = false
     private var isResizeBarOpen: Boolean = false
 
     // Theme colors
@@ -358,8 +367,14 @@ class NativeKeyboardView(
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create("sans-serif", Typeface.BOLD)
     }
+    private val menuItemTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.LEFT
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    }
 
-    private val hitRects = ArrayList<HitRect>(64)
+    private val hitRects = ArrayList<HitRect>(80)
+    private val menuHitRects = ArrayList<HitRect>(8)
+    private var menuCardRect = RectF()
 
     // Active pointer tracking
     private var activePointerId: Int = MotionEvent.INVALID_POINTER_ID
@@ -384,28 +399,27 @@ class NativeKeyboardView(
         NativeKeySpec("ESC", action = NativeActionType.ESCAPE, flex = 0.95f, keyCode = 111),
         NativeKeySpec("CTRL", action = NativeActionType.CTRL, flex = 1.05f, keyCode = 113),
         NativeKeySpec("ALT", action = NativeActionType.ALT, flex = 0.95f, keyCode = 57),
-        NativeKeySpec("V2", action = NativeActionType.SWITCH_VERSION, flex = 1.15f),
         NativeKeySpec("◀", action = NativeActionType.ARROW_LEFT, flex = 0.8f, keyCode = 21),
         NativeKeySpec("▼", action = NativeActionType.ARROW_DOWN, flex = 0.8f, keyCode = 20),
         NativeKeySpec("▲", action = NativeActionType.ARROW_UP, flex = 0.8f, keyCode = 19),
         NativeKeySpec("▶", action = NativeActionType.ARROW_RIGHT, flex = 0.8f, keyCode = 22),
+        NativeKeySpec("⊞", action = NativeActionType.OPEN_LAYOUT_MENU, flex = 0.9f),
         NativeKeySpec("🌐", action = NativeActionType.SWITCH_IME, flex = 0.85f),
         NativeKeySpec("↕", action = NativeActionType.TOGGLE_RESIZE, flex = 0.85f),
         NativeKeySpec("⚙️", action = NativeActionType.OPEN_SETTINGS, flex = 0.85f)
     )
 
-    // Row 0 (Directly above Number Row): Shift, ?123, V2/V1 Layer, ?, /, ,, ., Space, Backspace (Cross), Enter
+    // Row 0 (Directly above Number Row): Shift, ?123, ?, /, ,, ., Space, Backspace (Cross), Enter
     private val actionSymbolRow = listOf(
-        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 0.95f),
-        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 0.95f),
-        NativeKeySpec("V2", action = NativeActionType.SWITCH_VERSION, flex = 0.85f),
-        NativeKeySpec("?", "!", "¿", "¡", "@", flex = 0.8f),
-        NativeKeySpec("/", "\\", "|", "-", "_", flex = 0.8f),
-        NativeKeySpec(",", "<", ";", "'", "\"", flex = 0.8f),
-        NativeKeySpec(".", ">", ":", "(", ")", flex = 0.8f),
-        NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.35f),
-        NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.95f, keyCode = 67),
-        NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.95f, keyCode = 66)
+        NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.0f),
+        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 1.0f),
+        NativeKeySpec("?", "!", "¿", "¡", "@", flex = 0.85f),
+        NativeKeySpec("/", "\\", "|", "-", "_", flex = 0.85f),
+        NativeKeySpec(",", "<", ";", "'", "\"", flex = 0.85f),
+        NativeKeySpec(".", ">", ":", "(", ")", flex = 0.85f),
+        NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.5f),
+        NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.0f, keyCode = 67),
+        NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 1.0f, keyCode = 66)
     )
 
     // Row 1 (Number Row): 1 2 3 4 5 6 7 8 9 0
@@ -565,7 +579,7 @@ class NativeKeyboardView(
         longPressMs = service.getSavedLongPressMs()
         themeMode = service.getSavedThemeMode()
         hapticsEnabled = service.isHapticsEnabled()
-        isVersion1Layout = (service.getSavedLayoutVersion() == 1)
+        layoutMode = service.getSavedLayoutMode()
         applyThemePalette(themeMode)
         if (width > 0) {
             rebuildHitRects(width.toFloat())
@@ -679,21 +693,22 @@ class NativeKeyboardView(
         val totalModFlex = topBarSpecs.fold(0f) { acc, s -> acc + s.flex }
         var modLeft = 0f
         for (rawSpec in topBarSpecs) {
-            val spec = when {
-                rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout -> rawSpec.copy(primary = "ABC")
-                rawSpec.action == NativeActionType.SWITCH_VERSION -> rawSpec.copy(primary = if (isVersion1Layout) "V1" else "V2")
-                else -> rawSpec
+            val spec = if (rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout) {
+                rawSpec.copy(primary = "ABC")
+            } else {
+                rawSpec
             }
             val kw = viewWidth * (spec.flex / totalModFlex)
             hitRects.add(HitRect(spec, RectF(modLeft, currentTop, modLeft + kw, currentTop + modH), isTopBar = true))
             modLeft += kw
         }
         currentTop += modH
+        val bodyTop = currentTop
 
         // 7 Main Keyboard Rows (Row 0 Action/Symbol Row + Row 1 Number Row + 5 Letter/Symbol Rows)
         val rows = when {
             isSymbolLayout -> symbolRows
-            isVersion1Layout -> version1Rows
+            layoutMode == "qwerty" -> version1Rows
             else -> version2Rows
         }
         val rowH = dp(keyHeightDp)
@@ -701,16 +716,58 @@ class NativeKeyboardView(
             val totalRowFlex = row.fold(0f) { acc, s -> acc + s.flex }
             var left = 0f
             for (rawSpec in row) {
-                val spec = when {
-                    rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout -> rawSpec.copy(primary = "ABC")
-                    rawSpec.action == NativeActionType.SWITCH_VERSION -> rawSpec.copy(primary = if (isVersion1Layout) "V1" else "V2")
-                    else -> rawSpec
+                val spec = if (rawSpec.action == NativeActionType.SWITCH_LAYOUT && isSymbolLayout) {
+                    rawSpec.copy(primary = "ABC")
+                } else {
+                    rawSpec
                 }
                 val kw = viewWidth * (spec.flex / totalRowFlex)
                 hitRects.add(HitRect(spec, RectF(left, currentTop, left + kw, currentTop + rowH), isTopBar = false))
                 left += kw
             }
             currentTop += rowH
+        }
+
+        // Build Layout Selection Popup Menu hit rects
+        menuHitRects.clear()
+        val bodyH = currentTop - bodyTop
+        val cardW = min(viewWidth * 0.88f, dp(320f))
+        val cardH = min(bodyH - dp(10f), dp(248f))
+        val cardLeft = (viewWidth - cardW) / 2f
+        val cardTop = bodyTop + max(dp(4f), (bodyH - cardH) / 2f)
+        menuCardRect = RectF(cardLeft, cardTop, cardLeft + cardW, cardTop + cardH)
+
+        val headerH = dp(34f)
+        val closeSpec = NativeKeySpec("✕", action = NativeActionType.CLOSE_LAYOUT_MENU)
+        menuHitRects.add(
+            HitRect(
+                closeSpec,
+                RectF(cardLeft + cardW - dp(40f), cardTop, cardLeft + cardW, cardTop + headerH),
+                isTopBar = true
+            )
+        )
+
+        val menuItems = listOf(
+            NativeKeySpec("1. QWERTY Type", action = NativeActionType.SELECT_LAYOUT_QWERTY),
+            NativeKeySpec("2. ABCD Serially", action = NativeActionType.SELECT_LAYOUT_ABCD),
+            NativeKeySpec("3. Left Hand", action = NativeActionType.SELECT_LAYOUT_LEFT),
+            NativeKeySpec("4. Right Hand", action = NativeActionType.SELECT_LAYOUT_RIGHT),
+            NativeKeySpec("5. Both Hand", action = NativeActionType.SELECT_LAYOUT_BOTH)
+        )
+        val availItemsH = cardH - headerH - dp(8f)
+        val itemH = availItemsH / menuItems.size
+        var itemTop = cardTop + headerH + dp(2f)
+        val itemLeft = cardLeft + dp(10f)
+        val itemRight = cardLeft + cardW - dp(10f)
+        for (itemSpec in menuItems) {
+            menuHitRects.add(
+                HitRect(
+                    itemSpec,
+                    RectF(itemLeft, itemTop + dp(1.5f), itemRight, itemTop + itemH - dp(1.5f)),
+                    isTopBar = true
+                )
+            )
+            itemTop += itemH
         }
     }
 
@@ -744,7 +801,7 @@ class NativeKeyboardView(
                     (spec.action == NativeActionType.CTRL && isCtrlActive) ||
                     (spec.action == NativeActionType.ALT && isAltActive) ||
                     (spec.action == NativeActionType.SWITCH_LAYOUT && spec.primary == "ABC") ||
-                    (spec.action == NativeActionType.SWITCH_VERSION && isVersion1Layout) ||
+                    (spec.action == NativeActionType.OPEN_LAYOUT_MENU && isLayoutMenuOpen) ||
                     (spec.action == NativeActionType.TOGGLE_RESIZE && isResizeBarOpen) ||
                     (spec.action == NativeActionType.RESIZE_DONE)
 
@@ -759,6 +816,23 @@ class NativeKeyboardView(
             borderPaint.strokeWidth = if (isActiveMod) activeStrokePx else strokePx
             canvas.drawRect(r, borderPaint)
 
+            if (spec.action == NativeActionType.OPEN_LAYOUT_MENU) {
+                // Draw crisp 2x2 Layout Grid Icon
+                val iconColor = if (isActiveMod) 0xFFFFFFFF.toInt() else accentColor
+                bgPaint.color = iconColor
+                val iconSize = min(r.width(), r.height()) * 0.44f
+                val gap = max(dp(1.8f), iconSize * 0.18f)
+                val sq = (iconSize - gap) / 2f
+                val startXIcon = r.centerX() - iconSize / 2f
+                val startYIcon = r.centerY() - iconSize / 2f
+                val rad = dp(1.5f)
+                canvas.drawRoundRect(RectF(startXIcon, startYIcon, startXIcon + sq, startYIcon + sq), rad, rad, bgPaint)
+                canvas.drawRoundRect(RectF(startXIcon + sq + gap, startYIcon, startXIcon + iconSize, startYIcon + sq), rad, rad, bgPaint)
+                canvas.drawRoundRect(RectF(startXIcon, startYIcon + sq + gap, startXIcon + sq, startYIcon + iconSize), rad, rad, bgPaint)
+                canvas.drawRoundRect(RectF(startXIcon + sq + gap, startYIcon + sq + gap, startXIcon + iconSize, startYIcon + iconSize), rad, rad, bgPaint)
+                continue
+            }
+
             // Primary label
             val displayPrimary = when {
                 spec.action == NativeActionType.SPACE -> "␣"
@@ -769,7 +843,7 @@ class NativeKeyboardView(
 
             val fgColor = when {
                 isActiveMod -> 0xFFFFFFFF.toInt()
-                spec.action == NativeActionType.SWITCH_IME || spec.action == NativeActionType.SWITCH_VERSION -> accentColor
+                spec.action == NativeActionType.SWITCH_IME -> accentColor
                 else -> primaryTextColor
             }
 
@@ -827,6 +901,59 @@ class NativeKeyboardView(
             }
         }
 
+        // Draw Layout Picker Popup Modal when open
+        if (isLayoutMenuOpen) {
+            bgPaint.color = 0xCC000000.toInt()
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+            val cardRad = dp(10f)
+            bgPaint.color = keyBgColor
+            canvas.drawRoundRect(menuCardRect, cardRad, cardRad, bgPaint)
+            borderPaint.color = accentColor
+            borderPaint.strokeWidth = dp(1.5f)
+            canvas.drawRoundRect(menuCardRect, cardRad, cardRad, borderPaint)
+
+            // Title text
+            multiCharTextPaint.color = accentColor
+            multiCharTextPaint.textSize = dp(13.5f)
+            val titleFm = multiCharTextPaint.fontMetrics
+            val titleY = menuCardRect.top + dp(17f) - (titleFm.ascent + titleFm.descent) / 2f
+            canvas.drawText("Choose Keyboard Layout", menuCardRect.centerX() - dp(10f), titleY, multiCharTextPaint)
+
+            for (mHit in menuHitRects) {
+                val mSpec = mHit.spec
+                val mr = mHit.rect
+                if (mSpec.action == NativeActionType.CLOSE_LAYOUT_MENU) {
+                    multiCharTextPaint.color = cornerTextColor
+                    multiCharTextPaint.textSize = dp(14f)
+                    val cFm = multiCharTextPaint.fontMetrics
+                    canvas.drawText("✕", mr.centerX(), mr.centerY() - (cFm.ascent + cFm.descent) / 2f, multiCharTextPaint)
+                    continue
+                }
+
+                val isSelected = (mSpec.action == NativeActionType.SELECT_LAYOUT_QWERTY && layoutMode == "qwerty") ||
+                        (mSpec.action == NativeActionType.SELECT_LAYOUT_ABCD && layoutMode == "abcd") ||
+                        (mSpec.action == NativeActionType.SELECT_LAYOUT_LEFT && layoutMode == "left_hand") ||
+                        (mSpec.action == NativeActionType.SELECT_LAYOUT_RIGHT && layoutMode == "right_hand") ||
+                        (mSpec.action == NativeActionType.SELECT_LAYOUT_BOTH && layoutMode == "both_hand")
+
+                val itemRad = dp(6f)
+                bgPaint.color = if (isSelected) modActiveColor else bgColor
+                canvas.drawRoundRect(mr, itemRad, itemRad, bgPaint)
+                borderPaint.color = if (isSelected) accentColor else modInactiveColor
+                borderPaint.strokeWidth = if (isSelected) dp(1.2f) else dp(0.6f)
+                canvas.drawRoundRect(mr, itemRad, itemRad, borderPaint)
+
+                menuItemTextPaint.color = if (isSelected) 0xFFFFFFFF.toInt() else primaryTextColor
+                menuItemTextPaint.textSize = min(dp(13.5f), mr.height() * 0.44f)
+                val iFm = menuItemTextPaint.fontMetrics
+                val textY = mr.centerY() - (iFm.ascent + iFm.descent) / 2f
+                val prefix = if (isSelected) "✓  " else "    "
+                canvas.drawText(prefix + mSpec.primary, mr.left + dp(12f), textY, menuItemTextPaint)
+            }
+            return
+        }
+
         // Draw live key press popup preview
         val pLabel = popupLabel
         val pRect = popupAnchorRect
@@ -852,6 +979,19 @@ class NativeKeyboardView(
     }
 
     private fun findHit(x: Float, y: Float): HitRect? {
+        if (isLayoutMenuOpen) {
+            for (mHit in menuHitRects) {
+                if (mHit.rect.contains(x, y)) {
+                    return mHit
+                }
+            }
+            for (hit in hitRects) {
+                if (hit.spec.action == NativeActionType.OPEN_LAYOUT_MENU && hit.rect.contains(x, y)) {
+                    return hit
+                }
+            }
+            return null
+        }
         for (hit in hitRects) {
             if (hit.rect.contains(x, y)) {
                 return hit
@@ -909,6 +1049,16 @@ class NativeKeyboardView(
         longPressMs = newMs.coerceIn(0, 3000)
         service.saveLongPressMs(longPressMs)
         rebuildHitRects(width.toFloat())
+        invalidate()
+    }
+
+    private fun selectLayoutMode(mode: String) {
+        currentLayoutMode = mode
+        isSymbolLayout = false
+        isLayoutMenuOpen = false
+        service.saveLayoutMode(mode)
+        rebuildHitRects(width.toFloat())
+        triggerHapticNow()
         invalidate()
     }
 
@@ -1054,15 +1204,32 @@ class NativeKeyboardView(
                 triggerHapticNow()
                 invalidate()
             }
-            NativeActionType.SWITCH_VERSION -> {
-                isVersion1Layout = !isVersion1Layout
-                isSymbolLayout = false
-                service.saveLayoutVersion(if (isVersion1Layout) 1 else 2)
+            NativeActionType.OPEN_LAYOUT_MENU -> {
+                isLayoutMenuOpen = !isLayoutMenuOpen
                 rebuildHitRects(width.toFloat())
-                popupLabel = if (isVersion1Layout) "V1" else "V2"
-                popupAnchorRect = hit.rect
                 triggerHapticNow()
                 invalidate()
+            }
+            NativeActionType.CLOSE_LAYOUT_MENU -> {
+                isLayoutMenuOpen = false
+                rebuildHitRects(width.toFloat())
+                triggerHapticNow()
+                invalidate()
+            }
+            NativeActionType.SELECT_LAYOUT_QWERTY -> {
+                selectLayoutMode("qwerty")
+            }
+            NativeActionType.SELECT_LAYOUT_ABCD -> {
+                selectLayoutMode("abcd")
+            }
+            NativeActionType.SELECT_LAYOUT_LEFT -> {
+                selectLayoutMode("left_hand")
+            }
+            NativeActionType.SELECT_LAYOUT_RIGHT -> {
+                selectLayoutMode("right_hand")
+            }
+            NativeActionType.SELECT_LAYOUT_BOTH -> {
+                selectLayoutMode("both_hand")
             }
             NativeActionType.SWITCH_IME -> {
                 triggerHapticNow()
@@ -1133,7 +1300,16 @@ class NativeKeyboardView(
                 val ptrId = event.getPointerId(index)
                 val x = event.getX(index)
                 val y = event.getY(index)
-                val hit = findHit(x, y) ?: return true
+                val hit = findHit(x, y)
+                if (hit == null) {
+                    if (isLayoutMenuOpen) {
+                        isLayoutMenuOpen = false
+                        rebuildHitRects(width.toFloat())
+                        triggerHapticNow()
+                        invalidate()
+                    }
+                    return true
+                }
 
                 activePointerId = ptrId
                 activeHit = hit

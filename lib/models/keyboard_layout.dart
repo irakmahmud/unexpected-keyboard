@@ -7,43 +7,50 @@ enum LayoutType {
 }
 
 class KeyboardLayout {
-  /// Top Terminal Bar: ESC, CTRL, ALT, V2/V1 Layer Switch, and Arrow keys
+  /// Available Layout Options shown in the Layout Picker Popup when clicking the Layout Icon Button (⊞)
+  static const Map<String, String> layoutModeOptions = {
+    'qwerty': '1. QWERTY Type',
+    'abcd': '2. ABCD Serially',
+    'left_hand': '3. Left Hand',
+    'right_hand': '4. Right Hand',
+    'both_hand': '5. Both Hand',
+  };
+
+  /// Top Terminal Bar: ESC, CTRL, ALT, Arrow keys, and Layout Icon Button (⊞)
   static List<KeyModel> get terminalBarKeys => const [
-    KeyModel(primary: 'ESC', actionType: KeyActionType.escape, flex: 0.95, androidKeyCode: 111),
-    KeyModel(primary: 'CTRL', actionType: KeyActionType.ctrl, flex: 1.05, androidKeyCode: 113),
-    KeyModel(primary: 'ALT', actionType: KeyActionType.alt, flex: 0.95, androidKeyCode: 57),
-    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 1.15),
-    KeyModel(primary: '◀', actionType: KeyActionType.arrowLeft, flex: 0.8, androidKeyCode: 21),
-    KeyModel(primary: '▼', actionType: KeyActionType.arrowDown, flex: 0.8, androidKeyCode: 20),
-    KeyModel(primary: '▲', actionType: KeyActionType.arrowUp, flex: 0.8, androidKeyCode: 19),
-    KeyModel(primary: '▶', actionType: KeyActionType.arrowRight, flex: 0.8, androidKeyCode: 22),
+    KeyModel(primary: 'ESC', actionType: KeyActionType.escape, flex: 1.0, androidKeyCode: 111),
+    KeyModel(primary: 'CTRL', actionType: KeyActionType.ctrl, flex: 1.15, androidKeyCode: 113),
+    KeyModel(primary: 'ALT', actionType: KeyActionType.alt, flex: 1.0, androidKeyCode: 57),
+    KeyModel(primary: '◀', actionType: KeyActionType.arrowLeft, flex: 0.85, androidKeyCode: 21),
+    KeyModel(primary: '▼', actionType: KeyActionType.arrowDown, flex: 0.85, androidKeyCode: 20),
+    KeyModel(primary: '▲', actionType: KeyActionType.arrowUp, flex: 0.85, androidKeyCode: 19),
+    KeyModel(primary: '▶', actionType: KeyActionType.arrowRight, flex: 0.85, androidKeyCode: 22),
+    KeyModel(primary: '⊞', actionType: KeyActionType.switchVersion, flex: 0.9),
   ];
 
-  /// Row 0 (Directly above Number Row): Shift (⇧), ?123, V2/V1 Layer, ?, /, ,, ., Space, Backspace (Cross ⌫), Enter (↵)
+  /// Row 0 (Directly above Number Row): Shift (⇧), ?123, ?, /, ,, ., Space, Backspace (Cross ⌫), Enter (↵)
   static List<KeyModel> get actionSymbolRow => const [
-    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.95),
-    KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 0.95),
-    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 0.85),
-    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.8),
-    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.8),
-    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.8),
-    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.8),
-    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.35),
-    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.95, androidKeyCode: 67),
-    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.95, androidKeyCode: 66),
+    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.0),
+    KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 1.0),
+    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.85),
+    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.85),
+    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.85),
+    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.85),
+    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.5),
+    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
   ];
 
   static List<KeyModel> get symbolActionRow => const [
-    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.95),
-    KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 0.95),
-    KeyModel(primary: 'V2', actionType: KeyActionType.switchVersion, flex: 0.85),
-    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.8),
-    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.8),
-    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.8),
-    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.8),
-    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.35),
-    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.95, androidKeyCode: 67),
-    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.95, androidKeyCode: 66),
+    KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.0),
+    KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 1.0),
+    KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 0.85),
+    KeyModel(primary: '/', topLeft: '\\', topRight: '|', bottomLeft: '-', bottomRight: '_', swipeUp: '\\', flex: 0.85),
+    KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 0.85),
+    KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 0.85),
+    KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.5),
+    KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.0, androidKeyCode: 67),
+    KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 1.0, androidKeyCode: 66),
   ];
 
   /// Row 1: Dedicated Number Row positioned directly below Action/Symbol Row

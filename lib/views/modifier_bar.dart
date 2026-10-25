@@ -12,7 +12,7 @@ class ModifierBar extends StatelessWidget {
   final bool isCtrlActive;
   final bool isAltActive;
   final bool isSymbolLayout;
-  final bool isVersion1Layout;
+  final bool isLayoutMenuOpen;
   final double keyHeight;
   final bool isResizeBarOpen;
   final VoidCallback? onToggleResizeBar;
@@ -28,7 +28,7 @@ class ModifierBar extends StatelessWidget {
     required this.isCtrlActive,
     required this.isAltActive,
     this.isSymbolLayout = false,
-    this.isVersion1Layout = false,
+    this.isLayoutMenuOpen = false,
     this.keyHeight = 46.0,
     this.isResizeBarOpen = false,
     this.onToggleResizeBar,
@@ -57,20 +57,14 @@ class ModifierBar extends StatelessWidget {
                     actionType: KeyActionType.switchLayout,
                     flex: key.flex,
                   )
-                : (isVersionSwitch
-                    ? KeyModel(
-                        primary: isVersion1Layout ? 'V1' : 'V2',
-                        actionType: KeyActionType.switchVersion,
-                        flex: key.flex,
-                      )
-                    : key);
+                : key;
 
             bool isActive = false;
             if (effectiveKey.actionType == KeyActionType.shift && isShiftActive) isActive = true;
             if (effectiveKey.actionType == KeyActionType.ctrl && isCtrlActive) isActive = true;
             if (effectiveKey.actionType == KeyActionType.alt && isAltActive) isActive = true;
             if (isLayoutSwitch && isSymbolLayout) isActive = true;
-            if (isVersionSwitch && isVersion1Layout) isActive = true;
+            if (isVersionSwitch && isLayoutMenuOpen) isActive = true;
 
             return Expanded(
               flex: (effectiveKey.flex * 10).round(),
@@ -87,21 +81,27 @@ class ModifierBar extends StatelessWidget {
                       width: isActive ? 1.2 : 0.5,
                     ),
                   ),
-                  child: Text(
-                    effectiveKey.primary,
-                    maxLines: 1,
-                    softWrap: false,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'sans-serif',
-                      fontSize: effectiveKey.primary.length > 1
-                          ? (barButtonHeight * 0.34).clamp(11.5, 20.0)
-                          : (barButtonHeight * 0.46).clamp(15.0, 26.0),
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                      color: isActive ? Colors.white : theme.primaryTextColor,
-                      height: 1.0,
-                    ),
-                  ),
+                  child: isVersionSwitch
+                      ? Icon(
+                          Icons.grid_view_rounded,
+                          size: 18.0,
+                          color: isActive ? Colors.white : theme.accentColor,
+                        )
+                      : Text(
+                          effectiveKey.primary,
+                          maxLines: 1,
+                          softWrap: false,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'sans-serif',
+                            fontSize: effectiveKey.primary.length > 1
+                                ? (barButtonHeight * 0.34).clamp(11.5, 20.0)
+                                : (barButtonHeight * 0.46).clamp(15.0, 26.0),
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                            color: isActive ? Colors.white : theme.primaryTextColor,
+                            height: 1.0,
+                          ),
+                        ),
                 ),
               ),
             );

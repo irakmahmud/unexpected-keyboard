@@ -16,13 +16,17 @@ When the user asks to revert to **Version 1** or uncomment Version 1, restore th
 
 ---
 
-## 🧪 Version 2 (Default Layout) + Live `V2`/`V1` Layer Button (Release: `v1.2.3`)
-- **Default Layout (`V2`):** Sequential `a` through `z` layout with 5 letters per row (`a..e`, `f..j`, `k..o`, `p..t`), a dedicated Action & Symbol Row directly above the Number Row (`⇧  ?123  V2  ?  /  ,  .  Space  ⌫  ↵`), and only letters in the bottom row (`u, v, w, x` + compact `y, z`).
-- **Live Layer Switch (`V2` ⇄ `V1` Button):** Placed in both the Top Terminal Bar (right after `ALT`) and in Row 0 (right next to `?123`). Clicking **`V2`** immediately switches the letter alignment to **Version 1 (`V1`)** (`q..y`, `a..h`, `z..n`, `u i j k m o`, `, . Space p l ⌫ ↵`) and highlights the button as **`V1`**. Clicking **`V1`** again switches right back to **Version 2 (`V2` Default)**.
-- **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  V2/V1  ?  /  ,  .  Space  ⌫  ↵`
+## 🧪 Version 2 (`2. ABCD Serially` Default) + Layout Icon Button (`⊞`) Popup Menu (Release: `v1.2.4`)
+- **Single Layout Icon Button (`⊞`):** Placed in the Top Terminal Bar (`ESC  CTRL  ALT  ◀  ▼  ▲  ▶  ⊞  🌐  ↕  ⚙️`). Clicking the **`⊞` Layout Icon Button** opens a floating **Popup Menu** over the keyboard with 5 selectable layout options:
+  1. **`1. QWERTY Type`** (`"qwerty"` — Version 1 alignment: `q..y`, `a..h`, `z..n`, `u i j k m o`, `, . Space p l ⌫ ↵`)
+  2. **`2. ABCD Serially`** (`"abcd"` — **Default** Version 2 alignment: 5 letters per row `a..e`, `f..j`, `k..o`, `p..t`, and bottom row `u, v, w, x` + compact `y, z`)
+  3. **`3. Left Hand`** (`"left_hand"` — ready for custom left-handed design)
+  4. **`4. Right Hand`** (`"right_hand"` — ready for custom right-handed design)
+  5. **`5. Both Hand`** (`"both_hand"` — ready for custom two-handed design)
+- **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  ?  /  ,  .  Space  ⌫  ↵`
 - **Row 1 (Numbers):** `1  2  3  4  5  6  7  8  9  0`
-- **Row 2 (5 keys in V2 / 6 keys in V1):** `a  b  c  d  e` (V2) / `q  w  e  r  t  y` (V1)
-- **Row 3 (5 keys in V2 / 6 keys in V1):** `f  g  h  i  j` (V2) / `a  s  d  f  g  h` (V1)
-- **Row 4 (5 keys in V2 / 6 keys in V1):** `k  l  m  n  o` (V2) / `z  x  c  v  b  n` (V1)
-- **Row 5 (5 keys in V2 / 6 keys in V1):** `p  q  r  s  t` (V2) / `u  i  j  k  m  o` (V1)
-- **Row 6 (Bottom Row):** `u (1.0)  v (1.0)  w (1.0)  x (1.0)  y (0.55)  z (0.55)` (V2) / `,  .  Space  p  l  ⌫  ↵` (V1)
+- **Row 2 (`2. ABCD Serially` / `1. QWERTY Type`):** `a  b  c  d  e` / `q  w  e  r  t  y`
+- **Row 3 (`2. ABCD Serially` / `1. QWERTY Type`):** `f  g  h  i  j` / `a  s  d  f  g  h`
+- **Row 4 (`2. ABCD Serially` / `1. QWERTY Type`):** `k  l  m  n  o` / `z  x  c  v  b  n`
+- **Row 5 (`2. ABCD Serially` / `1. QWERTY Type`):** `p  q  r  s  t` / `u  i  j  k  m  o`
+- **Row 6 (Bottom Row):** `u (1.0)  v (1.0)  w (1.0)  x (1.0)  y (0.55)  z (0.55)` (`2. ABCD Serially`) / `,  .  Space  p  l  ⌫  ↵` (`1. QWERTY Type`)

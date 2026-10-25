@@ -34,7 +34,8 @@ class KeyboardView extends StatefulWidget {
 
 class _KeyboardViewState extends State<KeyboardView> {
   LayoutType _currentLayout = LayoutType.qwerty;
-  bool _isVersion1Layout = false; // Default false => Version 2 is default
+  String _currentLayoutMode = 'abcd'; // Default 'abcd' => 2. ABCD Serially
+  bool _isLayoutMenuOpen = false;
   final bool _showTerminalBar = true;
   bool _isResizeBarOpen = false;
   late double _localKeyHeight;
@@ -263,8 +264,7 @@ class _KeyboardViewState extends State<KeyboardView> {
 
       case KeyActionType.switchVersion:
         setState(() {
-          _isVersion1Layout = !_isVersion1Layout;
-          _currentLayout = LayoutType.qwerty;
+          _isLayoutMenuOpen = !_isLayoutMenuOpen;
         });
         _forceImmediateFrame();
         widget.imeService.triggerHaptic();
@@ -439,10 +439,121 @@ class _KeyboardViewState extends State<KeyboardView> {
     );
   }
 
+  Widget _buildLayoutPickerPopup() {
+    final entries = KeyboardLayout.layoutModeOptions.entries.toList();
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          widget.imeService.triggerHaptic();
+          setState(() {
+            _isLayoutMenuOpen = false;
+          });
+        },
+        child: Container(
+          color: Colors.black.withOpacity(0.55),
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () {},
+            child: Container(
+              width: 260.0,
+              padding: const EdgeInsets.all(10.0),
+              decoration: BoxDecoration(
+                color: widget.theme.keyBackgroundColor,
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: widget.theme.accentColor, width: 1.5),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Keyboard Layout',
+                        style: TextStyle(
+                          color: widget.theme.accentColor,
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          widget.imeService.triggerHaptic();
+                          setState(() {
+                            _isLayoutMenuOpen = false;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                          child: Text(
+                            '✕',
+                            style: TextStyle(
+                              color: widget.theme.primaryTextColor,
+                              fontSize: 14.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6.0),
+                  ...entries.map((entry) {
+                    final bool isSelected = _currentLayoutMode == entry.key;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: InkWell(
+                        onTap: () {
+                          widget.imeService.triggerHaptic();
+                          setState(() {
+                            _currentLayoutMode = entry.key;
+                            _currentLayout = LayoutType.qwerty;
+                            _isLayoutMenuOpen = false;
+                          });
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 7.0),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? widget.theme.modifierActiveColor
+                                : widget.theme.backgroundColor,
+                            borderRadius: BorderRadius.circular(6.0),
+                            border: Border.all(
+                              color: isSelected
+                                  ? widget.theme.accentColor
+                                  : widget.theme.modifierInactiveColor,
+                              width: isSelected ? 1.2 : 0.6,
+                            ),
+                          ),
+                          child: Text(
+                            isSelected ? '✓  ${entry.value}' : '    ${entry.value}',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : widget.theme.primaryTextColor,
+                              fontSize: 12.5,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<List<KeyModel>> rows = (_currentLayout == LayoutType.qwerty)
-        ? (_isVersion1Layout ? KeyboardLayout.version1Layout : KeyboardLayout.version2Layout)
+        ? (_currentLayoutMode == 'qwerty'
+            ? KeyboardLayout.version1Layout
+            : KeyboardLayout.version2Layout)
         : KeyboardLayout.symbolLayout;
     final currentKeyHeight = _effectiveKeyHeight;
 
@@ -450,75 +561,73 @@ class _KeyboardViewState extends State<KeyboardView> {
       color: widget.theme.backgroundColor,
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            if (_isResizeBarOpen) _buildInlineResizeBar(),
-
-            // Top Terminal Modifier Bar (Termux / Hacker Keys + 🌐 Switch Keyboard + ↕ Resize + ⚙️ Settings)
-            if (_showTerminalBar)
-              ModifierBar(
-                theme: widget.theme,
-                onKeyPress: _handleKeyPress,
-                isShiftActive: widget.imeService.isShiftActive,
-                isCtrlActive: widget.imeService.isCtrlActive,
-                isAltActive: widget.imeService.isAltActive,
-                isSymbolLayout: _currentLayout == LayoutType.symbols,
-                isVersion1Layout: _isVersion1Layout,
-                keyHeight: currentKeyHeight,
-                isResizeBarOpen: _isResizeBarOpen,
-                onToggleResizeBar: _toggleResizeBar,
-                onSwitchKeyboard: () {
-                  widget.imeService.triggerHaptic();
-                  widget.imeService.showInputMethodPicker();
-                },
-                onOpenSettings: () {
-                  widget.imeService.triggerHaptic();
-                  widget.onOpenSettings();
-                },
-                onVerticalResizeDrag: (deltaDp) {
-                  _updateKeyHeight(currentKeyHeight + deltaDp);
-                },
-              ),
-
-            // Keyboard Character Rows (Zero gaps between keys — maximum key area, middle-aligned)
             Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: rows.map((row) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: row.map((rawKey) {
-                    final KeyModel key = (rawKey.actionType == KeyActionType.switchVersion && _isVersion1Layout)
-                        ? KeyModel(
-                            primary: 'V1',
-                            actionType: KeyActionType.switchVersion,
-                            flex: rawKey.flex,
-                          )
-                        : rawKey;
-                    return KeyWidget(
-                      keyModel: key,
-                      theme: widget.theme,
-                      onKeyPress: _handleKeyPress,
-                      onCornerSwipeReplace: _handleCornerSwipeReplace,
-                      onSpaceLongPress: key.actionType == KeyActionType.space
-                          ? () {
-                              widget.imeService.sendBackspace();
-                              widget.imeService.triggerHaptic();
-                              widget.imeService.showInputMethodPicker();
-                            }
-                          : null,
-                      isShiftActive: widget.imeService.isShiftActive,
-                      isCtrlActive: widget.imeService.isCtrlActive,
-                      isAltActive: widget.imeService.isAltActive,
-                      height: currentKeyHeight,
-                      longPressMs: _effectiveLongPressMs,
+              children: [
+                if (_isResizeBarOpen) _buildInlineResizeBar(),
+
+                // Top Terminal Modifier Bar (Termux / Hacker Keys + ⊞ Layout Menu + 🌐 Switch Keyboard + ↕ Resize + ⚙️ Settings)
+                if (_showTerminalBar)
+                  ModifierBar(
+                    theme: widget.theme,
+                    onKeyPress: _handleKeyPress,
+                    isShiftActive: widget.imeService.isShiftActive,
+                    isCtrlActive: widget.imeService.isCtrlActive,
+                    isAltActive: widget.imeService.isAltActive,
+                    isSymbolLayout: _currentLayout == LayoutType.symbols,
+                    isLayoutMenuOpen: _isLayoutMenuOpen,
+                    keyHeight: currentKeyHeight,
+                    isResizeBarOpen: _isResizeBarOpen,
+                    onToggleResizeBar: _toggleResizeBar,
+                    onSwitchKeyboard: () {
+                      widget.imeService.triggerHaptic();
+                      widget.imeService.showInputMethodPicker();
+                    },
+                    onOpenSettings: () {
+                      widget.imeService.triggerHaptic();
+                      widget.onOpenSettings();
+                    },
+                    onVerticalResizeDrag: (deltaDp) {
+                      _updateKeyHeight(currentKeyHeight + deltaDp);
+                    },
+                  ),
+
+                // Keyboard Character Rows (Zero gaps between keys — maximum key area, middle-aligned)
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: rows.map((row) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: row.map((key) {
+                        return KeyWidget(
+                          keyModel: key,
+                          theme: widget.theme,
+                          onKeyPress: _handleKeyPress,
+                          onCornerSwipeReplace: _handleCornerSwipeReplace,
+                          onSpaceLongPress: key.actionType == KeyActionType.space
+                              ? () {
+                                  widget.imeService.sendBackspace();
+                                  widget.imeService.triggerHaptic();
+                                  widget.imeService.showInputMethodPicker();
+                                }
+                              : null,
+                          isShiftActive: widget.imeService.isShiftActive,
+                          isCtrlActive: widget.imeService.isCtrlActive,
+                          isAltActive: widget.imeService.isAltActive,
+                          height: currentKeyHeight,
+                          longPressMs: _effectiveLongPressMs,
+                        );
+                      }).toList(),
                     );
                   }).toList(),
-                );
-              }).toList(),
+                ),
+              ],
             ),
+            if (_isLayoutMenuOpen) _buildLayoutPickerPopup(),
           ],
         ),
       ),
