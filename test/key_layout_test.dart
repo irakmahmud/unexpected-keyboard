@@ -101,25 +101,26 @@ void main() {
         '5. Both Hand',
       ]);
 
-      // 4. Right Hand Banglish Layout (9x5 ergonomic grid mapped from Official Final Rank Table & Spreadsheet):
+      // 4. Right Hand Banglish Layout (Row 0 Number Row below ESC/CTRL + 9x5 ergonomic grid with number gaps filled by J, F, L):
       final rhb = KeyboardLayout.rightHandBanglishLayout;
-      expect(rhb.length, 9);
-      expect(rhb[0].map((k) => k.primary).toList(), ['q', 'G', '-', 'H', '⇧', '⌫', 'c']);
-      expect(rhb[0][4].actionType, KeyActionType.shift);
-      expect(rhb[0][5].actionType, KeyActionType.backspace);
-      expect(rhb[1].map((k) => k.primary).toList(), ['V', 'R', 'C', 'V', '↵', 'E', 'm', 's']);
-      expect(rhb[1][4].actionType, KeyActionType.enter);
-      expect(rhb[2].map((k) => k.primary).toList(), ['N', "'", '?', 'd', 'h', 'e']);
-      expect(rhb[3].map((k) => k.primary).toList(), ['D', 'z', 'f', 'l', 'a', 'i']);
-      expect(rhb[4].map((k) => k.primary).toList(), ['।', 'M', 'y', 't', ' ', 'r']);
-      expect(rhb[4][4].actionType, KeyActionType.space);
-      expect(rhb[5].map((k) => k.primary).toList(), ['0', '1', '.', 'k', 'o', 'n']);
-      expect(rhb[6].map((k) => k.primary).toList(), ['K', '!', 'w', 'b', 'u', 'p']);
-      expect(rhb[7].map((k) => k.primary).toList(), ['P', 'x', 'S', 'j', 'g', 'v']);
-      expect(rhb[8].map((k) => k.primary).toList(), ['2', 'O', 'I', 'B', 'T', 'A', ',']);
+      expect(rhb.length, 10);
+      expect(rhb[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+      expect(rhb[1].map((k) => k.primary).toList(), ['q', 'G', '-', 'H', '⇧', '⌫', 'c']);
+      expect(rhb[1][4].actionType, KeyActionType.shift);
+      expect(rhb[1][5].actionType, KeyActionType.backspace);
+      expect(rhb[2].map((k) => k.primary).toList(), ['V', 'R', 'C', 'V', '↵', 'E', 'm', 's']);
+      expect(rhb[2][4].actionType, KeyActionType.enter);
+      expect(rhb[3].map((k) => k.primary).toList(), ['N', "'", '?', 'd', 'h', 'e']);
+      expect(rhb[4].map((k) => k.primary).toList(), ['D', 'z', 'f', 'l', 'a', 'i']);
+      expect(rhb[5].map((k) => k.primary).toList(), ['।', 'M', 'y', 't', ' ', 'r']);
+      expect(rhb[5][4].actionType, KeyActionType.space);
+      expect(rhb[6].map((k) => k.primary).toList(), ['J', 'F', '.', 'k', 'o', 'n']);
+      expect(rhb[7].map((k) => k.primary).toList(), ['K', '!', 'w', 'b', 'u', 'p']);
+      expect(rhb[8].map((k) => k.primary).toList(), ['P', 'x', 'S', 'j', 'g', 'v']);
+      expect(rhb[9].map((k) => k.primary).toList(), ['L', 'O', 'I', 'B', 'T', 'A', ',']);
 
-      // Verify leftmost 2 columns take the exact same horizontal width (0.44 each) across all 9 rows:
-      for (int r = 0; r < 9; r++) {
+      // Verify leftmost 2 columns take the exact same horizontal width (0.44 each) across all 9 grid rows (rhb[1]..rhb[9]):
+      for (int r = 1; r < 10; r++) {
         expect(rhb[r][0].flex, 0.44);
         expect(rhb[r][1].flex, 0.44);
       }

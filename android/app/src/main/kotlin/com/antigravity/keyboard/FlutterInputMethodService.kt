@@ -547,17 +547,20 @@ class NativeKeyboardView(
         )
     )
 
-    // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid mapped strictly from the Official Final Rank Table & Spreadsheet):
+    // RIGHT HAND BANGLISH LAYOUT (Number Row below ESC/CTRL + 9x5 Ergonomic Grid from Official Final Rank Table & Spreadsheet):
+    // Row 0 (Directly below ESC/CTRL): Number Row [ 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ]
     // Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
     // Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
     // Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
     // Row 4 (Sheet Row 7): [ #41/#42 (D/z) | #24 (f) | #11 (l) | #2 (a) | #5 (i) ]
     // Row 5 (Sheet Row 8): [ #39/#40 (।/M) | #21 (y) | #6 (t) | #1 (Space) | #7 (r) ]
-    // Row 6 (Sheet Row 9): [ #35/#36 (0/1) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
+    // Row 6 (Sheet Row 9): [ #56/#59 (J/F — in 0/1's gap!) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
     // Row 7 (Sheet Row 10): [ #37/#38 (K/!) | #25 (w) | #16 (b) | #15 (u) | #19 (p) ]
     // Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
-    // Row 9 (Sheet Row 12): [ #45/#46 (2/O) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
+    // Row 9 (Sheet Row 12): [ #60/#46 (L/O — L in 2's gap!) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
     private val rightHandBanglishRows = listOf(
+        // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..9, 0)
+        numberRow,
         // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
         listOf(
             NativeKeySpec("q", "1", "`", "~", "\\", flex = 0.44f),
@@ -606,10 +609,10 @@ class NativeKeyboardView(
             NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.03f),
             NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.03f)
         ),
-        // Row 6 (Sheet Row 9): [ 35/36 (0/1) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
+        // Row 6 (Sheet Row 9): [ 56/59 (J/F — in 35/36 0/1's gap!) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
         listOf(
-            NativeKeySpec("0", ")", flex = 0.44f),
-            NativeKeySpec("1", "!", flex = 0.44f),
+            NativeKeySpec("J", "j", flex = 0.44f),
+            NativeKeySpec("F", "f", flex = 0.44f),
             NativeKeySpec(".", "?", "!", ",", "'", flex = 1.03f),
             NativeKeySpec("k", "(", ")", "<", ">", flex = 1.03f),
             NativeKeySpec("o", "9", "(", "[", "]", flex = 1.03f),
@@ -633,9 +636,9 @@ class NativeKeyboardView(
             NativeKeySpec("g", "&", "*", "-", "=", flex = 1.03f),
             NativeKeySpec("v", ":", ";", "•", "°", flex = 1.03f)
         ),
-        // Row 9 (Sheet Row 12): [ 45/46 (2/O) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
+        // Row 9 (Sheet Row 12): [ 60/46 (L/O — L in 45 2's gap!) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
         listOf(
-            NativeKeySpec("2", "@", flex = 0.44f),
+            NativeKeySpec("L", "l", flex = 0.44f),
             NativeKeySpec("O", "o", flex = 0.44f),
             NativeKeySpec("I", "i", flex = 0.515f),
             NativeKeySpec("B", "b", flex = 0.515f),

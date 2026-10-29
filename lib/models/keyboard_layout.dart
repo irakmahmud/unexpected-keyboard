@@ -351,19 +351,22 @@ class KeyboardLayout {
     ],
   ];
 
-  /// RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid mapped strictly from the Official Final Rank Table & Spreadsheet):
+  /// RIGHT HAND BANGLISH LAYOUT (Number Row below ESC/CTRL + 9x5 Ergonomic Grid from Official Final Rank Table & Spreadsheet):
+  /// Row 0 (Directly below ESC/CTRL): Number Row [ 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ]
   /// Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
   /// Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
   /// Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
   /// Row 4 (Sheet Row 7): [ #41/#42 (D/z) | #24 (f) | #11 (l) | #2 (a) | #5 (i) ]
   /// Row 5 (Sheet Row 8): [ #39/#40 (।/M) | #21 (y) | #6 (t) | #1 (Space) | #7 (r) ]
-  /// Row 6 (Sheet Row 9): [ #35/#36 (0/1) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
+  /// Row 6 (Sheet Row 9): [ #56/#59 (J/F — in 0/1's gap!) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
   /// Row 7 (Sheet Row 10): [ #37/#38 (K/!) | #25 (w) | #16 (b) | #15 (u) | #19 (p) ]
   /// Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
-  /// Row 9 (Sheet Row 12): [ #45/#46 (2/O) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
-  static List<List<KeyModel>> get rightHandBanglishLayout => const [
+  /// Row 9 (Sheet Row 12): [ #60/#46 (L/O — L in 2's gap!) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
+  static List<List<KeyModel>> get rightHandBanglishLayout => [
+    // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..9, 0)
+    numberRow,
     // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
-    [
+    const [
       KeyModel(primary: 'q', topLeft: '1', topRight: '`', bottomLeft: '~', bottomRight: '\\', swipeUp: '1', flex: 0.44),
       KeyModel(primary: 'G', topLeft: 'g', flex: 0.44),
       KeyModel(primary: '-', topLeft: '_', topRight: '+', bottomLeft: '=', flex: 0.515),
@@ -373,7 +376,7 @@ class KeyboardLayout {
       KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.03),
     ],
     // Row 2 (Sheet Row 5): [ 50/51 (V/R) | 49/50 (C/V) | 31/32 (↵/E) | 14 (m) | 10 (s) ]
-    [
+    const [
       KeyModel(primary: 'V', topLeft: 'v', flex: 0.44),
       KeyModel(primary: 'R', topLeft: 'r', flex: 0.44),
       KeyModel(primary: 'C', topLeft: 'c', flex: 0.515),
@@ -384,7 +387,7 @@ class KeyboardLayout {
       KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.03),
     ],
     // Row 3 (Sheet Row 6): [ 47/48 (N/') | 28 (?) | 13 (d) | 9 (h) | 3 (e) ]
-    [
+    const [
       KeyModel(primary: 'N', topLeft: 'n', flex: 0.44),
       KeyModel(primary: "'", topLeft: '"', topRight: '`', bottomLeft: '~', flex: 0.44),
       KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 1.03),
@@ -393,7 +396,7 @@ class KeyboardLayout {
       KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.03),
     ],
     // Row 4 (Sheet Row 7): [ 41/42 (D/z) | 24 (f) | 11 (l) | 2 (a) | 5 (i) ]
-    [
+    const [
       KeyModel(primary: 'D', topLeft: 'd', flex: 0.44),
       KeyModel(primary: 'z', topLeft: '*', topRight: '/', bottomLeft: '\\', bottomRight: '|', swipeUp: '*', flex: 0.44),
       KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.03),
@@ -402,7 +405,7 @@ class KeyboardLayout {
       KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.03),
     ],
     // Row 5 (Sheet Row 8): [ 39/40 (।/M) | 21 (y) | 6 (t) | 1 (Space) | 7 (r) ]
-    [
+    const [
       KeyModel(primary: '।', topLeft: '.', flex: 0.44),
       KeyModel(primary: 'M', topLeft: 'm', flex: 0.44),
       KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.03),
@@ -410,17 +413,17 @@ class KeyboardLayout {
       KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.03),
       KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.03),
     ],
-    // Row 6 (Sheet Row 9): [ 35/36 (0/1) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
-    [
-      KeyModel(primary: '0', topLeft: ')', flex: 0.44),
-      KeyModel(primary: '1', topLeft: '!', flex: 0.44),
+    // Row 6 (Sheet Row 9): [ 56/59 (J/F — in 35/36 0/1's gap!) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
+    const [
+      KeyModel(primary: 'J', topLeft: 'j', flex: 0.44),
+      KeyModel(primary: 'F', topLeft: 'f', flex: 0.44),
       KeyModel(primary: '.', topLeft: '?', topRight: '!', bottomLeft: ',', bottomRight: "'", swipeUp: '?', flex: 1.03),
       KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.03),
       KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.03),
       KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.03),
     ],
     // Row 7 (Sheet Row 10): [ 37/38 (K/!) | 25 (w) | 16 (b) | 15 (u) | 19 (p) ]
-    [
+    const [
       KeyModel(primary: 'K', topLeft: 'k', flex: 0.44),
       KeyModel(primary: '!', topLeft: '?', flex: 0.44),
       KeyModel(primary: 'w', topLeft: '2', topRight: '|', bottomLeft: '<', bottomRight: '>', swipeUp: '2', flex: 1.03),
@@ -429,7 +432,7 @@ class KeyboardLayout {
       KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.03),
     ],
     // Row 8 (Sheet Row 11): [ 43/44 (P/x) | 30 (S) | 22 (j) | 20 (g) | 23 (v) ]
-    [
+    const [
       KeyModel(primary: 'P', topLeft: 'p', flex: 0.44),
       KeyModel(primary: 'x', topLeft: '"', topRight: "'", bottomLeft: '`', bottomRight: '~', swipeUp: '"', flex: 0.44),
       KeyModel(primary: 'S', topLeft: 's', flex: 1.03),
@@ -437,9 +440,9 @@ class KeyboardLayout {
       KeyModel(primary: 'g', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '=', swipeUp: '&', flex: 1.03),
       KeyModel(primary: 'v', topLeft: ':', topRight: ';', bottomLeft: '•', bottomRight: '°', swipeUp: ':', flex: 1.03),
     ],
-    // Row 9 (Sheet Row 12): [ 45/46 (2/O) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
-    [
-      KeyModel(primary: '2', topLeft: '@', flex: 0.44),
+    // Row 9 (Sheet Row 12): [ 60/46 (L/O — L in 45 2's gap!) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
+    const [
+      KeyModel(primary: 'L', topLeft: 'l', flex: 0.44),
       KeyModel(primary: 'O', topLeft: 'o', flex: 0.44),
       KeyModel(primary: 'I', topLeft: 'i', flex: 0.515),
       KeyModel(primary: 'B', topLeft: 'b', flex: 0.515),
