@@ -2401,5 +2401,210 @@ async function resetAllFaceProfiles() {
     await res.json();
     openHrAction('delete-face');
 }
+
+// =========================================================================
+// 3D FUTURISTIC NEURAL MESH ENGINE, 3D CARD TILT & CLASSIC ROLLBACK TOGGLE
+// =========================================================================
+function applyDesignTheme(mode) {
+    const body = document.body;
+    const iconEl = document.getElementById('theme-toggle-icon');
+    const labelEl = document.getElementById('theme-toggle-label');
+    if (!body) return;
+
+    if (mode === 'classic') {
+        body.classList.remove('futuristic-3d-mode');
+        body.classList.add('classic-v8-mode');
+        if (iconEl) iconEl.innerText = '⏪';
+        if (labelEl) labelEl.innerText = 'CLASSIC V8 MODE (3D অন করুন)';
+    } else {
+        body.classList.remove('classic-v8-mode');
+        body.classList.add('futuristic-3d-mode');
+        if (iconEl) iconEl.innerText = '🌌';
+        if (labelEl) labelEl.innerText = '3D FUTURISTIC MODE';
+    }
+    try {
+        localStorage.setItem('attendance_ui_theme_mode', mode);
+    } catch (_) {}
+}
+
+function toggleDesignTheme() {
+    const isClassic = document.body.classList.contains('classic-v8-mode');
+    const nextMode = isClassic ? 'futuristic_3d' : 'classic';
+    applyDesignTheme(nextMode);
+    if (typeof addTerminalLog === 'function') {
+        addTerminalLog(
+            nextMode === 'classic'
+                ? 'Switched UI to Original Classic V8 Design (Rollback Mode Active)'
+                : 'Switched UI to 3D Futuristic Biometric Cyber-HUD Mode',
+            'INFO'
+        );
+    }
+}
+
+function initFuturistic3DTilt() {
+    const panels = document.querySelectorAll('.glass-panel');
+    panels.forEach((panel) => {
+        panel.addEventListener('mousemove', (e) => {
+            if (document.body.classList.contains('classic-v8-mode')) return;
+            const rect = panel.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const ry = ((x - cx) / Math.max(cx, 1)) * 3.2;
+            const rx = -((y - cy) / Math.max(cy, 1)) * 2.8;
+            panel.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+            panel.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+            panel.style.setProperty('--mouse-x', `${x.toFixed(0)}px`);
+            panel.style.setProperty('--mouse-y', `${y.toFixed(0)}px`);
+        });
+        panel.addEventListener('mouseleave', () => {
+            panel.style.setProperty('--rx', '0deg');
+            panel.style.setProperty('--ry', '0deg');
+        });
+    });
+}
+
+function initCyber3DNeuralCanvas() {
+    const canvas = document.getElementById('cyber-3d-canvas');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth || 1280);
+    let height = (canvas.height = window.innerHeight || 720);
+
+    window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth || 1280;
+        height = canvas.height = window.innerHeight || 720;
+    });
+
+    // Build 3D Fibonacci Biometric Sphere Nodes + Deep Space Particles
+    const sphereNodes = [];
+    const N = 76;
+    const radius = 215;
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < N; i++) {
+        const y = 1 - (i / (N - 1)) * 2;
+        const r = Math.sqrt(Math.max(0, 1 - y * y));
+        const theta = goldenAngle * i;
+        sphereNodes.push({
+            x: Math.cos(theta) * r * radius,
+            y: y * radius,
+            z: Math.sin(theta) * r * radius,
+            color: i % 3 === 0 ? '#00f2fe' : i % 3 === 1 ? '#a29bfe' : '#00f5d4'
+        });
+    }
+
+    const starParticles = [];
+    for (let i = 0; i < 55; i++) {
+        starParticles.push({
+            x: (Math.random() - 0.5) * 1400,
+            y: (Math.random() - 0.5) * 900,
+            z: Math.random() * 800 - 400,
+            speed: 0.65 + Math.random() * 1.1
+        });
+    }
+
+    let rotY = 0;
+    let rotX = 0.18;
+    let targetRotX = 0.18;
+    let targetRotY = 0;
+
+    window.addEventListener('mousemove', (e) => {
+        const nx = (e.clientX / Math.max(width, 1)) - 0.5;
+        const ny = (e.clientY / Math.max(height, 1)) - 0.5;
+        targetRotY = nx * 0.75;
+        targetRotX = 0.18 + ny * 0.45;
+    });
+
+    const fov = 460;
+    function renderFrame() {
+        if (!document.body.classList.contains('classic-v8-mode')) {
+            ctx.clearRect(0, 0, width, height);
+            rotY += 0.0045 + (targetRotY - rotY) * 0.03;
+            rotX += (targetRotX - rotX) * 0.03;
+
+            const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+            const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+            const cx = width * 0.72;
+            const cy = height * 0.48;
+
+            // 1. Render Deep-Space 3D Z-Streaming Telemetry Particles
+            for (let i = 0; i < starParticles.length; i++) {
+                const p = starParticles[i];
+                p.z -= p.speed;
+                if (p.z < -380) p.z = 420;
+                const scale = fov / Math.max(60, fov + p.z + 420);
+                const sx = width * 0.5 + p.x * scale;
+                const sy = height * 0.5 + p.y * scale;
+                const alpha = Math.min(0.65, Math.max(0.08, scale * 0.6));
+                ctx.fillStyle = `rgba(0, 242, 254, ${alpha.toFixed(2)})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, Math.max(1, scale * 2.2), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 2. Project 3D Biometric Sphere Nodes
+            const projected = [];
+            for (let i = 0; i < sphereNodes.length; i++) {
+                const n = sphereNodes[i];
+                const x1 = n.x * cosY - n.z * sinY;
+                const z1 = n.z * cosY + n.x * sinY;
+                const y2 = n.y * cosX - z1 * sinX;
+                const z2 = z1 * cosX + n.y * sinX;
+                const scale = fov / Math.max(80, fov + z2 + 360);
+                projected.push({
+                    sx: cx + x1 * scale,
+                    sy: cy + y2 * scale,
+                    z: z2,
+                    scale,
+                    color: n.color
+                });
+            }
+
+            // 3. Draw 3D Synaptic Connections
+            ctx.lineWidth = 1;
+            for (let i = 0; i < projected.length; i++) {
+                for (let j = i + 1; j < projected.length; j++) {
+                    const dx = projected[i].sx - projected[j].sx;
+                    const dy = projected[i].sy - projected[j].sy;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < 5800) {
+                        const alpha = (1 - distSq / 5800) * 0.28;
+                        ctx.strokeStyle = `rgba(0, 242, 254, ${alpha.toFixed(3)})`;
+                        ctx.beginPath();
+                        ctx.moveTo(projected[i].sx, projected[i].sy);
+                        ctx.lineTo(projected[j].sx, projected[j].sy);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 4. Draw Glowing 3D Biometric Vertices
+            for (let i = 0; i < projected.length; i++) {
+                const p = projected[i];
+                const r = Math.max(1.4, p.scale * 3.1);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        requestAnimationFrame(renderFrame);
+    }
+    requestAnimationFrame(renderFrame);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const savedTheme = localStorage.getItem('attendance_ui_theme_mode');
+        if (savedTheme === 'classic' || savedTheme === 'futuristic_3d') {
+            applyDesignTheme(savedTheme);
+        }
+        initFuturistic3DTilt();
+        initCyber3DNeuralCanvas();
+    } catch (_) {}
+});
     "##
 }

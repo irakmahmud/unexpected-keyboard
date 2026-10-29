@@ -2,6 +2,17 @@ use crate::ui::scripts::get_kiosk_js;
 use crate::ui::styles::get_global_css;
 
 pub fn render_full_portal_html() -> String {
+    if let Ok(override_html) = std::fs::read_to_string("data/ui_override.html") {
+        if !override_html.trim().is_empty() {
+            return override_html;
+        }
+    }
+
+    let body_class = match std::fs::read_to_string("data/ui_design_mode.txt") {
+        Ok(mode) if mode.trim().eq_ignore_ascii_case("classic") => "classic-v8-mode",
+        _ => "futuristic-3d-mode",
+    };
+
     let css = get_global_css();
     let js = get_kiosk_js();
 
@@ -14,18 +25,26 @@ pub fn render_full_portal_html() -> String {
     <title>Face Recognition System — Attendance Management System</title>
     <style>{}</style>
 </head>
-<body>
-    <!-- FLOATING MODERN HEADER (attendance_v8.py line 6538 Parity) -->
+<body class="{}">
+    <!-- 3D HOLOGRAPHIC NEURAL MESH CANVAS & CYBER FLOOR -->
+    <canvas id="cyber-3d-canvas"></canvas>
+    <div class="cyber-3d-floor"></div>
+
+    <!-- FLOATING MODERN HEADER (attendance_v8.py line 6538 Parity + 3D Cyber Controls) -->
     <header class="app-header">
         <div class="brand-wrapper">
             <div class="brand-logo">⚡</div>
             <div class="brand-title-box">
                 <span class="brand-main-title">ATTENDANCE</span>
-                <span class="brand-subtitle">MANAGEMENT SYSTEM</span>
+                <span class="brand-subtitle">3D BIOMETRIC NEURAL SYSTEM</span>
             </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <button onclick="openCompanyManagement()" style="background: rgba(108, 92, 231, 0.2); border: 1px solid rgba(162, 155, 254, 0.4); color: #fff; padding: 0.5rem 1rem; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <button id="btn-theme-toggle" class="btn-cyber-theme-switch" onclick="toggleDesignTheme()" title="Switch between 3D Futuristic &amp; Original Classic Design">
+                <span id="theme-toggle-icon">🌌</span>
+                <span id="theme-toggle-label">3D FUTURISTIC MODE</span>
+            </button>
+            <button onclick="openCompanyManagement()" style="background: rgba(108, 92, 231, 0.2); border: 1px solid rgba(0, 242, 254, 0.45); color: #fff; padding: 0.5rem 1rem; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                 <span>🏢</span>
                 <span id="header-company-name">Company: Loading...</span>
             </button>
@@ -35,6 +54,18 @@ pub fn render_full_portal_html() -> String {
             </div>
         </div>
     </header>
+
+    <!-- 3D HOLOGRAPHIC TELEMETRY RIBBON -->
+    <div class="futuristic-hud-banner">
+        <div class="hud-badge-group">
+            <span class="hud-pill hud-pill-cyan">🌐 3D HOLOGRAPHIC HUD v8.0</span>
+            <span class="hud-pill hud-pill-green">🧬 NEURAL BIOMETRIC MESH: ONLINE</span>
+            <span class="hud-pill hud-pill-purple">✨ INTERACTIVE 3D TILT: ACTIVE</span>
+        </div>
+        <button onclick="toggleDesignTheme()" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(0, 242, 254, 0.4); color: #e2e8f0; padding: 0.3rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.76rem; font-weight: 700;">
+            ⏪ আগের ডিজাইন / Classic View টগল করুন
+        </button>
+    </div>
 
     <!-- TWO-COLUMN MAIN LAYOUT (attendance_v8.py line 6060 Parity) -->
     <main class="main-layout">
@@ -712,6 +743,6 @@ pub fn render_full_portal_html() -> String {
     <script>{}</script>
 </body>
 </html>"##,
-        css, js
+        css, body_class, js
     )
 }
