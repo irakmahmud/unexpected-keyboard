@@ -1,11 +1,13 @@
 pub mod repos;
 pub mod schema;
+pub mod sharded_engine;
 
 use attendance_common::{AppError, Result, TimeHelper};
 use attendance_domain::*;
 use parking_lot::Mutex;
 use repos::*;
 use rusqlite::Connection;
+use sharded_engine::PhysicalShardedEngine;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -13,14 +15,17 @@ use std::sync::Arc;
 pub struct DbPool {
     conn: Arc<Mutex<Connection>>,
     db_path: PathBuf,
+    pub sharded_engine: Option<PhysicalShardedEngine>,
 }
 
 impl DbPool {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let db_path = path.as_ref().to_path_buf();
-        if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
+        let parent_dir = db_path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("data"));
+        std::fs::create_dir_all(&parent_dir)?;
 
         let conn = Connection::open(&db_path)
             .map_err(|e| AppError::Database(format!("Failed to open SQLite database: {}", e)))?;
@@ -37,12 +42,16 @@ impl DbPool {
         )
         .map_err(|e| AppError::Database(format!("Failed to set SQLite pragmas: {}", e)))?;
 
+        let sharded_engine = PhysicalShardedEngine::new(&parent_dir).ok();
+
         let pool = Self {
             conn: Arc::new(Mutex::new(conn)),
             db_path,
+            sharded_engine,
         };
 
         pool.initialize_schema()?;
+        pool.sync_existing_records_to_physical_shards();
         Ok(pool)
     }
 
@@ -56,9 +65,48 @@ impl DbPool {
         let pool = Self {
             conn: Arc::new(Mutex::new(conn)),
             db_path: PathBuf::from(":memory:"),
+            sharded_engine: None,
         };
         pool.initialize_schema()?;
         Ok(pool)
+    }
+
+    fn sync_existing_records_to_physical_shards(&self) {
+        if let Some(ref engine) = self.sharded_engine {
+            let rows: Vec<(String, String, String, Option<String>, Option<String>, String)> = {
+                let conn = self.conn.lock();
+                let mut list = Vec::new();
+                if let Ok(mut stmt) = conn.prepare(
+                    "SELECT record_id, username, date, in_time, out_time, status FROM attendance_records",
+                ) {
+                    if let Ok(mapped) = stmt.query_map([], |r| {
+                        Ok((
+                            r.get::<_, String>(0)?,
+                            r.get::<_, String>(1)?,
+                            r.get::<_, String>(2)?,
+                            r.get::<_, Option<String>>(3)?,
+                            r.get::<_, Option<String>>(4)?,
+                            r.get::<_, String>(5)?,
+                        ))
+                    }) {
+                        for item in mapped.flatten() {
+                            list.push(item);
+                        }
+                    }
+                }
+                list
+            };
+            for (rec_id, uname, dt, in_t, out_t, st) in rows {
+                let _ = engine.route_and_insert(
+                    &rec_id,
+                    &uname,
+                    &dt,
+                    in_t.as_deref(),
+                    out_t.as_deref(),
+                    &st,
+                );
+            }
+        }
     }
 
     pub fn get_connection(&self) -> parking_lot::MutexGuard<'_, Connection> {
@@ -123,8 +171,22 @@ impl DbPool {
     }
 
     pub fn save_in_time(&self, rec: &AttendanceRecord) -> Result<()> {
-        let conn = self.conn.lock();
-        AttendanceRepo::insert_in_time(&conn, rec)
+        {
+            let conn = self.conn.lock();
+            AttendanceRepo::insert_in_time(&conn, rec)?;
+        }
+        if let Some(ref engine) = self.sharded_engine {
+            let status_str = rec.status.to_string();
+            let _ = engine.route_and_insert(
+                &rec.record_id,
+                &rec.username,
+                &rec.date,
+                rec.in_time.as_deref(),
+                rec.out_time.as_deref(),
+                &status_str,
+            );
+        }
+        Ok(())
     }
 
     pub fn save_out_time_detailed(
@@ -505,6 +567,12 @@ impl DbPool {
 
     pub fn get_scale_architecture_status(&self) -> Result<serde_json::Value> {
         let partitions = self.list_storage_partitions().unwrap_or_default();
+        let physical_shards_summary = self
+            .sharded_engine
+            .as_ref()
+            .and_then(|e| e.inspect_physical_shards_summary().ok())
+            .unwrap_or_else(|| serde_json::json!({ "physical_shard_files_count": 0 }));
+
         let conn = self.conn.lock();
 
         let mut config_map = serde_json::Map::new();
@@ -528,14 +596,15 @@ impl DbPool {
         }
 
         Ok(serde_json::json!({
-            "architecture": "50-Year / 10-Lakh (1,000,000) Employee Partitioned & Sharded Storage Engine",
+            "architecture": "50-Year / 10-Lakh (1,000,000) Employee Physical 64-Shard & Time-Partitioned Storage Engine",
             "active_driver": config_map.get("active_storage_driver").cloned().unwrap_or_else(|| serde_json::json!("SQLITE_WAL_PARTITIONED")),
             "switchable_drivers": [
-                "SQLITE_WAL_PARTITIONED (Current Operational)",
-                "POSTGRESQL_PARTITIONED (Drop-in Range/Hash Partitioning)",
+                "SQLITE_WAL_PARTITIONED (64 Physical Shard DBs + Monthly Physical Tables)",
+                "POSTGRESQL_PARTITIONED (Declarative RANGE + HASH 64 Subpartitions)",
                 "TIMESCALEDB_HYPERTABLE (Time-Series Chunk Compression)",
                 "CLICKHOUSE_CLUSTER (Columnar Analytical Warehouse)"
             ],
+            "physical_sharding_and_partitioning": physical_shards_summary,
             "capacity_design": {
                 "retention_horizon_years": 50,
                 "max_concurrent_employees": 1_000_000,
@@ -543,9 +612,9 @@ impl DbPool {
                 "employee_hash_shards": 64,
                 "pagination_engine": "O(1) Keyset Cursor Pagination on (date DESC, record_id DESC)",
                 "storage_tiers": {
-                    "HOT": "Active SQLite WAL + 64MB RAM Cache + 256MB mmap",
-                    "WARM": "Yearly/Monthly Partitioned Tables (partition_year, partition_month, shard_bucket)",
-                    "COLD": "Transactional Outbox -> BigQuery / Parquet Archive"
+                    "HOT": "64 Physical SQLite WAL Shards (data/shards/shard_00..63.db) + 64MB RAM Cache",
+                    "WARM": "Physical Monthly Partition Tables (attendance_records_yYYYY_mMM)",
+                    "COLD": "Transactional Outbox -> PostgreSQL / BigQuery / Parquet Archive"
                 }
             },
             "active_composite_indexes": indexes,
@@ -562,49 +631,103 @@ impl DbPool {
         after_id: Option<&str>,
         limit: usize,
     ) -> Result<serde_json::Value> {
+        let start = std::time::Instant::now();
         let safe_limit = limit.clamp(1, 500) as i64;
         let conn = self.conn.lock();
 
         let cursor_date = after_date.unwrap_or("9999-12-31");
         let cursor_id = after_id.unwrap_or("~~~~~~~~~~~~~~~~~~~~");
 
-        let mut stmt = conn
-            .prepare(
-                "SELECT record_id, username, date, in_time, out_time, status, partition_year, partition_month, shard_bucket, storage_tier
-                 FROM attendance_records
-                 WHERE (?1 IS NULL OR partition_year = ?1)
-                   AND (?2 IS NULL OR partition_month = ?2)
-                   AND (date < ?3 OR (date = ?3 AND record_id < ?4))
-                 ORDER BY date DESC, record_id DESC
-                 LIMIT ?5",
-            )
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        // When both year and month are omitted, use the pure O(1) index-backed query without nullable filter scan
+        let (query_sql, explain_sql) = if partition_year.is_none() && partition_month.is_none() {
+            let q = "SELECT record_id, username, date, in_time, out_time, status, partition_year, partition_month, shard_bucket, storage_tier
+                     FROM attendance_records INDEXED BY idx_att_cursor_pagination
+                     WHERE (date < ?1 OR (date = ?1 AND record_id < ?2))
+                     ORDER BY date DESC, record_id DESC
+                     LIMIT ?3";
+            (q, "EXPLAIN QUERY PLAN SELECT record_id, username, date FROM attendance_records INDEXED BY idx_att_cursor_pagination WHERE (date < ?1 OR (date = ?1 AND record_id < ?2)) ORDER BY date DESC, record_id DESC LIMIT ?3")
+        } else {
+            let q = "SELECT record_id, username, date, in_time, out_time, status, partition_year, partition_month, shard_bucket, storage_tier
+                     FROM attendance_records
+                     WHERE (?1 IS NULL OR partition_year = ?1)
+                       AND (?2 IS NULL OR partition_month = ?2)
+                       AND (date < ?3 OR (date = ?3 AND record_id < ?4))
+                     ORDER BY date DESC, record_id DESC
+                     LIMIT ?5";
+            (q, "EXPLAIN QUERY PLAN SELECT record_id, username, date FROM attendance_records WHERE (?1 IS NULL OR partition_year = ?1) AND (?2 IS NULL OR partition_month = ?2) AND (date < ?3 OR (date = ?3 AND record_id < ?4)) ORDER BY date DESC, record_id DESC LIMIT ?5")
+        };
 
-        let rows = stmt
-            .query_map(
-                rusqlite::params![partition_year, partition_month, cursor_date, cursor_id, safe_limit],
-                |row| {
-                    Ok(serde_json::json!({
-                        "record_id": row.get::<_, String>(0)?,
-                        "username": row.get::<_, String>(1)?,
-                        "date": row.get::<_, String>(2)?,
-                        "in_time": row.get::<_, Option<String>>(3)?,
-                        "out_time": row.get::<_, Option<String>>(4)?,
-                        "status": row.get::<_, String>(5)?,
-                        "partition_year": row.get::<_, i32>(6)?,
-                        "partition_month": row.get::<_, i32>(7)?,
-                        "shard_bucket": row.get::<_, i32>(8)?,
-                        "storage_tier": row.get::<_, String>(9)?
-                    }))
-                },
-            )
+        let mut explain_plan = Vec::new();
+        if partition_year.is_none() && partition_month.is_none() {
+            if let Ok(mut estmt) = conn.prepare(explain_sql) {
+                if let Ok(rows) = estmt.query_map(rusqlite::params![cursor_date, cursor_id, safe_limit], |r| r.get::<_, String>(3)) {
+                    for s in rows.flatten() {
+                        explain_plan.push(s);
+                    }
+                }
+            }
+        } else if let Ok(mut estmt) = conn.prepare(explain_sql) {
+            if let Ok(rows) = estmt.query_map(rusqlite::params![partition_year, partition_month, cursor_date, cursor_id, safe_limit], |r| r.get::<_, String>(3)) {
+                for s in rows.flatten() {
+                    explain_plan.push(s);
+                }
+            }
+        }
+
+        let mut stmt = conn
+            .prepare(query_sql)
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         let mut items = Vec::new();
-        for r in rows.flatten() {
-            items.push(r);
+        if partition_year.is_none() && partition_month.is_none() {
+            let rows = stmt
+                .query_map(
+                    rusqlite::params![cursor_date, cursor_id, safe_limit],
+                    |row| {
+                        Ok(serde_json::json!({
+                            "record_id": row.get::<_, String>(0)?,
+                            "username": row.get::<_, String>(1)?,
+                            "date": row.get::<_, String>(2)?,
+                            "in_time": row.get::<_, Option<String>>(3)?,
+                            "out_time": row.get::<_, Option<String>>(4)?,
+                            "status": row.get::<_, String>(5)?,
+                            "partition_year": row.get::<_, i32>(6)?,
+                            "partition_month": row.get::<_, i32>(7)?,
+                            "shard_bucket": row.get::<_, i32>(8)?,
+                            "storage_tier": row.get::<_, String>(9)?
+                        }))
+                    },
+                )
+                .map_err(|e| AppError::Database(e.to_string()))?;
+            for r in rows.flatten() {
+                items.push(r);
+            }
+        } else {
+            let rows = stmt
+                .query_map(
+                    rusqlite::params![partition_year, partition_month, cursor_date, cursor_id, safe_limit],
+                    |row| {
+                        Ok(serde_json::json!({
+                            "record_id": row.get::<_, String>(0)?,
+                            "username": row.get::<_, String>(1)?,
+                            "date": row.get::<_, String>(2)?,
+                            "in_time": row.get::<_, Option<String>>(3)?,
+                            "out_time": row.get::<_, Option<String>>(4)?,
+                            "status": row.get::<_, String>(5)?,
+                            "partition_year": row.get::<_, i32>(6)?,
+                            "partition_month": row.get::<_, i32>(7)?,
+                            "shard_bucket": row.get::<_, i32>(8)?,
+                            "storage_tier": row.get::<_, String>(9)?
+                        }))
+                    },
+                )
+                .map_err(|e| AppError::Database(e.to_string()))?;
+            for r in rows.flatten() {
+                items.push(r);
+            }
         }
 
+        let elapsed_us = start.elapsed().as_micros();
         let next_cursor = items.last().map(|last| {
             serde_json::json!({
                 "after_date": last.get("date").and_then(|v| v.as_str()).unwrap_or(""),
@@ -614,11 +737,31 @@ impl DbPool {
 
         Ok(serde_json::json!({
             "pagination_engine": "KEYSET_CURSOR_O1",
+            "execution_time_us": elapsed_us,
+            "execution_time_ms": (elapsed_us as f64) / 1000.0,
+            "explain_query_plan": explain_plan,
             "count": items.len(),
             "limit": safe_limit,
             "next_cursor": next_cursor,
             "records": items
         }))
+    }
+
+    pub fn run_empirical_scale_benchmark(&self, rows: usize) -> Result<serde_json::Value> {
+        let bench_dir = std::env::temp_dir().join("attendance_scale_benchmark_64shards");
+        let _ = std::fs::remove_dir_all(&bench_dir);
+        let bench_engine = PhysicalShardedEngine::new(&bench_dir)?;
+        let report = bench_engine.run_empirical_benchmark(rows)?;
+        let _ = std::fs::remove_dir_all(&bench_dir);
+        Ok(report)
+    }
+
+    pub fn generate_postgres_migration_ddl(&self) -> String {
+        if let Some(ref engine) = self.sharded_engine {
+            engine.generate_postgres_declarative_partition_sql(&[1977, 2001, 2025, 2026], 8)
+        } else {
+            String::new()
+        }
     }
 }
 
@@ -653,6 +796,46 @@ impl EnterpriseStorageBackend for DbPool {
         limit: usize,
     ) -> Result<serde_json::Value> {
         self.get_cursor_paginated_attendance(partition_year, partition_month, after_date, after_id, limit)
+    }
+}
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn test_50yr_physical_64_shards_and_explain_plan() {
+        let tmp_dir = std::env::temp_dir().join("test_att_64shards_unit");
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        let engine = PhysicalShardedEngine::new(&tmp_dir).expect("Failed to init 64-shard engine");
+        let report = engine
+            .run_empirical_benchmark(10_000)
+            .expect("Benchmark failed");
+
+        assert_eq!(report["benchmark_rows_inserted"], 10_000);
+        assert_eq!(report["physical_shard_files_used"], 64);
+        assert_eq!(report["concurrent_rw_lock_errors"], 0);
+        assert_eq!(
+            report["backup_and_recovery_verification"]["restored_integrity_check"],
+            "ok"
+        );
+
+        let plan_1977 = report["historical_queries"]["year_1977_50yr_ago"]["explain_query_plan"]
+            .as_array()
+            .expect("Missing explain plan");
+        assert!(!plan_1977.is_empty());
+        let plan_str = plan_1977[0].as_str().unwrap_or("");
+        assert!(
+            plan_str.contains("USING COVERING INDEX") || plan_str.contains("USING INDEX"),
+            "Expected index seek in EXPLAIN QUERY PLAN, got: {}",
+            plan_str
+        );
+
+        let pg_ddl = engine.generate_postgres_declarative_partition_sql(&[1977, 2026], 4);
+        assert!(pg_ddl.contains("PARTITION BY RANGE (partition_year, partition_month)"));
+        assert!(pg_ddl.contains("PARTITION BY HASH (shard_bucket)"));
+
+        let _ = std::fs::remove_dir_all(&tmp_dir);
     }
 }
 

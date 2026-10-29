@@ -17,12 +17,31 @@ pub struct CursorQueryParams {
     pub limit: Option<usize>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BenchmarkQueryParams {
+    pub rows: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShardedQueryParams {
+    pub username: String,
+    pub year: Option<i32>,
+    pub month: Option<i32>,
+    pub date: Option<String>,
+}
+
 pub fn system_router() -> Router<AppState> {
     Router::new()
         .route("/health", get(get_health_status))
         .route("/scale-architecture", get(get_scale_architecture))
         .route("/partitions", get(get_storage_partitions))
         .route("/cursor-attendance", get(get_cursor_attendance))
+        .route(
+            "/run-scale-benchmark",
+            get(run_scale_benchmark).post(run_scale_benchmark),
+        )
+        .route("/postgres-migration-ddl", get(get_postgres_migration_ddl))
+        .route("/sharded-query", get(get_sharded_query))
         .route("/vacuum", post(trigger_vacuum))
         .route("/integrity", get(check_integrity))
         .route("/backup", post(create_backup).get(list_backups))
@@ -88,6 +107,44 @@ async fn get_cursor_attendance(
         params.after_date.as_deref(),
         params.after_id.as_deref(),
         params.limit.unwrap_or(50),
+    )?;
+    Ok(Json(res))
+}
+
+async fn run_scale_benchmark(
+    State(state): State<AppState>,
+    Query(params): Query<BenchmarkQueryParams>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let rows = params.rows.unwrap_or(50_000).clamp(1_000, 1_000_000);
+    let db = state.db.clone();
+    let res = tokio::task::spawn_blocking(move || db.run_empirical_scale_benchmark(rows))
+        .await
+        .map_err(|e| attendance_common::AppError::Internal(e.to_string()))??;
+    Ok(Json(res))
+}
+
+async fn get_postgres_migration_ddl(
+    State(state): State<AppState>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let ddl = state.db.generate_postgres_migration_ddl();
+    Ok(Json(serde_json::json!({
+        "target_engine": "PostgreSQL 16+ Declarative RANGE + HASH Partitioning",
+        "ddl_sql": ddl
+    })))
+}
+
+async fn get_sharded_query(
+    State(state): State<AppState>,
+    Query(params): Query<ShardedQueryParams>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    let engine = state.db.sharded_engine.as_ref().ok_or_else(|| {
+        attendance_common::AppError::Internal("PhysicalShardedEngine not initialized".to_string())
+    })?;
+    let res = engine.query_partitioned_user(
+        &params.username,
+        params.year.unwrap_or(2026),
+        params.month.unwrap_or(10),
+        params.date.as_deref(),
     )?;
     Ok(Json(res))
 }
