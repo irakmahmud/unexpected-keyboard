@@ -422,7 +422,7 @@ impl PhysicalShardedEngine {
                                 }
                             }
                             let _ = tx.commit();
-                        }
+                        };
                     }
                 });
             }
