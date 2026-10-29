@@ -75,18 +75,24 @@ impl AttendanceRepo {
     pub fn insert_in_time(conn: &Connection, rec: &AttendanceRecord) -> Result<()> {
         let now = TimeHelper::now_utc_sqlite_string();
         let status_str = rec.status.to_string();
+        let (p_year, p_month) = crate::schema::parse_year_month(&rec.date);
+        let shard_bucket = crate::schema::compute_shard_bucket(&rec.username);
 
         conn.execute(
             "INSERT INTO attendance_records (
                 record_id, company_user_uuid, username, date, in_time, out_time,
                 video_path_in, in_time_with_camera, in_time_with_qr, status, work_hours,
-                overtime_hours, late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+                overtime_hours, late_minutes, early_exit_minutes, ip_address, device_id, remarks, created_at,
+                partition_year, partition_month, shard_bucket, storage_tier
+            ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, 'HOT')
             ON CONFLICT(username, date) DO UPDATE SET
                 in_time = COALESCE(attendance_records.in_time, excluded.in_time),
                 video_path_in = COALESCE(attendance_records.video_path_in, excluded.video_path_in),
                 status = excluded.status,
-                late_minutes = excluded.late_minutes",
+                late_minutes = excluded.late_minutes,
+                partition_year = excluded.partition_year,
+                partition_month = excluded.partition_month,
+                shard_bucket = excluded.shard_bucket",
             params![
                 rec.record_id,
                 rec.company_user_uuid,
@@ -104,9 +110,23 @@ impl AttendanceRepo {
                 rec.ip_address,
                 rec.device_id,
                 rec.remarks,
-                rec.created_at.as_deref().unwrap_or(&now)
+                rec.created_at.as_deref().unwrap_or(&now),
+                p_year,
+                p_month,
+                shard_bucket
             ],
         ).map_err(|e| AppError::Database(format!("Failed to insert in_time: {}", e)))?;
+
+        // Update 50-Year Partition Catalog count
+        let part_key = format!("attendance_records_y{:04}_m{:02}", p_year, p_month);
+        let _ = conn.execute(
+            "INSERT INTO storage_partitions (partition_key, table_name, partition_year, partition_month, shard_count, storage_tier, active_driver, row_count, created_at, updated_at)
+             VALUES (?1, 'attendance_records', ?2, ?3, 64, 'HOT', 'SQLITE_WAL_PARTITIONED', 1, ?4, ?4)
+             ON CONFLICT(partition_key) DO UPDATE SET
+                 row_count = (SELECT COUNT(*) FROM attendance_records WHERE partition_year = ?2 AND partition_month = ?3),
+                 updated_at = ?4",
+            params![part_key, p_year, p_month, now],
+        );
 
         // Queue BigQuery Outbox event
         let event_id = uuid::Uuid::new_v4().to_string();
