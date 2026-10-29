@@ -45,69 +45,137 @@ class KeyboardLayout {
     0xFFFF6D00, // #12 (Study #10): তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
   ];
 
+  /// Official 150-Key Final Rank Table (1..110 Verified Text Output Keys + 111..150 Action/Gesture Keys):
   static int getBanglishRank(KeyModel key) {
     switch (key.actionType) {
       case KeyActionType.space:
-        return 1;
-      case KeyActionType.backspace:
-        return 3;
-      case KeyActionType.shift:
-        return 19;
+        return 1; // KEY_063_SPACE
       case KeyActionType.enter:
-        return 21;
+        return 31; // KEY_064_ENTER
+      case KeyActionType.backspace:
+        return 111; // KEY_111_BACKSPACE
+      case KeyActionType.shift:
+        return 112; // KEY_112_SHIFT_MODIFIER
+      case KeyActionType.switchLayout:
+        return key.primary == 'ABC' ? 116 : 114; // KEY_116_ABC_RETURN / KEY_114_SYM_LAYER_123
+      case KeyActionType.arrowLeft:
+        return 123; // KEY_123_CURSOR_LEFT
+      case KeyActionType.arrowRight:
+        return 124; // KEY_124_CURSOR_RIGHT
+      case KeyActionType.tab:
+        return 130; // KEY_130_TAB_INDENT
+      case KeyActionType.openSettings:
+        return 134; // KEY_134_KB_SETTINGS
       case KeyActionType.inputChar:
-        switch (key.primary.toLowerCase()) {
-          case 'a': return 2;
-          case 'e': return 4;
-          case 'r': return 5;
-          case 'o': return 6;
-          case 'i': return 7;
-          case 'h': return 8;
-          case 'k': return 9;
-          case 'n': return 10;
-          case 't': return 11;
-          case 's': return 12;
-          case 'b': return 13;
-          case 'm': return 14;
-          case 'l': return 15;
-          case 'd': return 16;
-          case 'u': return 17;
-          case 'c': return 18;
-          case 'p': return 20;
-          case 'g': return 22;
-          case 'j': return 23;
-          case 'y': return 24;
-          case '.': return 25;
-          case ',': return 26;
-          case 'v': return 27;
-          case '?': return 28;
-          case 'f': return 29;
-          case "'": return 30;
-          case '!': return 31;
-          case 'w': return 32;
-          case '1': return 33;
-          case '2': return 34;
-          case 'z': return 35;
-          case '0': return 36;
-          case '-': return 37;
-          case 'x': return 38;
-          case '"': return 39;
-          case '3': return 40;
-          case '4': return 41;
-          case '5': return 42;
-          case 'q': return 43;
-          case ')': return 44;
-          case '(': return 45;
-          case ':': return 46;
-          case '6': return 47;
-          case '7': return 48;
-          case '/': return 49;
-          case '8': return 50;
-          case '9': return 51;
-          case ';': return 52;
-          case '@': return 53;
-          case '&': return 54;
-          case '%': return 55;
+        switch (key.primary) {
+          case 'a': return 2;   // KEY_001_A_LOWER
+          case 'e': return 3;   // KEY_005_E_LOWER
+          case 'o': return 4;   // KEY_015_O_LOWER
+          case 'i': return 5;   // KEY_009_I_LOWER
+          case 't': return 6;   // KEY_020_T_LOWER
+          case 'r': return 7;   // KEY_018_R_LOWER
+          case 'n': return 8;   // KEY_014_N_LOWER
+          case 'h': return 9;   // KEY_008_H_LOWER
+          case 's': return 10;  // KEY_019_S_LOWER
+          case 'l': return 11;  // KEY_012_L_LOWER
+          case 'k': return 12;  // KEY_011_K_LOWER
+          case 'd': return 13;  // KEY_004_D_LOWER
+          case 'm': return 14;  // KEY_013_M_LOWER
+          case 'u': return 15;  // KEY_021_U_LOWER
+          case 'b': return 16;  // KEY_002_B_LOWER
+          case 'c': return 17;  // KEY_003_C_LOWER
+          case '.': return 18;  // KEY_065_PUNCT_01
+          case 'p': return 19;  // KEY_016_P_LOWER
+          case 'g': return 20;  // KEY_007_G_LOWER
+          case 'y': return 21;  // KEY_025_Y_LOWER
+          case 'j': return 22;  // KEY_010_J_LOWER
+          case 'v': return 23;  // KEY_022_V_LOWER
+          case 'f': return 24;  // KEY_006_F_LOWER
+          case 'w': return 25;  // KEY_023_W_LOWER
+          case ',': return 26;  // KEY_066_PUNCT_02
+          case 'A': return 27;  // KEY_027_A_UPPER
+          case '?': return 28;  // KEY_067_PUNCT_03
+          case 'T': return 29;  // KEY_046_T_UPPER
+          case 'S': return 30;  // KEY_045_S_UPPER
+          case 'E': return 32;  // KEY_031_E_UPPER
+          case 'I': return 33;  // KEY_035_I_UPPER
+          case 'B': return 34;  // KEY_028_B_UPPER
+          case '0': return 35;  // KEY_053_DIGIT_0
+          case '1': return 36;  // KEY_054_DIGIT_1
+          case 'K': return 37;  // KEY_037_K_UPPER
+          case '!': return 38;  // KEY_068_PUNCT_04
+          case '।': return 39;  // KEY_097_REGSYM_01
+          case 'M': return 40;  // KEY_039_M_UPPER
+          case 'D': return 41;  // KEY_030_D_UPPER
+          case 'z': return 42;  // KEY_026_Z_LOWER
+          case 'P': return 43;  // KEY_042_P_UPPER
+          case 'x': return 44;  // KEY_024_X_LOWER
+          case '2': return 45;  // KEY_055_DIGIT_2
+          case 'O': return 46;  // KEY_041_O_UPPER
+          case 'N': return 47;  // KEY_040_N_UPPER
+          case "'": return 48;  // KEY_069_PUNCT_05
+          case 'C': return 49;  // KEY_029_C_UPPER
+          case 'V': return 50;  // KEY_048_V_UPPER
+          case 'R': return 51;  // KEY_044_R_UPPER
+          case 'H': return 52;  // KEY_034_H_UPPER
+          case '-': return 53;  // KEY_071_PUNCT_07
+          case 'G': return 54;  // KEY_033_G_UPPER
+          case 'q': return 55;  // KEY_017_Q_LOWER
+          case 'J': return 56;  // KEY_036_J_UPPER
+          case '5': return 57;  // KEY_058_DIGIT_5
+          case '3': return 58;  // KEY_056_DIGIT_3
+          case 'F': return 59;  // KEY_032_F_UPPER
+          case 'L': return 60;  // KEY_038_L_UPPER
+          case '4': return 61;  // KEY_057_DIGIT_4
+          case 'W': return 62;  // KEY_049_W_UPPER
+          case '6': return 63;  // KEY_059_DIGIT_6
+          case 'U': return 64;  // KEY_047_U_UPPER
+          case '7': return 65;  // KEY_060_DIGIT_7
+          case '9': return 66;  // KEY_062_DIGIT_9
+          case ')': return 67;  // KEY_073_PUNCT_09
+          case '"': return 68;  // KEY_070_PUNCT_06
+          case '8': return 69;  // KEY_061_DIGIT_8
+          case '&': return 70;  // KEY_079_EXTSYM_01
+          case ':': return 71;  // KEY_074_PUNCT_10
+          case '(': return 72;  // KEY_072_PUNCT_08
+          case '/': return 73;  // KEY_076_PUNCT_12
+          case '%': return 74;  // KEY_080_EXTSYM_02
+          case 'Y': return 75;  // KEY_051_Y_UPPER
+          case '*': return 76;  // KEY_083_EXTSYM_05
+          case '+': return 77;  // KEY_081_EXTSYM_03
+          case 'Z': return 78;  // KEY_052_Z_UPPER
+          case '…': return 79;  // KEY_107_REGSYM_11
+          case 'Q': return 80;  // KEY_043_Q_UPPER
+          case 'X': return 81;  // KEY_050_X_UPPER
+          case '#': return 82;  // KEY_078_PUNCT_14
+          case '=': return 83;  // KEY_082_EXTSYM_04
+          case ';': return 84;  // KEY_075_PUNCT_11
+          case '—': return 85;  // KEY_109_REGSYM_13
+          case '>': return 86;  // KEY_092_EXTSYM_14
+          case ']': return 87;  // KEY_094_EXTSYM_16
+          case '[': return 88;  // KEY_093_EXTSYM_15
+          case '~': return 89;  // KEY_087_EXTSYM_09
+          case '|': return 90;  // KEY_090_EXTSYM_12
+          case '<': return 91;  // KEY_091_EXTSYM_13
+          case '•': return 92;  // KEY_110_REGSYM_14
+          case '°': return 93;  // KEY_103_REGSYM_07
+          case '^': return 94;  // KEY_089_EXTSYM_11
+          case '\$': return 95; // KEY_086_EXTSYM_08
+          case '×': return 96;  // KEY_105_REGSYM_09
+          case '\\': return 97; // KEY_085_EXTSYM_07
+          case '–': return 98;  // KEY_108_REGSYM_12
+          case '@': return 99;  // KEY_077_PUNCT_13
+          case '}': return 100; // KEY_096_EXTSYM_18
+          case '{': return 101; // KEY_095_EXTSYM_17
+          case '÷': return 102; // KEY_106_REGSYM_10
+          case '_': return 103; // KEY_084_EXTSYM_06
+          case '`': return 104; // KEY_088_EXTSYM_10
+          case '৳': return 105; // KEY_098_REGSYM_02
+          case '₹': return 106; // KEY_099_REGSYM_03
+          case '€': return 107; // KEY_100_REGSYM_04
+          case '£': return 108; // KEY_101_REGSYM_05
+          case '¥': return 109; // KEY_102_REGSYM_06
+          case '±': return 110; // KEY_104_REGSYM_08
           default: return 0;
         }
       default:
@@ -283,89 +351,100 @@ class KeyboardLayout {
     ],
   ];
 
-  /// RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
-  /// Leftmost 2 narrow columns take exact 0.44 + 0.44 = 0.88 width (matching 2,3 horizontally across the entire column):
+  /// RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid mapped strictly from the Official Final Rank Table & Spreadsheet):
+  /// Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
+  /// Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
+  /// Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
+  /// Row 4 (Sheet Row 7): [ #41/#42 (D/z) | #24 (f) | #11 (l) | #2 (a) | #5 (i) ]
+  /// Row 5 (Sheet Row 8): [ #39/#40 (।/M) | #21 (y) | #6 (t) | #1 (Space) | #7 (r) ]
+  /// Row 6 (Sheet Row 9): [ #35/#36 (0/1) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
+  /// Row 7 (Sheet Row 10): [ #37/#38 (K/!) | #25 (w) | #16 (b) | #15 (u) | #19 (p) ]
+  /// Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
+  /// Row 9 (Sheet Row 12): [ #45/#46 (2/O) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
   static List<List<KeyModel>> get rightHandBanglishLayout => const [
-    // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
+    // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
     [
-      KeyModel(primary: '%', flex: 0.88),
-      KeyModel(primary: '&', flex: 1.03),
-      KeyModel(primary: '@', flex: 1.03),
-      KeyModel(primary: ';', flex: 1.03),
-      KeyModel(primary: 'u', topLeft: '7', topRight: '&', bottomLeft: '-', bottomRight: '_', swipeUp: '7', flex: 1.03),
+      KeyModel(primary: 'q', topLeft: '1', topRight: '`', bottomLeft: '~', bottomRight: '\\', swipeUp: '1', flex: 0.44),
+      KeyModel(primary: 'G', topLeft: 'g', flex: 0.44),
+      KeyModel(primary: '-', topLeft: '_', topRight: '+', bottomLeft: '=', flex: 0.515),
+      KeyModel(primary: 'H', topLeft: 'h', flex: 0.515),
+      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.03),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.03, androidKeyCode: 67),
+      KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.03),
     ],
-    // Row 2: [ 50/51 (8/9) | 49 (/) | 31/32 (!/w) | 14 (m) | 10 (n) ]
+    // Row 2 (Sheet Row 5): [ 50/51 (V/R) | 49/50 (C/V) | 31/32 (↵/E) | 14 (m) | 10 (s) ]
     [
-      KeyModel(primary: '8', topLeft: '9', flex: 0.44),
-      KeyModel(primary: '9', flex: 0.44),
-      KeyModel(primary: '/', topLeft: '?', topRight: '\\', bottomLeft: '|', flex: 1.03),
-      KeyModel(primary: '!', topLeft: 'w', flex: 0.515),
-      KeyModel(primary: 'w', topLeft: '!', flex: 0.515),
+      KeyModel(primary: 'V', topLeft: 'v', flex: 0.44),
+      KeyModel(primary: 'R', topLeft: 'r', flex: 0.44),
+      KeyModel(primary: 'C', topLeft: 'c', flex: 0.515),
+      KeyModel(primary: 'V', topLeft: 'v', flex: 0.515),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.515, androidKeyCode: 66),
+      KeyModel(primary: 'E', topLeft: '3', flex: 0.515),
       KeyModel(primary: 'm', topLeft: '?', topRight: '!', bottomLeft: '«', bottomRight: '»', swipeUp: '?', flex: 1.03),
-      KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.03),
+      KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.03),
     ],
-    // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 5 (r moved up!) ]
+    // Row 3 (Sheet Row 6): [ 47/48 (N/') | 28 (?) | 13 (d) | 9 (h) | 3 (e) ]
     [
-      KeyModel(primary: '6', topLeft: '7', flex: 0.44),
-      KeyModel(primary: '7', flex: 0.44),
+      KeyModel(primary: 'N', topLeft: 'n', flex: 0.44),
+      KeyModel(primary: "'", topLeft: '"', topRight: '`', bottomLeft: '~', flex: 0.44),
       KeyModel(primary: '?', topLeft: '!', topRight: '¿', bottomLeft: '¡', bottomRight: '@', swipeUp: '!', flex: 1.03),
-      KeyModel(primary: 'b', topLeft: ';', topRight: ':', bottomLeft: '§', bottomRight: '¶', swipeUp: ';', flex: 1.03),
-      KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.03),
-      KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.03),
+      KeyModel(primary: 'd', topLeft: '\$', topRight: '%', bottomLeft: '&', bottomRight: '*', swipeUp: '\$', flex: 1.03),
+      KeyModel(primary: 'h', topLeft: '-', topRight: '_', bottomLeft: ':', bottomRight: ';', swipeUp: '-', flex: 1.03),
+      KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.03),
     ],
-    // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 7 (i moved up!) ]
+    // Row 4 (Sheet Row 7): [ 41/42 (D/z) | 24 (f) | 11 (l) | 2 (a) | 5 (i) ]
     [
-      KeyModel(primary: '4', topLeft: '5', flex: 0.44),
-      KeyModel(primary: '5', flex: 0.44),
-      KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.03),
-      KeyModel(primary: 't', topLeft: '5', topRight: '%', bottomLeft: '(', bottomRight: ')', swipeUp: '5', flex: 1.03),
+      KeyModel(primary: 'D', topLeft: 'd', flex: 0.44),
+      KeyModel(primary: 'z', topLeft: '*', topRight: '/', bottomLeft: '\\', bottomRight: '|', swipeUp: '*', flex: 0.44),
+      KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.03),
+      KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.03),
       KeyModel(primary: 'a', topLeft: '@', topRight: '!', bottomLeft: '#', bottomRight: '\$', swipeUp: '@', flex: 1.03),
       KeyModel(primary: 'i', topLeft: '8', topRight: '*', bottomLeft: '/', bottomRight: '*', swipeUp: '8', flex: 1.03),
     ],
-    // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧) | 3 (⌫ Cross — Red, left of Space!) | 1 (Space — most right!) ]
+    // Row 5 (Sheet Row 8): [ 39/40 (।/M) | 21 (y) | 6 (t) | 1 (Space) | 7 (r) ]
     [
-      KeyModel(primary: '2', topLeft: '3', flex: 0.44),
-      KeyModel(primary: '3', flex: 0.44),
-      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.88, androidKeyCode: 66),
-      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 0.88),
-      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 0.88, androidKeyCode: 67),
-      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.48),
+      KeyModel(primary: '।', topLeft: '.', flex: 0.44),
+      KeyModel(primary: 'M', topLeft: 'm', flex: 0.44),
+      KeyModel(primary: 'y', topLeft: '6', topRight: '^', bottomLeft: '=', bottomRight: '+', swipeUp: '6', flex: 1.03),
+      KeyModel(primary: 't', topLeft: '5', topRight: '%', bottomLeft: '(', bottomRight: ')', swipeUp: '5', flex: 1.03),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 1.03),
+      KeyModel(primary: 'r', topLeft: '4', topRight: '₹', bottomLeft: '[', bottomRight: ']', swipeUp: '4', flex: 1.03),
     ],
-    // Row 6: [ 36/33 (0/1) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
+    // Row 6 (Sheet Row 9): [ 35/36 (0/1) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
     [
-      KeyModel(primary: '0', topLeft: '1', flex: 0.44),
-      KeyModel(primary: '1', flex: 0.44),
-      KeyModel(primary: 'c', topLeft: "'", topRight: '`', bottomLeft: '©', bottomRight: '¢', swipeUp: "'", flex: 1.03),
-      KeyModel(primary: 's', topLeft: '#', topRight: '\$', bottomLeft: '%', bottomRight: '^', swipeUp: '#', flex: 1.03),
-      KeyModel(primary: 'e', topLeft: '3', topRight: '€', bottomLeft: '{', bottomRight: '}', swipeUp: '3', flex: 1.03),
-      KeyModel(primary: 'h', topLeft: '-', topRight: '_', bottomLeft: ':', bottomRight: ';', swipeUp: '-', flex: 1.03),
-    ],
-    // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 6 (o below h!) ]
-    [
-      KeyModel(primary: '-', topLeft: 'x', flex: 0.44),
-      KeyModel(primary: 'x', topLeft: '-', flex: 0.44),
-      KeyModel(primary: '.', topLeft: '>', topRight: ':', bottomLeft: '(', bottomRight: ')', swipeUp: '>', flex: 1.03),
-      KeyModel(primary: 'd', topLeft: '\$', topRight: '%', bottomLeft: '&', bottomRight: '*', swipeUp: '\$', flex: 1.03),
-      KeyModel(primary: 'l', topLeft: ')', topRight: ':', bottomLeft: '[', bottomRight: ']', swipeUp: ')', flex: 1.03),
+      KeyModel(primary: '0', topLeft: ')', flex: 0.44),
+      KeyModel(primary: '1', topLeft: '!', flex: 0.44),
+      KeyModel(primary: '.', topLeft: '?', topRight: '!', bottomLeft: ',', bottomRight: "'", swipeUp: '?', flex: 1.03),
+      KeyModel(primary: 'k', topLeft: '(', topRight: ')', bottomLeft: '<', bottomRight: '>', swipeUp: '(', flex: 1.03),
       KeyModel(primary: 'o', topLeft: '9', topRight: '(', bottomLeft: '[', bottomRight: ']', swipeUp: '9', flex: 1.03),
+      KeyModel(primary: 'n', topLeft: '!', topRight: '?', bottomLeft: '¿', bottomRight: '¡', swipeUp: '!', flex: 1.03),
     ],
-    // Row 8: [ 43/44 (q/)) | 30 (') | 22 (g) | 20 (p) | 23 (j) ]
+    // Row 7 (Sheet Row 10): [ 37/38 (K/!) | 25 (w) | 16 (b) | 15 (u) | 19 (p) ]
     [
-      KeyModel(primary: 'q', topLeft: ')', flex: 0.44),
-      KeyModel(primary: ')', flex: 0.44),
-      KeyModel(primary: "'", topLeft: '"', topRight: '`', bottomLeft: '~', flex: 1.03),
-      KeyModel(primary: 'g', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '=', swipeUp: '&', flex: 1.03),
+      KeyModel(primary: 'K', topLeft: 'k', flex: 0.44),
+      KeyModel(primary: '!', topLeft: '?', flex: 0.44),
+      KeyModel(primary: 'w', topLeft: '2', topRight: '|', bottomLeft: '<', bottomRight: '>', swipeUp: '2', flex: 1.03),
+      KeyModel(primary: 'b', topLeft: ';', topRight: ':', bottomLeft: '§', bottomRight: '¶', swipeUp: ';', flex: 1.03),
+      KeyModel(primary: 'u', topLeft: '7', topRight: '&', bottomLeft: '-', bottomRight: '_', swipeUp: '7', flex: 1.03),
       KeyModel(primary: 'p', topLeft: '0', topRight: ')', bottomLeft: '{', bottomRight: '}', swipeUp: '0', flex: 1.03),
-      KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.03),
     ],
-    // Row 9: [ 45/46 ((/:) | 35/39 (z/") | 29 (f) | 27 (v) | 26 (,) ]
+    // Row 8 (Sheet Row 11): [ 43/44 (P/x) | 30 (S) | 22 (j) | 20 (g) | 23 (v) ]
     [
-      KeyModel(primary: '(', topLeft: ':', flex: 0.44),
-      KeyModel(primary: ':', flex: 0.44),
-      KeyModel(primary: 'z', topLeft: '"', flex: 0.515),
-      KeyModel(primary: '"', flex: 0.515),
-      KeyModel(primary: 'f', topLeft: '%', topRight: '^', bottomLeft: '_', bottomRight: '+', swipeUp: '%', flex: 1.03),
+      KeyModel(primary: 'P', topLeft: 'p', flex: 0.44),
+      KeyModel(primary: 'x', topLeft: '"', topRight: "'", bottomLeft: '`', bottomRight: '~', swipeUp: '"', flex: 0.44),
+      KeyModel(primary: 'S', topLeft: 's', flex: 1.03),
+      KeyModel(primary: 'j', topLeft: '+', topRight: '=', bottomLeft: '"', bottomRight: "'", swipeUp: '+', flex: 1.03),
+      KeyModel(primary: 'g', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '=', swipeUp: '&', flex: 1.03),
       KeyModel(primary: 'v', topLeft: ':', topRight: ';', bottomLeft: '•', bottomRight: '°', swipeUp: ':', flex: 1.03),
+    ],
+    // Row 9 (Sheet Row 12): [ 45/46 (2/O) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
+    [
+      KeyModel(primary: '2', topLeft: '@', flex: 0.44),
+      KeyModel(primary: 'O', topLeft: 'o', flex: 0.44),
+      KeyModel(primary: 'I', topLeft: 'i', flex: 0.515),
+      KeyModel(primary: 'B', topLeft: 'b', flex: 0.515),
+      KeyModel(primary: 'T', topLeft: 't', flex: 1.03),
+      KeyModel(primary: 'A', topLeft: 'a', flex: 1.03),
       KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 1.03),
     ],
   ];

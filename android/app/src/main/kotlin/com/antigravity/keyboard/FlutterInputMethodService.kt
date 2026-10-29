@@ -547,98 +547,100 @@ class NativeKeyboardView(
         )
     )
 
-    // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid based on 55 Banglish Mobile Keys Rank #1..#55):
-    // Leftmost 2 narrow columns take exact 0.44f + 0.44f = 0.88f width (matching 2,3 horizontally across the entire column):
-    // Row 1: [ #55 (%) | #54 (&) | #53 (@) | #52 (;) | #17 (u) ]
-    // Row 2: [ #50/#51 (8/9) | #49 (/) | #31/#32 (!/w) | #14 (m) | #10 (n) ]
-    // Row 3: [ #47/#48 (6/7) | #28 (?) | #13 (b) | #9 (k) | #5 (r — moved up!) ]
-    // Row 4: [ #41/#42 (4/5) | #24 (y) | #11 (t) | #2 (a) | #7 (i — moved up!) ]
-    // Row 5: [ #34/#40 (2/3) | #21 (↵) | #19 (⇧) | #3 (⌫ Cross — Red, left of Space!) | #1 (Space — most right!) ]
-    // Row 6: [ #36/#33 (0/1) | #18 (c) | #12 (s) | #4 (e) | #8 (h) ]
-    // Row 7: [ #37/#38 (-/x) | #25 (.) | #16 (d) | #15 (l) | #6 (o — below h!) ]
-    // Row 8: [ #43/#44 (q/)) | #30 (') | #22 (g) | #20 (p) | #23 (j) ]
-    // Row 9: [ #45/#46 ((/:) | #35/#39 (z/") | #29 (f) | #27 (v) | #26 (,) ]
+    // RIGHT HAND BANGLISH LAYOUT (9x5 Ergonomic Grid mapped strictly from the Official Final Rank Table & Spreadsheet):
+    // Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
+    // Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
+    // Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
+    // Row 4 (Sheet Row 7): [ #41/#42 (D/z) | #24 (f) | #11 (l) | #2 (a) | #5 (i) ]
+    // Row 5 (Sheet Row 8): [ #39/#40 (।/M) | #21 (y) | #6 (t) | #1 (Space) | #7 (r) ]
+    // Row 6 (Sheet Row 9): [ #35/#36 (0/1) | #18 (.) | #12 (k) | #4 (o) | #8 (n) ]
+    // Row 7 (Sheet Row 10): [ #37/#38 (K/!) | #25 (w) | #16 (b) | #15 (u) | #19 (p) ]
+    // Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
+    // Row 9 (Sheet Row 12): [ #45/#46 (2/O) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
     private val rightHandBanglishRows = listOf(
-        // Row 1: [ 55(%) | 54(&) | 53(@) | 52(;) | 17(u) ]
+        // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
         listOf(
-            NativeKeySpec("%", flex = 0.88f),
-            NativeKeySpec("&", flex = 1.03f),
-            NativeKeySpec("@", flex = 1.03f),
-            NativeKeySpec(";", flex = 1.03f),
-            NativeKeySpec("u", "7", "&", "-", "_", flex = 1.03f)
+            NativeKeySpec("q", "1", "`", "~", "\\", flex = 0.44f),
+            NativeKeySpec("G", "g", flex = 0.44f),
+            NativeKeySpec("-", "_", "+", "=", flex = 0.515f),
+            NativeKeySpec("H", "h", flex = 0.515f),
+            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.03f),
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.03f, keyCode = 67),
+            NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.03f)
         ),
-        // Row 2: [ 50/51 (8/9) | 49 (/) | 31/32 (!/w) | 14 (m) | 10 (n) ]
+        // Row 2 (Sheet Row 5): [ 50/51 (V/R) | 49/50 (C/V) | 31/32 (↵/E) | 14 (m) | 10 (s) ]
         listOf(
-            NativeKeySpec("8", "9", flex = 0.44f),
-            NativeKeySpec("9", flex = 0.44f),
-            NativeKeySpec("/", "?", "\\", "|", flex = 1.03f),
-            NativeKeySpec("!", "w", flex = 0.515f),
-            NativeKeySpec("w", "!", flex = 0.515f),
+            NativeKeySpec("V", "v", flex = 0.44f),
+            NativeKeySpec("R", "r", flex = 0.44f),
+            NativeKeySpec("C", "c", flex = 0.515f),
+            NativeKeySpec("V", "v", flex = 0.515f),
+            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.515f, keyCode = 66),
+            NativeKeySpec("E", "3", flex = 0.515f),
             NativeKeySpec("m", "?", "!", "«", "»", flex = 1.03f),
-            NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.03f)
+            NativeKeySpec("s", "#", "$", "%", "^", flex = 1.03f)
         ),
-        // Row 3: [ 47/48 (6/7) | 28 (?) | 13 (b) | 9 (k) | 5 (r moved up!) ]
+        // Row 3 (Sheet Row 6): [ 47/48 (N/') | 28 (?) | 13 (d) | 9 (h) | 3 (e) ]
         listOf(
-            NativeKeySpec("6", "7", flex = 0.44f),
-            NativeKeySpec("7", flex = 0.44f),
+            NativeKeySpec("N", "n", flex = 0.44f),
+            NativeKeySpec("'", "\"", "`", "~", flex = 0.44f),
             NativeKeySpec("?", "!", "¿", "¡", "@", flex = 1.03f),
-            NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.03f),
-            NativeKeySpec("k", "(", ")", "<", ">", flex = 1.03f),
-            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.03f)
+            NativeKeySpec("d", "$", "%", "&", "*", flex = 1.03f),
+            NativeKeySpec("h", "-", "_", ":", ";", flex = 1.03f),
+            NativeKeySpec("e", "3", "€", "{", "}", flex = 1.03f)
         ),
-        // Row 4: [ 41/42 (4/5) | 24 (y) | 11 (t) | 2 (a) | 7 (i moved up!) ]
+        // Row 4 (Sheet Row 7): [ 41/42 (D/z) | 24 (f) | 11 (l) | 2 (a) | 5 (i) ]
         listOf(
-            NativeKeySpec("4", "5", flex = 0.44f),
-            NativeKeySpec("5", flex = 0.44f),
-            NativeKeySpec("y", "6", "^", "=", "+", flex = 1.03f),
-            NativeKeySpec("t", "5", "%", "(", ")", flex = 1.03f),
+            NativeKeySpec("D", "d", flex = 0.44f),
+            NativeKeySpec("z", "*", "/", "\\", "|", flex = 0.44f),
+            NativeKeySpec("f", "%", "^", "_", "+", flex = 1.03f),
+            NativeKeySpec("l", ")", ":", "[", "]", flex = 1.03f),
             NativeKeySpec("a", "@", "!", "#", "$", flex = 1.03f),
             NativeKeySpec("i", "8", "*", "/", "*", flex = 1.03f)
         ),
-        // Row 5: [ 34/40 (2/3) | 21 (↵) | 19 (⇧) | 3 (⌫ Cross — Red, left of Space!) | 1 (Space — most right!) ]
+        // Row 5 (Sheet Row 8): [ 39/40 (।/M) | 21 (y) | 6 (t) | 1 (Space) | 7 (r) ]
         listOf(
-            NativeKeySpec("2", "3", flex = 0.44f),
-            NativeKeySpec("3", flex = 0.44f),
-            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.88f, keyCode = 66),
-            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 0.88f),
-            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 0.88f, keyCode = 67),
-            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.48f)
+            NativeKeySpec("।", ".", flex = 0.44f),
+            NativeKeySpec("M", "m", flex = 0.44f),
+            NativeKeySpec("y", "6", "^", "=", "+", flex = 1.03f),
+            NativeKeySpec("t", "5", "%", "(", ")", flex = 1.03f),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 1.03f),
+            NativeKeySpec("r", "4", "₹", "[", "]", flex = 1.03f)
         ),
-        // Row 6: [ 36/33 (0/1) | 18 (c) | 12 (s) | 4 (e) | 8 (h) ]
+        // Row 6 (Sheet Row 9): [ 35/36 (0/1) | 18 (.) | 12 (k) | 4 (o) | 8 (n) ]
         listOf(
-            NativeKeySpec("0", "1", flex = 0.44f),
-            NativeKeySpec("1", flex = 0.44f),
-            NativeKeySpec("c", "'", "`", "©", "¢", flex = 1.03f),
-            NativeKeySpec("s", "#", "$", "%", "^", flex = 1.03f),
-            NativeKeySpec("e", "3", "€", "{", "}", flex = 1.03f),
-            NativeKeySpec("h", "-", "_", ":", ";", flex = 1.03f)
+            NativeKeySpec("0", ")", flex = 0.44f),
+            NativeKeySpec("1", "!", flex = 0.44f),
+            NativeKeySpec(".", "?", "!", ",", "'", flex = 1.03f),
+            NativeKeySpec("k", "(", ")", "<", ">", flex = 1.03f),
+            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.03f),
+            NativeKeySpec("n", "!", "?", "¿", "¡", flex = 1.03f)
         ),
-        // Row 7: [ 37/38 (-/x) | 25 (.) | 16 (d) | 15 (l) | 6 (o below h!) ]
+        // Row 7 (Sheet Row 10): [ 37/38 (K/!) | 25 (w) | 16 (b) | 15 (u) | 19 (p) ]
         listOf(
-            NativeKeySpec("-", "x", flex = 0.44f),
-            NativeKeySpec("x", "-", flex = 0.44f),
-            NativeKeySpec(".", ">", ":", "(", ")", flex = 1.03f),
-            NativeKeySpec("d", "$", "%", "&", "*", flex = 1.03f),
-            NativeKeySpec("l", ")", ":", "[", "]", flex = 1.03f),
-            NativeKeySpec("o", "9", "(", "[", "]", flex = 1.03f)
+            NativeKeySpec("K", "k", flex = 0.44f),
+            NativeKeySpec("!", "?", flex = 0.44f),
+            NativeKeySpec("w", "2", "|", "<", ">", flex = 1.03f),
+            NativeKeySpec("b", ";", ":", "§", "¶", flex = 1.03f),
+            NativeKeySpec("u", "7", "&", "-", "_", flex = 1.03f),
+            NativeKeySpec("p", "0", ")", "{", "}", flex = 1.03f)
         ),
-        // Row 8: [ 43/44 (q/)) | 30 (') | 22 (g) | 20 (p) | 23 (j) ]
+        // Row 8 (Sheet Row 11): [ 43/44 (P/x) | 30 (S) | 22 (j) | 20 (g) | 23 (v) ]
         listOf(
-            NativeKeySpec("q", ")", flex = 0.44f),
-            NativeKeySpec(")", flex = 0.44f),
-            NativeKeySpec("'", "\"", "`", "~", flex = 1.03f),
+            NativeKeySpec("P", "p", flex = 0.44f),
+            NativeKeySpec("x", "\"", "'", "`", "~", flex = 0.44f),
+            NativeKeySpec("S", "s", flex = 1.03f),
+            NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.03f),
             NativeKeySpec("g", "&", "*", "-", "=", flex = 1.03f),
-            NativeKeySpec("p", "0", ")", "{", "}", flex = 1.03f),
-            NativeKeySpec("j", "+", "=", "\"", "'", flex = 1.03f)
+            NativeKeySpec("v", ":", ";", "•", "°", flex = 1.03f)
         ),
-        // Row 9: [ 45/46 ((/:) | 35/39 (z/") | 29 (f) | 27 (v) | 26 (,) ]
+        // Row 9 (Sheet Row 12): [ 45/46 (2/O) | 33/34 (I/B) | 29 (T) | 27 (A) | 26 (,) ]
         listOf(
-            NativeKeySpec("(", ":", flex = 0.44f),
-            NativeKeySpec(":", flex = 0.44f),
-            NativeKeySpec("z", "\"", flex = 0.515f),
-            NativeKeySpec("\"", flex = 0.515f),
-            NativeKeySpec("f", "%", "^", "_", "+", flex = 1.03f),
-            NativeKeySpec("v", ":", ";", "•", "°", flex = 1.03f),
+            NativeKeySpec("2", "@", flex = 0.44f),
+            NativeKeySpec("O", "o", flex = 0.44f),
+            NativeKeySpec("I", "i", flex = 0.515f),
+            NativeKeySpec("B", "b", flex = 0.515f),
+            NativeKeySpec("T", "t", flex = 1.03f),
+            NativeKeySpec("A", "a", flex = 1.03f),
             NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.03f)
         )
     )
@@ -922,64 +924,127 @@ class NativeKeyboardView(
         0xFFFF6D00.toInt()  // #12 (Study #10): তীব্র হলুদাভ কমলা (Intense Yellowish Orange)
     )
 
+    // Official 150-Key Final Rank Table (1..110 Verified Text Output Keys + 111..150 Action/Gesture Keys):
     private fun getBanglishRank(spec: NativeKeySpec): Int {
         return when (spec.action) {
-            NativeActionType.SPACE -> 1
-            NativeActionType.BACKSPACE -> 3
-            NativeActionType.SHIFT -> 19
-            NativeActionType.ENTER -> 21
-            NativeActionType.INPUT_CHAR -> when (spec.primary.lowercase()) {
-                "a" -> 2
-                "e" -> 4
-                "r" -> 5
-                "o" -> 6
-                "i" -> 7
-                "h" -> 8
-                "k" -> 9
-                "n" -> 10
-                "t" -> 11
-                "s" -> 12
-                "b" -> 13
-                "m" -> 14
-                "l" -> 15
-                "d" -> 16
-                "u" -> 17
-                "c" -> 18
-                "p" -> 20
-                "g" -> 22
-                "j" -> 23
-                "y" -> 24
-                "." -> 25
-                "," -> 26
-                "v" -> 27
-                "?" -> 28
-                "f" -> 29
-                "'" -> 30
-                "!" -> 31
-                "w" -> 32
-                "1" -> 33
-                "2" -> 34
-                "z" -> 35
-                "0" -> 36
-                "-" -> 37
-                "x" -> 38
-                "\"" -> 39
-                "3" -> 40
-                "4" -> 41
-                "5" -> 42
-                "q" -> 43
-                ")" -> 44
-                "(" -> 45
-                ":" -> 46
-                "6" -> 47
-                "7" -> 48
-                "/" -> 49
-                "8" -> 50
-                "9" -> 51
-                ";" -> 52
-                "@" -> 53
-                "&" -> 54
-                "%" -> 55
+            NativeActionType.SPACE -> 1       // KEY_063_SPACE
+            NativeActionType.ENTER -> 31      // KEY_064_ENTER
+            NativeActionType.BACKSPACE -> 111 // KEY_111_BACKSPACE
+            NativeActionType.SHIFT -> 112     // KEY_112_SHIFT_MODIFIER
+            NativeActionType.SWITCH_LAYOUT -> if (spec.primary == "ABC") 116 else 114
+            NativeActionType.SWITCH_IME -> 117
+            NativeActionType.ARROW_LEFT -> 123
+            NativeActionType.ARROW_RIGHT -> 124
+            NativeActionType.OPEN_SETTINGS -> 134
+            NativeActionType.INPUT_CHAR -> when (spec.primary) {
+                "a" -> 2   // KEY_001_A_LOWER
+                "e" -> 3   // KEY_005_E_LOWER
+                "o" -> 4   // KEY_015_O_LOWER
+                "i" -> 5   // KEY_009_I_LOWER
+                "t" -> 6   // KEY_020_T_LOWER
+                "r" -> 7   // KEY_018_R_LOWER
+                "n" -> 8   // KEY_014_N_LOWER
+                "h" -> 9   // KEY_008_H_LOWER
+                "s" -> 10  // KEY_019_S_LOWER
+                "l" -> 11  // KEY_012_L_LOWER
+                "k" -> 12  // KEY_011_K_LOWER
+                "d" -> 13  // KEY_004_D_LOWER
+                "m" -> 14  // KEY_013_M_LOWER
+                "u" -> 15  // KEY_021_U_LOWER
+                "b" -> 16  // KEY_002_B_LOWER
+                "c" -> 17  // KEY_003_C_LOWER
+                "." -> 18  // KEY_065_PUNCT_01
+                "p" -> 19  // KEY_016_P_LOWER
+                "g" -> 20  // KEY_007_G_LOWER
+                "y" -> 21  // KEY_025_Y_LOWER
+                "j" -> 22  // KEY_010_J_LOWER
+                "v" -> 23  // KEY_022_V_LOWER
+                "f" -> 24  // KEY_006_F_LOWER
+                "w" -> 25  // KEY_023_W_LOWER
+                "," -> 26  // KEY_066_PUNCT_02
+                "A" -> 27  // KEY_027_A_UPPER
+                "?" -> 28  // KEY_067_PUNCT_03
+                "T" -> 29  // KEY_046_T_UPPER
+                "S" -> 30  // KEY_045_S_UPPER
+                "E" -> 32  // KEY_031_E_UPPER
+                "I" -> 33  // KEY_035_I_UPPER
+                "B" -> 34  // KEY_028_B_UPPER
+                "0" -> 35  // KEY_053_DIGIT_0
+                "1" -> 36  // KEY_054_DIGIT_1
+                "K" -> 37  // KEY_037_K_UPPER
+                "!" -> 38  // KEY_068_PUNCT_04
+                "।" -> 39  // KEY_097_REGSYM_01
+                "M" -> 40  // KEY_039_M_UPPER
+                "D" -> 41  // KEY_030_D_UPPER
+                "z" -> 42  // KEY_026_Z_LOWER
+                "P" -> 43  // KEY_042_P_UPPER
+                "x" -> 44  // KEY_024_X_LOWER
+                "2" -> 45  // KEY_055_DIGIT_2
+                "O" -> 46  // KEY_041_O_UPPER
+                "N" -> 47  // KEY_040_N_UPPER
+                "'" -> 48  // KEY_069_PUNCT_05
+                "C" -> 49  // KEY_029_C_UPPER
+                "V" -> 50  // KEY_048_V_UPPER
+                "R" -> 51  // KEY_044_R_UPPER
+                "H" -> 52  // KEY_034_H_UPPER
+                "-" -> 53  // KEY_071_PUNCT_07
+                "G" -> 54  // KEY_033_G_UPPER
+                "q" -> 55  // KEY_017_Q_LOWER
+                "J" -> 56  // KEY_036_J_UPPER
+                "5" -> 57  // KEY_058_DIGIT_5
+                "3" -> 58  // KEY_056_DIGIT_3
+                "F" -> 59  // KEY_032_F_UPPER
+                "L" -> 60  // KEY_038_L_UPPER
+                "4" -> 61  // KEY_057_DIGIT_4
+                "W" -> 62  // KEY_049_W_UPPER
+                "6" -> 63  // KEY_059_DIGIT_6
+                "U" -> 64  // KEY_047_U_UPPER
+                "7" -> 65  // KEY_060_DIGIT_7
+                "9" -> 66  // KEY_062_DIGIT_9
+                ")" -> 67  // KEY_073_PUNCT_09
+                "\"" -> 68 // KEY_070_PUNCT_06
+                "8" -> 69  // KEY_061_DIGIT_8
+                "&" -> 70  // KEY_079_EXTSYM_01
+                ":" -> 71  // KEY_074_PUNCT_10
+                "(" -> 72  // KEY_072_PUNCT_08
+                "/" -> 73  // KEY_076_PUNCT_12
+                "%" -> 74  // KEY_080_EXTSYM_02
+                "Y" -> 75  // KEY_051_Y_UPPER
+                "*" -> 76  // KEY_083_EXTSYM_05
+                "+" -> 77  // KEY_081_EXTSYM_03
+                "Z" -> 78  // KEY_052_Z_UPPER
+                "…" -> 79  // KEY_107_REGSYM_11
+                "Q" -> 80  // KEY_043_Q_UPPER
+                "X" -> 81  // KEY_050_X_UPPER
+                "#" -> 82  // KEY_078_PUNCT_14
+                "=" -> 83  // KEY_082_EXTSYM_04
+                ";" -> 84  // KEY_075_PUNCT_11
+                "—" -> 85  // KEY_109_REGSYM_13
+                ">" -> 86  // KEY_092_EXTSYM_14
+                "]" -> 87  // KEY_094_EXTSYM_16
+                "[" -> 88  // KEY_093_EXTSYM_15
+                "~" -> 89  // KEY_087_EXTSYM_09
+                "|" -> 90  // KEY_090_EXTSYM_12
+                "<" -> 91  // KEY_091_EXTSYM_13
+                "•" -> 92  // KEY_110_REGSYM_14
+                "°" -> 93  // KEY_103_REGSYM_07
+                "^" -> 94  // KEY_089_EXTSYM_11
+                "$" -> 95  // KEY_086_EXTSYM_08
+                "×" -> 96  // KEY_105_REGSYM_09
+                "\\" -> 97 // KEY_085_EXTSYM_07
+                "–" -> 98  // KEY_108_REGSYM_12
+                "@" -> 99  // KEY_077_PUNCT_13
+                "}" -> 100 // KEY_096_EXTSYM_18
+                "{" -> 101 // KEY_095_EXTSYM_17
+                "÷" -> 102 // KEY_106_REGSYM_10
+                "_" -> 103 // KEY_084_EXTSYM_06
+                "`" -> 104 // KEY_088_EXTSYM_10
+                "৳" -> 105 // KEY_098_REGSYM_02
+                "₹" -> 106 // KEY_099_REGSYM_03
+                "€" -> 107 // KEY_100_REGSYM_04
+                "£" -> 108 // KEY_101_REGSYM_05
+                "¥" -> 109 // KEY_102_REGSYM_06
+                "±" -> 110 // KEY_104_REGSYM_08
                 else -> 0
             }
             else -> 0

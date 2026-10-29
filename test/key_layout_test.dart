@@ -101,42 +101,81 @@ void main() {
         '5. Both Hand',
       ]);
 
-      // 4. Right Hand Banglish Layout (9x5 ergonomic grid with 55 Banglish keys #1..#55):
+      // 4. Right Hand Banglish Layout (9x5 ergonomic grid mapped from Official Final Rank Table & Spreadsheet):
       final rhb = KeyboardLayout.rightHandBanglishLayout;
       expect(rhb.length, 9);
-      expect(rhb[0].map((k) => k.primary).toList(), ['%', '&', '@', ';', 'u']);
-      expect(rhb[1].map((k) => k.primary).toList(), ['8', '9', '/', '!', 'w', 'm', 'n']);
-      expect(rhb[2].map((k) => k.primary).toList(), ['6', '7', '?', 'b', 'k', 'r']);
-      expect(rhb[3].map((k) => k.primary).toList(), ['4', '5', 'y', 't', 'a', 'i']);
-      expect(rhb[4].map((k) => k.primary).toList(), ['2', '3', '↵', '⇧', '⌫', ' ']);
-      expect(rhb[4][3].actionType, KeyActionType.shift);
-      expect(rhb[4][4].actionType, KeyActionType.backspace); // Cross left of Space
-      expect(rhb[4][5].actionType, KeyActionType.space); // Space at most right
-      expect(rhb[4][5].flex > rhb[4][4].flex, true); // Space button occupies more horizontal width
-      expect(rhb[5].map((k) => k.primary).toList(), ['0', '1', 'c', 's', 'e', 'h']);
-      expect(rhb[6].map((k) => k.primary).toList(), ['-', 'x', '.', 'd', 'l', 'o']);
-      expect(rhb[7].map((k) => k.primary).toList(), ['q', ')', "'", 'g', 'p', 'j']);
-      expect(rhb[8].map((k) => k.primary).toList(), ['(', ':', 'z', '"', 'f', 'v', ',']);
+      expect(rhb[0].map((k) => k.primary).toList(), ['q', 'G', '-', 'H', '⇧', '⌫', 'c']);
+      expect(rhb[0][4].actionType, KeyActionType.shift);
+      expect(rhb[0][5].actionType, KeyActionType.backspace);
+      expect(rhb[1].map((k) => k.primary).toList(), ['V', 'R', 'C', 'V', '↵', 'E', 'm', 's']);
+      expect(rhb[1][4].actionType, KeyActionType.enter);
+      expect(rhb[2].map((k) => k.primary).toList(), ['N', "'", '?', 'd', 'h', 'e']);
+      expect(rhb[3].map((k) => k.primary).toList(), ['D', 'z', 'f', 'l', 'a', 'i']);
+      expect(rhb[4].map((k) => k.primary).toList(), ['।', 'M', 'y', 't', ' ', 'r']);
+      expect(rhb[4][4].actionType, KeyActionType.space);
+      expect(rhb[5].map((k) => k.primary).toList(), ['0', '1', '.', 'k', 'o', 'n']);
+      expect(rhb[6].map((k) => k.primary).toList(), ['K', '!', 'w', 'b', 'u', 'p']);
+      expect(rhb[7].map((k) => k.primary).toList(), ['P', 'x', 'S', 'j', 'g', 'v']);
+      expect(rhb[8].map((k) => k.primary).toList(), ['2', 'O', 'I', 'B', 'T', 'A', ',']);
 
-      // Verify leftmost 2 columns take the exact same horizontal width as 2, 3 (0.44 each) across Rows 2..9:
-      for (int r = 1; r < 9; r++) {
+      // Verify leftmost 2 columns take the exact same horizontal width (0.44 each) across all 9 rows:
+      for (int r = 0; r < 9; r++) {
         expect(rhb[r][0].flex, 0.44);
         expect(rhb[r][1].flex, 0.44);
       }
 
-      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, Cross (⌫) -> Red 0xFFD32F2F, #4..#12 -> Study Colors):
+      // Official Final Rank verification (1..110 Verified Keys + 111..150 Action Keys):
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 1);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'a')), 2);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'e')), 3);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'o')), 4);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'i')), 5);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 't')), 6);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'r')), 7);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'n')), 8);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'h')), 9);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 's')), 10);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'l')), 11);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'k')), 12);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'd')), 13);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'm')), 14);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'u')), 15);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'b')), 16);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'c')), 17);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '.')), 18);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'p')), 19);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'g')), 20);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'y')), 21);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'j')), 22);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'v')), 23);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'f')), 24);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'w')), 25);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: ',')), 26);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'A')), 27);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '?')), 28);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'T')), 29);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'S')), 30);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '↵', actionType: KeyActionType.enter)), 31);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '।')), 39);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: 'q')), 55);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '±')), 110);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 111);
+      expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), 112);
+
+      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, Cross (⌫) -> Red 0xFFD32F2F, #3..#12 -> Study Colors):
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 0xFF1565C0);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'a')), 0xFF607D8B);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFF00C853);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFFFBC02D);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'i')), 0xFF00ACC1);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 't')), 0xFF141414);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'r')), 0xFFF5F5F5);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'n')), 0xFF29B6F6);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'h')), 0xFF1A237E);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 's')), 0xFFC62828);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'l')), 0xFF90A4AE);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFFFF6D00);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFFD32F2F);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFFFBC02D);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'r')), 0xFF00ACC1);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFF141414);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'i')), 0xFFF5F5F5);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'h')), 0xFF29B6F6);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFF1A237E);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'n')), 0xFFC62828);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 't')), 0xFF90A4AE);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 's')), 0xFFFF6D00);
 
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows
       final symbols = KeyboardLayout.symbolLayout;
