@@ -183,9 +183,20 @@ class KeyboardLayout {
     }
   }
 
+  static bool isDigitKey(KeyModel key) {
+    if (key.actionType != KeyActionType.inputChar || key.primary.length != 1) {
+      return false;
+    }
+    final int code = key.primary.codeUnitAt(0);
+    return code >= 0x30 && code <= 0x39; // '0'..'9'
+  }
+
   static int? getResearchColorValue(KeyModel key) {
     if (key.actionType == KeyActionType.backspace) {
       return 0xFFD32F2F; // Cross (⌫) button explicitly Red as requested
+    }
+    if (isDigitKey(key)) {
+      return null; // All number row (123...0) keys share the same uniform keyBackgroundColor
     }
     final rank = getBanglishRank(key);
     if (rank <= 0) return null;

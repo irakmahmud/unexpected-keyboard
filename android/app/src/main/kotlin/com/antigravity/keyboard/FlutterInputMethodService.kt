@@ -1147,9 +1147,16 @@ class NativeKeyboardView(
         }
     }
 
+    private fun isDigitSpec(spec: NativeKeySpec): Boolean {
+        return spec.action == NativeActionType.INPUT_CHAR &&
+            spec.primary.length == 1 &&
+            spec.primary[0] in '0'..'9'
+    }
+
     private fun getResearchColorForSpec(spec: NativeKeySpec): Int? {
         if (layoutMode != "right_hand") return null
         if (spec.action == NativeActionType.BACKSPACE) return 0xFFD32F2F.toInt() // Cross (⌫) button explicitly Red
+        if (isDigitSpec(spec)) return null // All number row (123...0) keys share the same uniform keyBgColor
         if (!researchColorsEnabled) return null
         val rank = getBanglishRank(spec)
         if (rank <= 0) return null

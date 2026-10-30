@@ -178,6 +178,11 @@ void main() {
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFFFF6D00);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFFD32F2F);
 
+      // All number row keys (1..9, 0) share the exact same uniform color (null -> keyBackgroundColor):
+      for (final digitKey in KeyboardLayout.numberRow) {
+        expect(KeyboardLayout.getResearchColorValue(digitKey), isNull);
+      }
+
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows
       final symbols = KeyboardLayout.symbolLayout;
       expect(symbols.length, 7);
