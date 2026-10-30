@@ -163,8 +163,7 @@ void main() {
       expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 111);
       expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), 112);
 
-      // Research Color Mapping (#1 Spacebar -> Blue, #2 'a' -> Grey, Cross (⌫) -> Red 0xFFD32F2F, #3..#12 -> Study Colors):
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 0xFF1565C0);
+      // Research Color Mapping (Only letter keys a..z / A..Z receive research colors; all non-letter keys share uniform null -> keyBackgroundColor):
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'a')), 0xFF607D8B);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFF00C853);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFFFBC02D);
@@ -176,11 +175,17 @@ void main() {
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 's')), 0xFFC62828);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'l')), 0xFF90A4AE);
       expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFFFF6D00);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 0xFFD32F2F);
 
-      // All number row keys (1..9, 0) share the exact same uniform color (null -> keyBackgroundColor):
+      // All non-letter keys (numbers 1..0, punctuation, symbols, Space, Shift, Backspace, Enter) share the exact same uniform color (null -> keyBackgroundColor):
       for (final digitKey in KeyboardLayout.numberRow) {
         expect(KeyboardLayout.getResearchColorValue(digitKey), isNull);
+      }
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), isNull);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), isNull);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '↵', actionType: KeyActionType.enter)), isNull);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), isNull);
+      for (final punct in ['-', "'", '?', '।', '.', '!', ',']) {
+        expect(KeyboardLayout.getResearchColorValue(KeyModel(primary: punct)), isNull);
       }
 
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows

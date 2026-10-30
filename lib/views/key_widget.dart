@@ -320,10 +320,8 @@ class _KeyWidgetState extends State<KeyWidget> {
     if (key.actionType == KeyActionType.switchLayout && key.primary == 'ABC') isActiveModifier = true;
     if (key.actionType == KeyActionType.switchVersion && key.primary == 'V1') isActiveModifier = true;
 
-    final int? researchColorVal = widget.isBanglishLayout
-        ? (key.actionType == KeyActionType.backspace
-            ? 0xFFD32F2F // Cross (⌫) button explicitly Red in Banglish layout
-            : (widget.researchColorsEnabled ? KeyboardLayout.getResearchColorValue(key) : null))
+    final int? researchColorVal = (widget.isBanglishLayout && widget.researchColorsEnabled)
+        ? KeyboardLayout.getResearchColorValue(key)
         : null;
     final Color? researchBg = researchColorVal != null ? Color(researchColorVal) : null;
 

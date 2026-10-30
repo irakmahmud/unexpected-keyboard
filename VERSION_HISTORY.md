@@ -16,12 +16,12 @@ When the user asks to revert to **Version 1** or uncomment Version 1, restore th
 
 ---
 
-## 🧪 Version 2 (`2. ABCD Serially` Default) + `4. Right Hand Banglish` Official 150-Key Final Rank Layout + Top Number Row (Release: `v1.3.2`)
+## 🧪 Version 2 (`2. ABCD Serially` Default) + `4. Right Hand Banglish` Official 150-Key Final Rank Layout + Uniform Non-Letter Key Color (Release: `v1.3.3`)
 - **Single Layout Icon Button (`⊞`):** Placed in the Top Terminal Bar (`ESC  CTRL  ALT  ◀  ▼  ▲  ▶  ⊞  🌐  ↕  ⚙️`). Clicking the **`⊞` Layout Icon Button** opens a floating **Popup Menu** over the keyboard with 5 selectable layout options:
   1. **`1. QWERTY Type`** (`"qwerty"` — Version 1 alignment: `q..y`, `a..h`, `z..n`, `u i j k m o`, `, . Space p l ⌫ ↵`)
   2. **`2. ABCD Serially`** (`"abcd"` — **Default** Version 2 alignment: 5 letters per row `a..e`, `f..j`, `k..o`, `p..t`, and bottom row `u, v, w, x` + compact `y, z`)
   3. **`3. Left Hand`** (`"left_hand"` — ready for custom left-handed design)
-  4. **`4. Right Hand Banglish`** (`"right_hand"` — Top Number Row `1..9, 0` with uniform color directly below `ESC CTRL` + 9×5 Ergonomic Grid from Official 150-Key Final Rank Table with number gaps `0, 1, 2` filled by `J` #56, `F` #59, `L` #60)
+  4. **`4. Right Hand Banglish`** (`"right_hand"` — Top Number Row `1..9, 0` directly below `ESC CTRL` + 9×5 Ergonomic Grid from Official 150-Key Final Rank Table with number gaps `0, 1, 2` filled by `J` #56, `F` #59, `L` #60; all non-letter keys share the same uniform color)
   5. **`5. Both Hand`** (`"both_hand"` — ready for custom two-handed design)
 - **Row 0 (Action & Symbol Row above Number Row):** `⇧  ?123  ?  /  ,  .  Space  ⌫  ↵`
 - **Row 1 (Numbers):** `1  2  3  4  5  6  7  8  9  0`

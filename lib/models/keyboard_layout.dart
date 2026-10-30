@@ -183,20 +183,17 @@ class KeyboardLayout {
     }
   }
 
-  static bool isDigitKey(KeyModel key) {
+  static bool isLetterKey(KeyModel key) {
     if (key.actionType != KeyActionType.inputChar || key.primary.length != 1) {
       return false;
     }
     final int code = key.primary.codeUnitAt(0);
-    return code >= 0x30 && code <= 0x39; // '0'..'9'
+    return (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A); // 'A'..'Z' or 'a'..'z'
   }
 
   static int? getResearchColorValue(KeyModel key) {
-    if (key.actionType == KeyActionType.backspace) {
-      return 0xFFD32F2F; // Cross (⌫) button explicitly Red as requested
-    }
-    if (isDigitKey(key)) {
-      return null; // All number row (123...0) keys share the same uniform keyBackgroundColor
+    if (!isLetterKey(key)) {
+      return null; // All non-letter keys (numbers, punctuation, symbols, Space, Shift, Backspace, Enter) share the same uniform keyBackgroundColor
     }
     final rank = getBanglishRank(key);
     if (rank <= 0) return null;
