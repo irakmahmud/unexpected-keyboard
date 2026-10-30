@@ -183,21 +183,51 @@ class KeyboardLayout {
     }
   }
 
-  static bool isLetterKey(KeyModel key) {
+  /// 4 Distinct Category Colors for Right Hand Banglish Layout:
+  /// 1. Small Letters (a..z)        -> Blue (0xFF1565C0)
+  /// 2. Capital Letters (A..Z)      -> Green (0xFF2E7D32)
+  /// 3. Number Row (123: 1..9, 0)   -> Teal (0xFF00838F)
+  /// 4. Non-Letter Keys (Punct/Act) -> Slate Grey (0xFF455A64)
+  static const int smallLetterColor = 0xFF1565C0;
+  static const int capitalLetterColor = 0xFF2E7D32;
+  static const int numberRowColor = 0xFF00838F;
+  static const int nonLetterKeyColor = 0xFF455A64;
+
+  static bool isSmallLetterKey(KeyModel key) {
     if (key.actionType != KeyActionType.inputChar || key.primary.length != 1) {
       return false;
     }
     final int code = key.primary.codeUnitAt(0);
-    return (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A); // 'A'..'Z' or 'a'..'z'
+    return code >= 0x61 && code <= 0x7A; // 'a'..'z'
+  }
+
+  static bool isCapitalLetterKey(KeyModel key) {
+    if (key.actionType != KeyActionType.inputChar || key.primary.length != 1) {
+      return false;
+    }
+    final int code = key.primary.codeUnitAt(0);
+    return code >= 0x41 && code <= 0x5A; // 'A'..'Z'
+  }
+
+  static bool isDigitKey(KeyModel key) {
+    if (key.actionType != KeyActionType.inputChar || key.primary.length != 1) {
+      return false;
+    }
+    final int code = key.primary.codeUnitAt(0);
+    return code >= 0x30 && code <= 0x39; // '0'..'9'
   }
 
   static int? getResearchColorValue(KeyModel key) {
-    if (!isLetterKey(key)) {
-      return null; // All non-letter keys (numbers, punctuation, symbols, Space, Shift, Backspace, Enter) share the same uniform keyBackgroundColor
+    if (isSmallLetterKey(key)) {
+      return smallLetterColor;
     }
-    final rank = getBanglishRank(key);
-    if (rank <= 0) return null;
-    return researchColorPalette[(rank - 1) % researchColorPalette.length];
+    if (isCapitalLetterKey(key)) {
+      return capitalLetterColor;
+    }
+    if (isDigitKey(key)) {
+      return numberRowColor;
+    }
+    return nonLetterKeyColor;
   }
 
   /// Top Terminal Bar: ESC, CTRL, ALT, Arrow keys, and Layout Icon Button (⊞)

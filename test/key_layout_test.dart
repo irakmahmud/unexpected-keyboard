@@ -163,30 +163,34 @@ void main() {
       expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), 111);
       expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), 112);
 
-      // Research Color Mapping (Only letter keys a..z / A..Z receive research colors; all non-letter keys share uniform null -> keyBackgroundColor):
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'a')), 0xFF607D8B);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'e')), 0xFF00C853);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'o')), 0xFFFBC02D);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'i')), 0xFF00ACC1);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 't')), 0xFF141414);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'r')), 0xFFF5F5F5);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'n')), 0xFF29B6F6);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'h')), 0xFF1A237E);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 's')), 0xFFC62828);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'l')), 0xFF90A4AE);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: 'k')), 0xFFFF6D00);
-
-      // All non-letter keys (numbers 1..0, punctuation, symbols, Space, Shift, Backspace, Enter) share the exact same uniform color (null -> keyBackgroundColor):
+      // 4 Distinct Category Colors for Right Hand Banglish Layout:
+      // 1. All Small Letters (a..z) share one color (0xFF1565C0 Blue)
+      for (final ch in ['a', 'e', 'o', 'i', 't', 'r', 'n', 'h', 's', 'l', 'k', 'q', 'z', 'x']) {
+        expect(KeyboardLayout.getResearchColorValue(KeyModel(primary: ch)), KeyboardLayout.smallLetterColor);
+      }
+      // 2. All Capital Letters (A..Z) share one color (0xFF2E7D32 Green)
+      for (final ch in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V']) {
+        expect(KeyboardLayout.getResearchColorValue(KeyModel(primary: ch)), KeyboardLayout.capitalLetterColor);
+      }
+      // 3. All Number Row keys (1..9, 0) share one color (0xFF00838F Teal)
       for (final digitKey in KeyboardLayout.numberRow) {
-        expect(KeyboardLayout.getResearchColorValue(digitKey), isNull);
+        expect(KeyboardLayout.getResearchColorValue(digitKey), KeyboardLayout.numberRowColor);
       }
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), isNull);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), isNull);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '↵', actionType: KeyActionType.enter)), isNull);
-      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), isNull);
+      // 4. All other Non-Letter keys (punctuation, symbols, Space, Shift, Backspace, Enter) share one color (0xFF455A64 Slate Grey)
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: ' ', actionType: KeyActionType.space)), KeyboardLayout.nonLetterKeyColor);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⌫', actionType: KeyActionType.backspace)), KeyboardLayout.nonLetterKeyColor);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '↵', actionType: KeyActionType.enter)), KeyboardLayout.nonLetterKeyColor);
+      expect(KeyboardLayout.getResearchColorValue(const KeyModel(primary: '⇧', actionType: KeyActionType.shift)), KeyboardLayout.nonLetterKeyColor);
       for (final punct in ['-', "'", '?', '।', '.', '!', ',']) {
-        expect(KeyboardLayout.getResearchColorValue(KeyModel(primary: punct)), isNull);
+        expect(KeyboardLayout.getResearchColorValue(KeyModel(primary: punct)), KeyboardLayout.nonLetterKeyColor);
       }
+      // Verify all 4 category colors are distinct from each other:
+      expect({
+        KeyboardLayout.smallLetterColor,
+        KeyboardLayout.capitalLetterColor,
+        KeyboardLayout.numberRowColor,
+        KeyboardLayout.nonLetterKeyColor,
+      }.length, 4);
 
       // Symbol layout has 7 rows: Row 0 (symbolActionRow), Row 1 (numberRow), and 5 symbol rows
       final symbols = KeyboardLayout.symbolLayout;

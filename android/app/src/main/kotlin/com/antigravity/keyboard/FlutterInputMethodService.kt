@@ -1147,19 +1147,29 @@ class NativeKeyboardView(
         }
     }
 
-    private fun isLetterSpec(spec: NativeKeySpec): Boolean {
-        return spec.action == NativeActionType.INPUT_CHAR &&
-            spec.primary.length == 1 &&
-            (spec.primary[0] in 'a'..'z' || spec.primary[0] in 'A'..'Z')
-    }
+    // 4 Distinct Category Colors for Right Hand Banglish Layout:
+    // 1. Small Letters (a..z)        -> Blue (0xFF1565C0)
+    // 2. Capital Letters (A..Z)      -> Green (0xFF2E7D32)
+    // 3. Number Row (123: 1..9, 0)   -> Teal (0xFF00838F)
+    // 4. Non-Letter Keys (Punct/Act) -> Slate Grey (0xFF455A64)
+    private val smallLetterColor = 0xFF1565C0.toInt()
+    private val capitalLetterColor = 0xFF2E7D32.toInt()
+    private val numberRowColor = 0xFF00838F.toInt()
+    private val nonLetterKeyColor = 0xFF455A64.toInt()
 
     private fun getResearchColorForSpec(spec: NativeKeySpec): Int? {
         if (layoutMode != "right_hand") return null
-        if (!isLetterSpec(spec)) return null // All non-letter keys share the exact same uniform keyBgColor
         if (!researchColorsEnabled) return null
-        val rank = getBanglishRank(spec)
-        if (rank <= 0) return null
-        return researchColorPalette[(rank - 1) % researchColorPalette.size]
+        if (spec.action == NativeActionType.INPUT_CHAR && spec.primary.length == 1) {
+            val ch = spec.primary[0]
+            return when (ch) {
+                in 'a'..'z' -> smallLetterColor
+                in 'A'..'Z' -> capitalLetterColor
+                in '0'..'9' -> numberRowColor
+                else -> nonLetterKeyColor
+            }
+        }
+        return nonLetterKeyColor
     }
 
     private fun isBrightColor(color: Int): Boolean {
