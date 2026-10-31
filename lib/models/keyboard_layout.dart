@@ -389,8 +389,39 @@ class KeyboardLayout {
     ],
   ];
 
+  /// Right Hand Banglish Top Number Row:
+  /// Each digit (1..0) has flex 0.44 (exact same width as 'q' key in Row 1, out of 5.00 total row flex),
+  /// and the remaining space after 0 (5.00 - 10 * 0.44 = 0.60) holds the '?123' / 'ABC' symbols toggle button.
+  static List<KeyModel> get banglishNumberRow => const [
+    KeyModel(primary: '1', topLeft: '!', topRight: '~', bottomLeft: '`', bottomRight: '¡', swipeUp: '!', flex: 0.44),
+    KeyModel(primary: '2', topLeft: '@', topRight: '#', bottomLeft: '<', bottomRight: '>', swipeUp: '@', flex: 0.44),
+    KeyModel(primary: '3', topLeft: '#', topRight: '\$', bottomLeft: '{', bottomRight: '}', swipeUp: '#', flex: 0.44),
+    KeyModel(primary: '4', topLeft: '\$', topRight: '€', bottomLeft: '[', bottomRight: ']', swipeUp: '\$', flex: 0.44),
+    KeyModel(primary: '5', topLeft: '%', topRight: '‰', bottomLeft: '(', bottomRight: ')', swipeUp: '%', flex: 0.44),
+    KeyModel(primary: '6', topLeft: '^', topRight: '&', bottomLeft: '=', bottomRight: '+', swipeUp: '^', flex: 0.44),
+    KeyModel(primary: '7', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '_', swipeUp: '&', flex: 0.44),
+    KeyModel(primary: '8', topLeft: '*', topRight: '+', bottomLeft: '/', bottomRight: '\\', swipeUp: '*', flex: 0.44),
+    KeyModel(primary: '9', topLeft: '(', topRight: '[', bottomLeft: '{', bottomRight: '«', swipeUp: '(', flex: 0.44),
+    KeyModel(primary: '0', topLeft: ')', topRight: ']', bottomLeft: '}', bottomRight: '»', swipeUp: ')', flex: 0.44),
+    KeyModel(primary: '?123', actionType: KeyActionType.switchLayout, flex: 0.60),
+  ];
+
+  static List<KeyModel> get banglishSymbolNumberRow => const [
+    KeyModel(primary: '1', topLeft: '!', topRight: '~', bottomLeft: '`', bottomRight: '¡', swipeUp: '!', flex: 0.44),
+    KeyModel(primary: '2', topLeft: '@', topRight: '#', bottomLeft: '<', bottomRight: '>', swipeUp: '@', flex: 0.44),
+    KeyModel(primary: '3', topLeft: '#', topRight: '\$', bottomLeft: '{', bottomRight: '}', swipeUp: '#', flex: 0.44),
+    KeyModel(primary: '4', topLeft: '\$', topRight: '€', bottomLeft: '[', bottomRight: ']', swipeUp: '\$', flex: 0.44),
+    KeyModel(primary: '5', topLeft: '%', topRight: '‰', bottomLeft: '(', bottomRight: ')', swipeUp: '%', flex: 0.44),
+    KeyModel(primary: '6', topLeft: '^', topRight: '&', bottomLeft: '=', bottomRight: '+', swipeUp: '^', flex: 0.44),
+    KeyModel(primary: '7', topLeft: '&', topRight: '*', bottomLeft: '-', bottomRight: '_', swipeUp: '&', flex: 0.44),
+    KeyModel(primary: '8', topLeft: '*', topRight: '+', bottomLeft: '/', bottomRight: '\\', swipeUp: '*', flex: 0.44),
+    KeyModel(primary: '9', topLeft: '(', topRight: '[', bottomLeft: '{', bottomRight: '«', swipeUp: '(', flex: 0.44),
+    KeyModel(primary: '0', topLeft: ')', topRight: ']', bottomLeft: '}', bottomRight: '»', swipeUp: ')', flex: 0.44),
+    KeyModel(primary: 'ABC', actionType: KeyActionType.switchLayout, flex: 0.60),
+  ];
+
   /// RIGHT HAND BANGLISH LAYOUT (Number Row below ESC/CTRL + 9x5 Ergonomic Grid from Official Final Rank Table & Spreadsheet):
-  /// Row 0 (Directly below ESC/CTRL): Number Row [ 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ]
+  /// Row 0 (Directly below ESC/CTRL): [ 1..0 (each 0.44 flex, matching 'q') | ?123 (0.60 flex) ]
   /// Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
   /// Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
   /// Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
@@ -401,8 +432,8 @@ class KeyboardLayout {
   /// Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
   /// Row 9 (Sheet Row 12): [ #60/#46 (L/O — L in 2's gap!) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
   static List<List<KeyModel>> get rightHandBanglishLayout => [
-    // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..9, 0)
-    numberRow,
+    // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..0 at 0.44 flex each) + ?123 button (0.60 flex)
+    banglishNumberRow,
     // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
     const [
       KeyModel(primary: 'q', topLeft: '1', topRight: '`', bottomLeft: '~', bottomRight: '\\', swipeUp: '1', flex: 0.44),
@@ -487,6 +518,109 @@ class KeyboardLayout {
       KeyModel(primary: 'T', topLeft: 't', flex: 1.03),
       KeyModel(primary: 'A', topLeft: 'a', flex: 1.03),
       KeyModel(primary: ',', topLeft: '<', topRight: ';', bottomLeft: "'", bottomRight: '"', swipeUp: '<', flex: 1.03),
+    ],
+  ];
+
+  /// RIGHT HAND BANGLISH SYMBOLS LAYOUT (Activated by clicking '?123' at the end of the Number Row):
+  /// Places all 46 Symbols from the Official 150-Key Final Rank Table (#18 '.' through #110 '±')
+  /// into Positions 1..46 of the Right Hand, Split 9x5 grid in strict rank order:
+  /// - Pos 1  = '.'  (#18) | Pos 2  = ','  (#26) | Pos 3  = '?'  (#28) | Pos 4  = '!'  (#38) | Pos 5  = '।'  (#39)
+  /// - Pos 6  = "'"  (#48) | Pos 7  = '-'  (#53) | Pos 8  = ')'  (#67) | Pos 9  = '"'  (#68) | Pos 10 = '&'  (#70)
+  /// - Pos 11 = ':'  (#71) | Pos 12 = '('  (#72) | Pos 13 = '/'  (#73) | Pos 14 = '%'  (#74) | Pos 15 = '*'  (#76)
+  /// - Pos 16 = '+'  (#77) | Pos 17 = '…'  (#79) | Pos 18 = '#'  (#82) | Pos 19 = '='  (#83) | Pos 20 = ';'  (#84)
+  /// - Pos 21 = '—'  (#85) | Pos 22 = '>'  (#86) | Pos 23 = ']'  (#87) | Pos 24 = '['  (#88) | Pos 25 = '~'  (#89)
+  /// - Pos 26 = '|'  (#90) | Pos 27 = '<'  (#91) | Pos 28 = '•'  (#92) | Pos 29 = '°'  (#93) | Pos 30 = '^'  (#94)
+  /// - Pos 31/32 = '$' (#95) / '×' (#96) | Pos 33/34 = '\' (#97) / '–' (#98)
+  /// - Pos 35/36 = '@' (#99) / '}' (#100) | Pos 37/38 = '{' (#101) / '÷' (#102)
+  /// - Pos 39/40 = '_' (#103) / '`' (#104) | Pos 41/42 = '৳' (#105) / '₹' (#106)
+  /// - Pos 43/44 = '€' (#107) / '£' (#108) | Pos 45/46 = '¥' (#109) / '±' (#110)
+  static List<List<KeyModel>> get rightHandBanglishSymbolLayout => [
+    // Row 0 (Directly below ESC CTRL bar): [ 1..0 (0.44 flex each) | ABC (0.60 flex) ]
+    banglishSymbolNumberRow,
+    // Row 1 (Sheet Row 4): [ 55/54 (≤/≥) | 53/52 (≠/≈) | 112 (⇧) | 111 (⌫) | Pos #17 ('…' #79) ]
+    const [
+      KeyModel(primary: '≤', flex: 0.44),
+      KeyModel(primary: '≥', flex: 0.44),
+      KeyModel(primary: '≠', flex: 0.515),
+      KeyModel(primary: '≈', flex: 0.515),
+      KeyModel(primary: '⇧', actionType: KeyActionType.shift, flex: 1.03),
+      KeyModel(primary: '⌫', actionType: KeyActionType.backspace, flex: 1.03, androidKeyCode: 67),
+      KeyModel(primary: '…', flex: 1.03),
+    ],
+    // Row 2 (Sheet Row 5): [ 50/51 («/») | 49/50 (↵/Space) | Pos #31/#32 ($/×) | Pos #14 (%) | Pos #10 (&) ]
+    const [
+      KeyModel(primary: '«', flex: 0.44),
+      KeyModel(primary: '»', flex: 0.44),
+      KeyModel(primary: '↵', actionType: KeyActionType.enter, flex: 0.515, androidKeyCode: 66),
+      KeyModel(primary: ' ', actionType: KeyActionType.space, flex: 0.515),
+      KeyModel(primary: '\$', flex: 0.515),
+      KeyModel(primary: '×', flex: 0.515),
+      KeyModel(primary: '%', flex: 1.03),
+      KeyModel(primary: '&', flex: 1.03),
+    ],
+    // Row 3 (Sheet Row 6): [ 47/48 (©/®) | Pos #28 (•) | Pos #13 (/) | Pos #9 (") | Pos #3 (?) ]
+    const [
+      KeyModel(primary: '©', flex: 0.44),
+      KeyModel(primary: '®', flex: 0.44),
+      KeyModel(primary: '•', flex: 1.03),
+      KeyModel(primary: '/', flex: 1.03),
+      KeyModel(primary: '"', flex: 1.03),
+      KeyModel(primary: '?', flex: 1.03),
+    ],
+    // Row 4 (Sheet Row 7): [ Pos #41/#42 (৳/₹) | Pos #24 ([) | Pos #11 (:) | Pos #2 (,) | Pos #5 (।) ]
+    const [
+      KeyModel(primary: '৳', flex: 0.44),
+      KeyModel(primary: '₹', flex: 0.44),
+      KeyModel(primary: '[', flex: 1.03),
+      KeyModel(primary: ':', flex: 1.03),
+      KeyModel(primary: ',', flex: 1.03),
+      KeyModel(primary: '।', flex: 1.03),
+    ],
+    // Row 5 (Sheet Row 8): [ Pos #39/#40 (_/`) | Pos #21 (—) | Pos #6 (') | Pos #1 ('.' — Top Symbol!) | Pos #7 (-) ]
+    const [
+      KeyModel(primary: '_', flex: 0.44),
+      KeyModel(primary: '`', flex: 0.44),
+      KeyModel(primary: '—', flex: 1.03),
+      KeyModel(primary: "'", flex: 1.03),
+      KeyModel(primary: '.', flex: 1.03),
+      KeyModel(primary: '-', flex: 1.03),
+    ],
+    // Row 6 (Sheet Row 9): [ Pos #35/#36 (@/}) | Pos #18 (#) | Pos #12 (() | Pos #4 (!) | Pos #8 ()) ]
+    const [
+      KeyModel(primary: '@', flex: 0.44),
+      KeyModel(primary: '}', flex: 0.44),
+      KeyModel(primary: '#', flex: 1.03),
+      KeyModel(primary: '(', flex: 1.03),
+      KeyModel(primary: '!', flex: 1.03),
+      KeyModel(primary: ')', flex: 1.03),
+    ],
+    // Row 7 (Sheet Row 10): [ Pos #37/#38 ({/÷) | Pos #25 (~) | Pos #16 (+) | Pos #15 (*) | Pos #19 (=) ]
+    const [
+      KeyModel(primary: '{', flex: 0.44),
+      KeyModel(primary: '÷', flex: 0.44),
+      KeyModel(primary: '~', flex: 1.03),
+      KeyModel(primary: '+', flex: 1.03),
+      KeyModel(primary: '*', flex: 1.03),
+      KeyModel(primary: '=', flex: 1.03),
+    ],
+    // Row 8 (Sheet Row 11): [ Pos #43/#44 (€/£) | Pos #30 (^) | Pos #22 (>) | Pos #20 (;) | Pos #23 (]) ]
+    const [
+      KeyModel(primary: '€', flex: 0.44),
+      KeyModel(primary: '£', flex: 0.44),
+      KeyModel(primary: '^', flex: 1.03),
+      KeyModel(primary: '>', flex: 1.03),
+      KeyModel(primary: ';', flex: 1.03),
+      KeyModel(primary: ']', flex: 1.03),
+    ],
+    // Row 9 (Sheet Row 12): [ Pos #45/#46 (¥/±) | Pos #33/#34 (\ / –) | Pos #29 (°) | Pos #27 (<) | Pos #26 (|) ]
+    const [
+      KeyModel(primary: '¥', flex: 0.44),
+      KeyModel(primary: '±', flex: 0.44),
+      KeyModel(primary: '\\', flex: 0.515),
+      KeyModel(primary: '–', flex: 0.515),
+      KeyModel(primary: '°', flex: 1.03),
+      KeyModel(primary: '<', flex: 1.03),
+      KeyModel(primary: '|', flex: 1.03),
     ],
   ];
 

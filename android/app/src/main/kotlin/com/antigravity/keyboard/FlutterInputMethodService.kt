@@ -547,8 +547,25 @@ class NativeKeyboardView(
         )
     )
 
+    // Right Hand Banglish Top Number Row:
+    // Each digit (1..0) has flex = 0.44f (exact same width as 'q' key in Row 1, out of 5.00f total row flex),
+    // and the remaining space after 0 (5.00f - 10 * 0.44f = 0.60f) holds the '?123' / 'ABC' symbols toggle button.
+    private val banglishNumberRow = listOf(
+        NativeKeySpec("1", "!", "~", "`", "¡", flex = 0.44f),
+        NativeKeySpec("2", "@", "#", "<", ">", flex = 0.44f),
+        NativeKeySpec("3", "#", "$", "{", "}", flex = 0.44f),
+        NativeKeySpec("4", "$", "€", "[", "]", flex = 0.44f),
+        NativeKeySpec("5", "%", "‰", "(", ")", flex = 0.44f),
+        NativeKeySpec("6", "^", "&", "=", "+", flex = 0.44f),
+        NativeKeySpec("7", "&", "*", "-", "_", flex = 0.44f),
+        NativeKeySpec("8", "*", "+", "/", "\\", flex = 0.44f),
+        NativeKeySpec("9", "(", "[", "{", "«", flex = 0.44f),
+        NativeKeySpec("0", ")", "]", "}", "»", flex = 0.44f),
+        NativeKeySpec("?123", action = NativeActionType.SWITCH_LAYOUT, flex = 0.60f)
+    )
+
     // RIGHT HAND BANGLISH LAYOUT (Number Row below ESC/CTRL + 9x5 Ergonomic Grid from Official Final Rank Table & Spreadsheet):
-    // Row 0 (Directly below ESC/CTRL): Number Row [ 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ]
+    // Row 0 (Directly below ESC/CTRL): [ 1..0 (each 0.44f flex, matching 'q') | ?123 (0.60f flex) ]
     // Row 1 (Sheet Row 4): [ #55/#54 (q/G) | #53/#52 (-/H) | #112 (⇧) | #111 (⌫) | #17 (c) ]
     // Row 2 (Sheet Row 5): [ #50/#51 (V/R) | #49/#50 (C/V) | #31/#32 (↵/E) | #14 (m) | #10 (s) ]
     // Row 3 (Sheet Row 6): [ #47/#48 (N/') | #28 (?) | #13 (d) | #9 (h) | #3 (e) ]
@@ -559,8 +576,8 @@ class NativeKeyboardView(
     // Row 8 (Sheet Row 11): [ #43/#44 (P/x) | #30 (S) | #22 (j) | #20 (g) | #23 (v) ]
     // Row 9 (Sheet Row 12): [ #60/#46 (L/O — L in 2's gap!) | #33/#34 (I/B) | #29 (T) | #27 (A) | #26 (,) ]
     private val rightHandBanglishRows = listOf(
-        // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..9, 0)
-        numberRow,
+        // Row 0 (Directly below ESC CTRL bar): Dedicated Number Row (1..0 at 0.44f each) + ?123 button (0.60f)
+        banglishNumberRow,
         // Row 1 (Sheet Row 4): [ 55/54 (q/G) | 53/52 (-/H) | 112 (⇧) | 111 (⌫) | 17 (c) ]
         listOf(
             NativeKeySpec("q", "1", "`", "~", "\\", flex = 0.44f),
@@ -645,6 +662,99 @@ class NativeKeyboardView(
             NativeKeySpec("T", "t", flex = 1.03f),
             NativeKeySpec("A", "a", flex = 1.03f),
             NativeKeySpec(",", "<", ";", "'", "\"", flex = 1.03f)
+        )
+    )
+
+    // RIGHT HAND BANGLISH SYMBOLS LAYOUT (Activated by clicking '?123' at the end of the Number Row):
+    // Places all 46 Symbols from the Official 150-Key Final Rank Table (#18 '.' through #110 '±')
+    // into Positions 1..46 of the Right Hand, Split 9x5 grid in strict rank order:
+    private val rightHandBanglishSymbolRows = listOf(
+        // Row 0 (Directly below ESC CTRL bar): [ 1..0 (0.44f each) | ABC (0.60f) ]
+        banglishNumberRow,
+        // Row 1 (Sheet Row 4): [ 55/54 (≤/≥) | 53/52 (≠/≈) | 112 (⇧) | 111 (⌫) | Pos #17 ('…' #79) ]
+        listOf(
+            NativeKeySpec("≤", flex = 0.44f),
+            NativeKeySpec("≥", flex = 0.44f),
+            NativeKeySpec("≠", flex = 0.515f),
+            NativeKeySpec("≈", flex = 0.515f),
+            NativeKeySpec("⇧", action = NativeActionType.SHIFT, flex = 1.03f),
+            NativeKeySpec("⌫", action = NativeActionType.BACKSPACE, flex = 1.03f, keyCode = 67),
+            NativeKeySpec("…", flex = 1.03f)
+        ),
+        // Row 2 (Sheet Row 5): [ 50/51 («/») | 49/50 (↵/Space) | Pos #31/#32 ($/×) | Pos #14 (%) | Pos #10 (&) ]
+        listOf(
+            NativeKeySpec("«", flex = 0.44f),
+            NativeKeySpec("»", flex = 0.44f),
+            NativeKeySpec("↵", action = NativeActionType.ENTER, flex = 0.515f, keyCode = 66),
+            NativeKeySpec(" ", topRight = "🌐", action = NativeActionType.SPACE, flex = 0.515f),
+            NativeKeySpec("$", flex = 0.515f),
+            NativeKeySpec("×", flex = 0.515f),
+            NativeKeySpec("%", flex = 1.03f),
+            NativeKeySpec("&", flex = 1.03f)
+        ),
+        // Row 3 (Sheet Row 6): [ 47/48 (©/®) | Pos #28 (•) | Pos #13 (/) | Pos #9 (") | Pos #3 (?) ]
+        listOf(
+            NativeKeySpec("©", flex = 0.44f),
+            NativeKeySpec("®", flex = 0.44f),
+            NativeKeySpec("•", flex = 1.03f),
+            NativeKeySpec("/", flex = 1.03f),
+            NativeKeySpec("\"", flex = 1.03f),
+            NativeKeySpec("?", flex = 1.03f)
+        ),
+        // Row 4 (Sheet Row 7): [ Pos #41/#42 (৳/₹) | Pos #24 ([) | Pos #11 (:) | Pos #2 (,) | Pos #5 (।) ]
+        listOf(
+            NativeKeySpec("৳", flex = 0.44f),
+            NativeKeySpec("₹", flex = 0.44f),
+            NativeKeySpec("[", flex = 1.03f),
+            NativeKeySpec(":", flex = 1.03f),
+            NativeKeySpec(",", flex = 1.03f),
+            NativeKeySpec("।", flex = 1.03f)
+        ),
+        // Row 5 (Sheet Row 8): [ Pos #39/#40 (_/`) | Pos #21 (—) | Pos #6 (') | Pos #1 ('.' — Top Symbol!) | Pos #7 (-) ]
+        listOf(
+            NativeKeySpec("_", flex = 0.44f),
+            NativeKeySpec("`", flex = 0.44f),
+            NativeKeySpec("—", flex = 1.03f),
+            NativeKeySpec("'", flex = 1.03f),
+            NativeKeySpec(".", flex = 1.03f),
+            NativeKeySpec("-", flex = 1.03f)
+        ),
+        // Row 6 (Sheet Row 9): [ Pos #35/#36 (@/}) | Pos #18 (#) | Pos #12 (() | Pos #4 (!) | Pos #8 ()) ]
+        listOf(
+            NativeKeySpec("@", flex = 0.44f),
+            NativeKeySpec("}", flex = 0.44f),
+            NativeKeySpec("#", flex = 1.03f),
+            NativeKeySpec("(", flex = 1.03f),
+            NativeKeySpec("!", flex = 1.03f),
+            NativeKeySpec(")", flex = 1.03f)
+        ),
+        // Row 7 (Sheet Row 10): [ Pos #37/#38 ({/÷) | Pos #25 (~) | Pos #16 (+) | Pos #15 (*) | Pos #19 (=) ]
+        listOf(
+            NativeKeySpec("{", flex = 0.44f),
+            NativeKeySpec("÷", flex = 0.44f),
+            NativeKeySpec("~", flex = 1.03f),
+            NativeKeySpec("+", flex = 1.03f),
+            NativeKeySpec("*", flex = 1.03f),
+            NativeKeySpec("=", flex = 1.03f)
+        ),
+        // Row 8 (Sheet Row 11): [ Pos #43/#44 (€/£) | Pos #30 (^) | Pos #22 (>) | Pos #20 (;) | Pos #23 (]) ]
+        listOf(
+            NativeKeySpec("€", flex = 0.44f),
+            NativeKeySpec("£", flex = 0.44f),
+            NativeKeySpec("^", flex = 1.03f),
+            NativeKeySpec(">", flex = 1.03f),
+            NativeKeySpec(";", flex = 1.03f),
+            NativeKeySpec("]", flex = 1.03f)
+        ),
+        // Row 9 (Sheet Row 12): [ Pos #45/#46 (¥/±) | Pos #33/#34 (\ / –) | Pos #29 (°) | Pos #27 (<) | Pos #26 (|) ]
+        listOf(
+            NativeKeySpec("¥", flex = 0.44f),
+            NativeKeySpec("±", flex = 0.44f),
+            NativeKeySpec("\\", flex = 0.515f),
+            NativeKeySpec("–", flex = 0.515f),
+            NativeKeySpec("°", flex = 1.03f),
+            NativeKeySpec("<", flex = 1.03f),
+            NativeKeySpec("|", flex = 1.03f)
         )
     )
 
@@ -827,8 +937,9 @@ class NativeKeyboardView(
         currentTop += modH
         val bodyTop = currentTop
 
-        // Main Keyboard Rows (7 rows for QWERTY/ABCD/Symbols, or 9 rows for Right Hand Banglish)
+        // Main Keyboard Rows (7 rows for QWERTY/ABCD/Symbols, or 10 rows for Right Hand Banglish & its Ranked Symbols Layer)
         val rows = when {
+            isSymbolLayout && layoutMode == "right_hand" -> rightHandBanglishSymbolRows
             isSymbolLayout -> symbolRows
             layoutMode == "qwerty" -> version1Rows
             layoutMode == "right_hand" -> rightHandBanglishRows

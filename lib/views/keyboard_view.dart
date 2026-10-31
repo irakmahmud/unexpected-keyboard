@@ -594,7 +594,9 @@ class _KeyboardViewState extends State<KeyboardView> {
             : (_currentLayoutMode == 'right_hand'
                 ? KeyboardLayout.rightHandBanglishLayout
                 : KeyboardLayout.version2Layout))
-        : KeyboardLayout.symbolLayout;
+        : (_currentLayoutMode == 'right_hand'
+            ? KeyboardLayout.rightHandBanglishSymbolLayout
+            : KeyboardLayout.symbolLayout);
     final currentKeyHeight = _effectiveKeyHeight;
     final effectiveRowHeight = currentKeyHeight * (7.0 / rows.length);
 

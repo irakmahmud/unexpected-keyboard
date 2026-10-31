@@ -101,10 +101,13 @@ void main() {
         '5. Both Hand',
       ]);
 
-      // 4. Right Hand Banglish Layout (Row 0 Number Row below ESC/CTRL + 9x5 ergonomic grid with number gaps filled by J, F, L):
+      // 4. Right Hand Banglish Layout (Row 0 Number Row below ESC/CTRL + ?123 button + 9x5 ergonomic grid with number gaps filled by J, F, L):
       final rhb = KeyboardLayout.rightHandBanglishLayout;
       expect(rhb.length, 10);
-      expect(rhb[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+      expect(rhb[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '?123']);
+      expect(rhb[0].sublist(0, 10).every((k) => k.flex == 0.44), true); // Every digit has exact same width (0.44) as 'q'
+      expect(rhb[0][10].flex, 0.60); // Remaining space after 0 (5.00 - 4.40 = 0.60) holds ?123 button
+      expect(rhb[0][10].actionType, KeyActionType.switchLayout);
       expect(rhb[1].map((k) => k.primary).toList(), ['q', 'G', '-', 'H', '⇧', '⌫', 'c']);
       expect(rhb[1][4].actionType, KeyActionType.shift);
       expect(rhb[1][5].actionType, KeyActionType.backspace);
@@ -124,6 +127,18 @@ void main() {
         expect(rhb[r][0].flex, 0.44);
         expect(rhb[r][1].flex, 0.44);
       }
+
+      // Verify Right Hand Banglish Symbols Layout (150-Key Ranked Symbols mapped to Positions 1..46, with '.' at Position 1):
+      final rhbSym = KeyboardLayout.rightHandBanglishSymbolLayout;
+      expect(rhbSym.length, 10);
+      expect(rhbSym[0].map((k) => k.primary).toList(), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'ABC']);
+      expect(rhbSym[5][4].primary, '.'); // Position #1 (Row 5 Col D) has #1 Top Symbol '.' (Rank #18)
+      expect(rhbSym[4][4].primary, ','); // Position #2 (Row 4 Col D) has #2 Symbol ',' (Rank #26)
+      expect(rhbSym[3][5].primary, '?'); // Position #3 (Row 3 Col E) has #3 Symbol '?' (Rank #28)
+      expect(rhbSym[6][4].primary, '!'); // Position #4 (Row 6 Col D) has #4 Symbol '!' (Rank #38)
+      expect(rhbSym[4][5].primary, '।'); // Position #5 (Row 4 Col E) has #5 Symbol '।' (Rank #39)
+      expect(rhbSym[9][0].primary, '¥'); // Position #45 (Row 9 Col A left) has #45 Symbol '¥' (Rank #109)
+      expect(rhbSym[9][1].primary, '±'); // Position #46 (Row 9 Col A right) has #46 Symbol '±' (Rank #110)
 
       // Official Final Rank verification (1..110 Verified Keys + 111..150 Action Keys):
       expect(KeyboardLayout.getBanglishRank(const KeyModel(primary: ' ', actionType: KeyActionType.space)), 1);
