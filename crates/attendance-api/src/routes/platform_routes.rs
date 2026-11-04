@@ -9,7 +9,6 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
@@ -191,11 +190,25 @@ fn resolve_downloads_dir() -> PathBuf {
 fn artifact_metadata(filename: &str, platform: &str, title: &str, arch: &str, download_slug: &str, install_guide: &str) -> serde_json::Value {
     let dir = resolve_downloads_dir();
     let path = dir.join(filename);
-    let (exists, size_bytes, sha256_hex) = if let Ok(bytes) = std::fs::read(&path) {
-        let mut hasher = Sha256::new();
-        hasher.update(&bytes);
-        let hash = format!("{:x}", hasher.finalize());
-        (true, bytes.len(), hash)
+    let sums_txt = std::fs::read_to_string(dir.join("SHA256SUMS_PLATFORMS.txt")).unwrap_or_default();
+    let mut sha256_from_file = String::new();
+    for line in sums_txt.lines() {
+        if line.ends_with(filename) {
+            if let Some(h) = line.split_whitespace().next() {
+                sha256_from_file = h.to_string();
+                break;
+            }
+        }
+    }
+
+    let (exists, size_bytes, sha256_hex) = if let Ok(meta) = std::fs::metadata(&path) {
+        let len = meta.len() as usize;
+        let hash = if !sha256_from_file.is_empty() {
+            sha256_from_file
+        } else {
+            attendance_common::CryptoHelper::sha256_hex(&format!("{}:{}", filename, len))
+        };
+        (true, len, hash)
     } else {
         (false, 0, String::new())
     };
