@@ -353,6 +353,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -413,6 +414,12 @@ public class MainActivity extends Activity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        startHardwareGpsTracking();
+    }
+
     private void startHardwareGpsTracking() {
         try {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -429,10 +436,22 @@ public class MainActivity extends Activity {
                 }
                 @Override public void onStatusChanged(String p, int s, Bundle e) {}
                 @Override public void onProviderEnabled(String p) {}
-                @Override public void onProviderDisabled(String p) {}
+                @Override public void onProviderDisabled(String p) {
+                    boolean anyOn = false;
+                    try {
+                        anyOn = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                             || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                    } catch (Exception ignored) {}
+                    if (!anyOn) {
+                        hasFix = false;
+                        lastLat = 0.0;
+                        lastLon = 0.0;
+                    }
+                }
             };
+            Looper mainLooper = Looper.getMainLooper();
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 1.0f, listener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 1.0f, listener, mainLooper);
                 Location last = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (last != null) {
                     lastLat = last.getLatitude();
@@ -442,7 +461,7 @@ public class MainActivity extends Activity {
                 }
             }
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 1.0f, listener);
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 1.0f, listener, mainLooper);
                 if (!hasFix) {
                     Location lastNet = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                     if (lastNet != null) {
@@ -468,6 +487,12 @@ public class MainActivity extends Activity {
                               || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
                 }
             } catch (Exception ignored) {}
+            if (!gpsEnabled) {
+                hasFix = false;
+                lastLat = 0.0;
+                lastLon = 0.0;
+                lastAcc = 0.0f;
+            }
             return "{\"has_fix\":" + hasFix +
                    ",\"gps_enabled\":" + gpsEnabled +
                    ",\"latitude\":" + lastLat +
@@ -484,11 +509,17 @@ public class MainActivity extends Activity {
                     if (info != null) {
                         String ssid = info.getSSID();
                         if (ssid != null) {
-                            ssid = ssid.replace("\"", "");
+                            ssid = ssid.replace("\"", "").replace("\\", "").trim();
+                            if (ssid.equalsIgnoreCase("<unknown ssid>")) {
+                                ssid = "";
+                            }
                         } else {
                             ssid = "";
                         }
-                        String bssid = info.getBSSID() != null ? info.getBSSID() : "";
+                        String bssid = info.getBSSID() != null ? info.getBSSID().trim() : "";
+                        if (bssid.equals("02:00:00:00:00:00")) {
+                            bssid = "";
+                        }
                         return "{\"wifi_enabled\":true,\"ssid\":\"" + ssid + "\",\"bssid\":\"" + bssid + "\"}";
                     }
                 }

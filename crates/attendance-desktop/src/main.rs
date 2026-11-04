@@ -152,16 +152,16 @@ pub fn process_local_desktop_punch(
     }
     let user_opt = store.users.iter().find(|u| u.username == uname);
     if let Some(u) = user_opt {
-        if let Some(p) = pin {
-            if !p.trim().is_empty() && sha256_hex(p.trim()) != u.pin_hash && p.trim() != "1234" && p.trim() != "admin123" {
-                return Err("Invalid PIN or password".to_string());
-            }
+        let provided_pin = pin.map(|s| s.trim()).unwrap_or("");
+        if provided_pin.is_empty() || sha256_hex(provided_pin) != u.pin_hash {
+            return Err("Invalid PIN or password".to_string());
         }
     } else {
+        let new_pin = pin.map(|s| s.trim()).filter(|s| !s.is_empty()).unwrap_or("1234");
         store.users.push(LocalDesktopUser {
             username: uname.clone(),
             designation: "Desktop User".to_string(),
-            pin_hash: sha256_hex(pin.unwrap_or("1234")),
+            pin_hash: sha256_hex(new_pin),
             created_at: dhaka_datetime_str(),
         });
     }
@@ -220,13 +220,54 @@ fn launch_native_desktop_window(url: &str) {
     }
 }
 
+fn read_full_http_request(stream: &mut TcpStream) -> Option<String> {
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(1500)));
+    let mut data = Vec::with_capacity(4096);
+    let mut chunk = [0u8; 4096];
+    let mut header_end_idx = None;
+    let mut expected_content_len = 0usize;
+
+    for _ in 0..16 {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+                data.extend_from_slice(&chunk[..n]);
+                if header_end_idx.is_none() {
+                    if let Some(pos) = data.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let hdr_end = pos + 4;
+                        header_end_idx = Some(hdr_end);
+                        let hdr_str = String::from_utf8_lossy(&data[..pos]);
+                        for line in hdr_str.lines() {
+                            if let Some((k, v)) = line.split_once(':') {
+                                if k.trim().eq_ignore_ascii_case("content-length") {
+                                    expected_content_len = v.trim().parse::<usize>().unwrap_or(0);
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(hdr_end) = header_end_idx {
+                    if data.len() >= hdr_end + expected_content_len {
+                        break;
+                    }
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    if data.is_empty() {
+        None
+    } else {
+        Some(String::from_utf8_lossy(&data).into_owned())
+    }
+}
+
 fn handle_http_client(mut stream: TcpStream, store: Arc<Mutex<LocalDesktopStore>>) {
-    let mut buf = [0u8; 16384];
-    let n = match stream.read(&mut buf) {
-        Ok(n) if n > 0 => n,
-        _ => return,
+    let req_str = match read_full_http_request(&mut stream) {
+        Some(s) => s,
+        None => return,
     };
-    let req_str = String::from_utf8_lossy(&buf[..n]);
     let first_line = req_str.lines().next().unwrap_or("");
     let parts: Vec<&str> = first_line.split_whitespace().collect();
     if parts.len() < 2 {
@@ -532,5 +573,25 @@ mod tests {
             .expect("Desktop punch OUT should succeed");
         assert!(out_rec.out_time.is_some());
         assert_eq!(out_rec.status, "CHECKED_OUT");
+    }
+
+    #[test]
+    fn test_desktop_punch_rejects_empty_or_wrong_pin() {
+        let mut store = LocalDesktopStore::default();
+        assert!(
+            process_local_desktop_punch(&mut store, "ADMIN", None).is_err(),
+            "Empty None PIN must be rejected"
+        );
+        assert!(
+            process_local_desktop_punch(&mut store, "ADMIN", Some("")).is_err(),
+            "Blank PIN must be rejected"
+        );
+        assert!(
+            process_local_desktop_punch(&mut store, "ADMIN", Some("1234")).is_err(),
+            "Wrong PIN for ADMIN must be rejected"
+        );
+        let ok_admin = process_local_desktop_punch(&mut store, "ADMIN", Some("admin123"))
+            .expect("Correct PIN for ADMIN must succeed");
+        assert_eq!(ok_admin.username, "ADMIN");
     }
 }

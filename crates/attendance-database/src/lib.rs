@@ -915,7 +915,12 @@ impl DbPool {
             .wifi_ssid
             .as_ref()
             .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty());
+            .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("<unknown ssid>"));
+        let connected_bssid = req
+            .wifi_bssid
+            .as_ref()
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty() && s != "02:00:00:00:00:00");
 
         // 1. MANDATORY LOCATION CHECK (Non-negotiable: Mobile App NEVER works without valid GPS location)
         let (location_verified, distance_meters, loc_reason) = match (req.latitude, req.longitude) {
@@ -936,7 +941,36 @@ impl DbPool {
                 let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
                 let dist = r * c;
 
-                if dist <= policy.allowed_radius_meters {
+                if let Some(acc) = req.gps_accuracy_meters {
+                    if !acc.is_finite() || acc < 0.0 || acc > policy.max_gps_accuracy_meters {
+                        (
+                            false,
+                            Some(dist),
+                            format!(
+                                "GPS লোকেশন সিগন্যালের নির্ভুলতা কম ({:.1}m > অনুমোদিত সর্বোচ্চ {:.0}m)! অনুগ্রহ করে খোলা স্থানে বা সঠিক GPS চালু করে আবার চেষ্টা করুন।",
+                                acc, policy.max_gps_accuracy_meters
+                            ),
+                        )
+                    } else if dist <= policy.allowed_radius_meters {
+                        (
+                            true,
+                            Some(dist),
+                            format!(
+                                "Location verified inside '{}' ({:.1}m <= {:.0}m radius)",
+                                policy.location_name, dist, policy.allowed_radius_meters
+                            ),
+                        )
+                    } else {
+                        (
+                            false,
+                            Some(dist),
+                            format!(
+                                "লোকেশন সীমার বাইরে! আপনি নির্ধারিত স্থান ({}) থেকে {:.1} মিটার দূরে আছেন (অনুমোদিত সীমা: {:.0} মিটার)। নির্ধারিত লোকেশনে আসলে মোবাইল অ্যাপ কাজ করবে।",
+                                policy.location_name, dist, policy.allowed_radius_meters
+                            ),
+                        )
+                    }
+                } else if dist <= policy.allowed_radius_meters {
                     (
                         true,
                         Some(dist),
@@ -976,26 +1010,63 @@ impl DbPool {
                 .map(|s| s.trim().to_lowercase())
                 .filter(|s| !s.is_empty())
                 .collect();
+            let allowed_bssids: Vec<String> = policy
+                .allowed_wifi_bssids
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
 
-            match &connected_ssid {
-                Some(ssid) if allowed_list.is_empty() || allowed_list.contains(&ssid.to_lowercase()) => (
-                    true,
-                    format!("Connected to authorized Wi-Fi '{}'", ssid),
-                ),
-                Some(ssid) => (
+            let bssid_ok = if allowed_bssids.is_empty() {
+                true
+            } else if let Some(ref b) = connected_bssid {
+                allowed_bssids.contains(b)
+            } else {
+                false
+            };
+
+            if allowed_list.is_empty() && allowed_bssids.is_empty() {
+                (
+                    false,
+                    "Wi-Fi অপশন চালু আছে কিন্তু কোনো অনুমোদিত Wi-Fi SSID কনফিগার করা হয়নি!".to_string(),
+                )
+            } else if !bssid_ok {
+                (
                     false,
                     format!(
-                        "নির্ধারিত Wi-Fi সংযোগ মেলেনি! বর্তমান Wi-Fi '{}' অনুমোদিত তালিকায় ({}) নেই।",
-                        ssid, policy.allowed_wifi_ssids
+                        "নির্ধারিত Wi-Fi রাউটার BSSID মেলেনি! অনুমোদিত BSSID: {}",
+                        policy.allowed_wifi_bssids
                     ),
-                ),
-                None => (
-                    false,
-                    format!(
-                        "এই অ্যাপ ব্যবহারের জন্য নির্ধারিত Wi-Fi ({}) এর সাথে সংযুক্ত থাকা আবশ্যক!",
-                        policy.allowed_wifi_ssids
+                )
+            } else {
+                match &connected_ssid {
+                    Some(ssid) if !allowed_list.is_empty() && allowed_list.contains(&ssid.to_lowercase()) => (
+                        true,
+                        format!("Connected to authorized Wi-Fi '{}'", ssid),
                     ),
-                ),
+                    Some(ssid) if allowed_list.is_empty() && bssid_ok => (
+                        true,
+                        format!("Connected to authorized Wi-Fi BSSID (SSID '{}')", ssid),
+                    ),
+                    Some(ssid) => (
+                        false,
+                        format!(
+                            "নির্ধারিত Wi-Fi সংযোগ মেলেনি! বর্তমান Wi-Fi '{}' অনুমোদিত তালিকায় ({}) নেই।",
+                            ssid, policy.allowed_wifi_ssids
+                        ),
+                    ),
+                    None if allowed_list.is_empty() && bssid_ok => (
+                        true,
+                        "Connected to authorized Wi-Fi BSSID".to_string(),
+                    ),
+                    None => (
+                        false,
+                        format!(
+                            "এই অ্যাপ ব্যবহারের জন্য নির্ধারিত Wi-Fi ({}) এর সাথে সংযুক্ত থাকা আবশ্যক!",
+                            policy.allowed_wifi_ssids
+                        ),
+                    ),
+                }
             }
         };
 
@@ -1113,6 +1184,55 @@ impl DbPool {
             "next_cursor_username": next_cursor,
             "execution_time_us": elapsed_us,
             "users": users
+        }))
+    }
+
+    pub fn register_mobile_sharded_user(
+        &self,
+        company_id: &str,
+        username: &str,
+        designation: &str,
+        password: &str,
+    ) -> Result<serde_json::Value> {
+        let clean_uname = username
+            .trim()
+            .to_uppercase()
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')
+            .collect::<String>();
+        if clean_uname.is_empty() {
+            return Err(AppError::Validation("Username is required".to_string()));
+        }
+        let shard = schema::compute_shard_bucket(&clean_uname);
+        let cu_uuid = format!("CU_{}", clean_uname);
+        let u_uuid = format!("U_{}", clean_uname);
+        let raw_pw = if password.trim().is_empty() { "1234" } else { password.trim() };
+        let pw_hash = attendance_common::CryptoHelper::sha256_hex(raw_pw);
+        let desig = if designation.trim().is_empty() { "Staff" } else { designation.trim() };
+        let now = TimeHelper::now_utc_sqlite_string();
+
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO users (
+                company_user_uuid, company_name, company_uuid, username, user_uuid,
+                user_designation, register_with_camera, password, role, status, shard_bucket, created_at, last_updated
+            ) VALUES (?1, 'Smart Attendance HQ', ?2, ?3, ?4, ?5, 'N', ?6, 'Employee', 'Active', ?7, ?8, ?8)
+            ON CONFLICT(username) DO UPDATE SET
+                user_designation = excluded.user_designation,
+                password = excluded.password,
+                shard_bucket = excluded.shard_bucket,
+                last_updated = excluded.last_updated",
+            rusqlite::params![cu_uuid, company_id, clean_uname, u_uuid, desig, pw_hash, shard, now],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(serde_json::json!({
+            "success": true,
+            "username": clean_uname,
+            "company_user_uuid": cu_uuid,
+            "user_designation": desig,
+            "shard_bucket": shard,
+            "message": format!("User '{}' registered on Shard #{} from Mobile Admin", clean_uname, shard)
         }))
     }
 

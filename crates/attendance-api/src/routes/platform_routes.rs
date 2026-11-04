@@ -15,6 +15,7 @@ use std::path::PathBuf;
 pub struct MobileProtectedCursorQuery {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub gps_accuracy_meters: Option<f64>,
     pub wifi_ssid: Option<String>,
     pub wifi_bssid: Option<String>,
     pub shard_bucket: Option<i32>,
@@ -27,6 +28,7 @@ pub struct MobileProtectedCursorQuery {
 pub struct MobileProtectedAccessQuery {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub gps_accuracy_meters: Option<f64>,
     pub wifi_ssid: Option<String>,
     pub wifi_bssid: Option<String>,
 }
@@ -37,6 +39,7 @@ pub fn mobile_router() -> Router<AppState> {
         .route("/verify-access", post(verify_mobile_access_status))
         .route("/enforce-access", post(enforce_mobile_access_strict))
         .route("/users-cursor", get(get_mobile_sharded_users_cursor))
+        .route("/register-user", post(handle_mobile_register_user))
         .route("/bulk-provision", post(handle_mobile_bulk_provision))
         .route("/scale-dashboard", get(get_mobile_scale_dashboard))
 }
@@ -90,7 +93,7 @@ async fn get_mobile_sharded_users_cursor(
     let access = state.db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
         latitude: q.latitude,
         longitude: q.longitude,
-        gps_accuracy_meters: None,
+        gps_accuracy_meters: q.gps_accuracy_meters,
         wifi_ssid: q.wifi_ssid.clone(),
         wifi_bssid: q.wifi_bssid.clone(),
         device_id: Some("MOBILE_ADMIN_CONSOLE".to_string()),
@@ -113,6 +116,38 @@ async fn get_mobile_sharded_users_cursor(
     Ok(Json(data))
 }
 
+async fn handle_mobile_register_user(
+    State(state): State<AppState>,
+    Json(payload): Json<MobileUserRegisterRequest>,
+) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    // Strictly enforce mandatory GPS Location (and Wi-Fi if enabled)
+    let access = state.db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        gps_accuracy_meters: payload.gps_accuracy_meters,
+        wifi_ssid: payload.wifi_ssid.clone(),
+        wifi_bssid: payload.wifi_bssid.clone(),
+        device_id: Some("MOBILE_USER_REGISTRAR".to_string()),
+    })?;
+
+    let company_id = payload.company_id.as_deref().unwrap_or("HQ_001");
+    let desig = payload.user_designation.as_deref().unwrap_or("Staff");
+    let pw = payload.password.as_deref().unwrap_or("1234");
+
+    let mut res = state
+        .db
+        .register_mobile_sharded_user(company_id, &payload.username, desig, pw)?;
+
+    if let Some(obj) = res.as_object_mut() {
+        obj.insert(
+            "mobile_security_verification".to_string(),
+            serde_json::to_value(access).unwrap_or(serde_json::Value::Null),
+        );
+    }
+
+    Ok(Json(res))
+}
+
 async fn handle_mobile_bulk_provision(
     State(state): State<AppState>,
     Json(payload): Json<MobileBulkProvisionRequest>,
@@ -121,7 +156,7 @@ async fn handle_mobile_bulk_provision(
     let access = state.db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
         latitude: payload.latitude,
         longitude: payload.longitude,
-        gps_accuracy_meters: None,
+        gps_accuracy_meters: payload.gps_accuracy_meters,
         wifi_ssid: payload.wifi_ssid.clone(),
         wifi_bssid: payload.wifi_bssid.clone(),
         device_id: Some("MOBILE_BULK_PROVISIONER".to_string()),
@@ -155,7 +190,7 @@ async fn get_mobile_scale_dashboard(
     let access = state.db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
         latitude: q.latitude,
         longitude: q.longitude,
-        gps_accuracy_meters: None,
+        gps_accuracy_meters: q.gps_accuracy_meters,
         wifi_ssid: q.wifi_ssid.clone(),
         wifi_bssid: q.wifi_bssid.clone(),
         device_id: Some("MOBILE_SCALE_DASHBOARD".to_string()),

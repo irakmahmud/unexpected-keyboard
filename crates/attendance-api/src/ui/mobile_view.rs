@@ -186,7 +186,7 @@ pub fn render_mobile_app_html() -> String {
             <!-- Wi-Fi SSID Input when Wi-Fi option is active or user wants to specify connected Wi-Fi -->
             <div class="form-group" style="text-align:left; margin-bottom:12px;">
                 <label class="form-label">📶 সংযুক্ত Wi-Fi এর নাম (Connected Wi-Fi SSID — অপশনাল/পলিসি অনুযায়ী):</label>
-                <input type="text" id="gate-wifi-input" class="form-input" placeholder="যেমন: Home_WiFi বা Office_WiFi" value="Home_WiFi">
+                <input type="text" id="gate-wifi-input" class="form-input" placeholder="যেমন: Home_WiFi বা Office_WiFi" value="">
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 9px;">
@@ -428,11 +428,13 @@ pub fn render_mobile_app_html() -> String {
             lat: null,
             lon: null,
             accuracy: null,
-            wifiSsid: "Home_WiFi",
+            wifiSsid: "",
+            wifiBssid: "",
             verified: false,
             policy: null,
             nextCursorUsername: "",
-            stream: null
+            stream: null,
+            watchId: null
         };
 
         // Populate 64 shards dropdown
@@ -452,7 +454,7 @@ pub fn render_mobile_app_html() -> String {
                 document.getElementById('gate-target-name').textContent = p.location_name;
                 document.getElementById('gate-target-coords').textContent = `${Number(p.target_latitude).toFixed(4)}, ${Number(p.target_longitude).toFixed(4)} (${p.allowed_radius_meters}m)`;
                 document.getElementById('gate-wifi-status').textContent = p.wifi_option_enabled
-                    ? `চালু আছে (${p.allowed_wifi_ssids})`
+                    ? `বাধ্যতামূলক (${p.allowed_wifi_ssids})`
                     : `ঐচ্ছিক (${p.allowed_wifi_ssids})`;
 
                 document.getElementById('pol-loc-name').value = p.location_name || '';
@@ -461,13 +463,6 @@ pub fn render_mobile_app_html() -> String {
                 document.getElementById('pol-radius').value = p.allowed_radius_meters;
                 document.getElementById('pol-wifi-enabled').checked = !!p.wifi_option_enabled;
                 document.getElementById('pol-wifi-ssids').value = p.allowed_wifi_ssids || '';
-
-                if (p.allowed_wifi_ssids) {
-                    const firstSsid = p.allowed_wifi_ssids.split(',')[0].trim();
-                    if (firstSsid && !document.getElementById('gate-wifi-input').value) {
-                        document.getElementById('gate-wifi-input').value = firstSsid;
-                    }
-                }
             } catch (e) {
                 console.error('Failed to load mobile policy:', e);
             }
@@ -477,16 +472,26 @@ pub fn render_mobile_app_html() -> String {
             if (window.AndroidNativeBridge) {
                 try {
                     const wifiJson = JSON.parse(window.AndroidNativeBridge.getWifiInfoJson());
-                    if (wifiJson && wifiJson.ssid) {
-                        document.getElementById('gate-wifi-input').value = wifiJson.ssid;
-                        mobileState.wifiSsid = wifiJson.ssid;
-                    }
+                    const rawSsid = (wifiJson && wifiJson.ssid) ? String(wifiJson.ssid).trim() : "";
+                    const cleanSsid = (rawSsid.toLowerCase() === "<unknown ssid>") ? "" : rawSsid;
+                    const rawBssid = (wifiJson && wifiJson.bssid) ? String(wifiJson.bssid).trim() : "";
+                    const cleanBssid = (rawBssid === "02:00:00:00:00:00") ? "" : rawBssid;
+
+                    document.getElementById('gate-wifi-input').value = cleanSsid;
+                    mobileState.wifiSsid = cleanSsid;
+                    mobileState.wifiBssid = cleanBssid;
+
                     const locJson = JSON.parse(window.AndroidNativeBridge.getHardwareLocationJson());
-                    if (locJson && locJson.latitude && locJson.longitude) {
+                    if (locJson && locJson.gps_enabled && locJson.has_fix && locJson.latitude && locJson.longitude) {
                         mobileState.lat = Number(locJson.latitude);
                         mobileState.lon = Number(locJson.longitude);
                         mobileState.accuracy = Number(locJson.accuracy || 15);
                         return true;
+                    } else {
+                        mobileState.lat = null;
+                        mobileState.lon = null;
+                        mobileState.accuracy = null;
+                        return false;
                     }
                 } catch (e) {
                     console.warn('Android bridge probe error:', e);
@@ -495,11 +500,34 @@ pub fn render_mobile_app_html() -> String {
             return false;
         }
 
+        function startContinuousGpsWatch() {
+            if (mobileState.watchId !== null || !navigator.geolocation) return;
+            mobileState.watchId = navigator.geolocation.watchPosition(
+                async (pos) => {
+                    mobileState.lat = pos.coords.latitude;
+                    mobileState.lon = pos.coords.longitude;
+                    mobileState.accuracy = pos.coords.accuracy;
+                    if (mobileState.verified) {
+                        await verifyWithBackend();
+                    }
+                },
+                () => {
+                    if (!detectNativeAndroidBridge()) {
+                        mobileState.lat = null;
+                        mobileState.lon = null;
+                        mobileState.accuracy = null;
+                        showGateLocked('GPS Location বন্ধ হয়ে গেছে! লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না।');
+                    }
+                },
+                { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            );
+        }
+
         async function requestAndVerifyMobileLocation() {
             mobileState.wifiSsid = (document.getElementById('gate-wifi-input').value || '').trim();
             document.getElementById('gate-current-coords').textContent = 'GPS সিগন্যাল খোঁজা হচ্ছে...';
 
-            if (detectNativeAndroidBridge() && mobileState.lat !== null) {
+            if (detectNativeAndroidBridge() && mobileState.lat !== null && mobileState.lon !== null) {
                 await verifyWithBackend();
                 return;
             }
@@ -514,11 +542,13 @@ pub fn render_mobile_app_html() -> String {
                     mobileState.lat = pos.coords.latitude;
                     mobileState.lon = pos.coords.longitude;
                     mobileState.accuracy = pos.coords.accuracy;
+                    startContinuousGpsWatch();
                     await verifyWithBackend();
                 },
-                (err) => {
+                () => {
                     mobileState.lat = null;
                     mobileState.lon = null;
+                    mobileState.accuracy = null;
                     showGateLocked('লোকেশন পারমিশন পাওয়া যায়নি বা GPS বন্ধ! লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না। অনুগ্রহ করে GPS চালু করুন।');
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -527,6 +557,9 @@ pub fn render_mobile_app_html() -> String {
 
         async function verifyWithBackend() {
             try {
+                if (!window.AndroidNativeBridge) {
+                    mobileState.wifiSsid = (document.getElementById('gate-wifi-input').value || '').trim();
+                }
                 const resp = await fetch('/api/v1/mobile/verify-access', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -535,12 +568,15 @@ pub fn render_mobile_app_html() -> String {
                         longitude: mobileState.lon,
                         gps_accuracy_meters: mobileState.accuracy,
                         wifi_ssid: mobileState.wifiSsid,
+                        wifi_bssid: mobileState.wifiBssid,
                         device_id: 'MOBILE_WEB_OR_APK'
                     })
                 });
                 const res = await resp.json();
                 if (mobileState.lat !== null && mobileState.lon !== null) {
                     document.getElementById('gate-current-coords').textContent = `${mobileState.lat.toFixed(5)}, ${mobileState.lon.toFixed(5)}`;
+                } else {
+                    document.getElementById('gate-current-coords').textContent = 'GPS বন্ধ / পাওয়া যায়নি';
                 }
                 if (res.distance_meters !== null && res.distance_meters !== undefined) {
                     document.getElementById('gate-distance').textContent = `${Number(res.distance_meters).toFixed(1)} মিটার (অনুমোদিত: ${res.allowed_radius_meters}m)`;
@@ -553,7 +589,7 @@ pub fn render_mobile_app_html() -> String {
                     document.getElementById('ribbon-gps-badge').className = 'badge badge-ok';
                     document.getElementById('ribbon-gps-badge').textContent = `📍 GPS যাচাইকৃত (${mobileState.lat.toFixed(3)}, ${mobileState.lon.toFixed(3)})`;
                     document.getElementById('ribbon-wifi-badge').className = 'badge badge-ok';
-                    document.getElementById('ribbon-wifi-badge').textContent = `📶 Wi-Fi: ${mobileState.wifiSsid || 'OK'}`;
+                    document.getElementById('ribbon-wifi-badge').textContent = `📶 Wi-Fi: ${mobileState.wifiSsid || 'Optional OK'}`;
                     loadMobileDashboardStats();
                     resetAndLoadMobileUsers();
                 } else {
@@ -573,27 +609,30 @@ pub fn render_mobile_app_html() -> String {
         }
 
         async function lockGeofenceToCurrentHouseLocation() {
+            if (detectNativeAndroidBridge() && mobileState.lat !== null && mobileState.lon !== null) {
+                await savePolicyCoords(mobileState.lat, mobileState.lon, 'আমার নির্ধারিত বাসা / অফিস লোকেশন');
+                return;
+            }
             if (!navigator.geolocation) {
-                alert('Geolocation পাওয়া যায়নি!');
+                showGateLocked('আপনার ডিভাইসে Geolocation সাপোর্ট নেই! লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না।');
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     mobileState.lat = pos.coords.latitude;
                     mobileState.lon = pos.coords.longitude;
-                    mobileState.wifiSsid = (document.getElementById('gate-wifi-input').value || 'Home_WiFi').trim();
+                    mobileState.accuracy = pos.coords.accuracy;
+                    mobileState.wifiSsid = (document.getElementById('gate-wifi-input').value || '').trim();
+                    startContinuousGpsWatch();
                     await savePolicyCoords(mobileState.lat, mobileState.lon, 'আমার নির্ধারিত বাসা / অফিস লোকেশন');
                 },
-                async () => {
-                    // If browser inside non-HTTPS or desktop test blocks hardware GPS prompt, use policy target or prompt
-                    const lat = mobileState.policy ? mobileState.policy.target_latitude : 23.8103;
-                    const lon = mobileState.policy ? mobileState.policy.target_longitude : 90.4125;
-                    mobileState.lat = lat;
-                    mobileState.lon = lon;
-                    mobileState.wifiSsid = (document.getElementById('gate-wifi-input').value || 'Home_WiFi').trim();
-                    await verifyWithBackend();
+                () => {
+                    mobileState.lat = null;
+                    mobileState.lon = null;
+                    mobileState.accuracy = null;
+                    showGateLocked('লোকেশন ছাড়া বাসার/অফিসের লোকেশন সেট বা অ্যাপ আনলক করা যাবে না! অনুগ্রহ করে আগে ফোনের GPS Location চালু ও Allow করুন।');
                 },
-                { enableHighAccuracy: true, timeout: 6000 }
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
             );
         }
 
@@ -615,7 +654,7 @@ pub fn render_mobile_app_html() -> String {
         }
 
         function switchMobileTab(tab) {
-            if (!mobileState.verified) {
+            if (!mobileState.verified || mobileState.lat === null || mobileState.lon === null) {
                 showGateLocked('লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না! অনুগ্রহ করে আগে লোকেশন যাচাই করুন।');
                 return;
             }
@@ -628,9 +667,13 @@ pub fn render_mobile_app_html() -> String {
         async function loadMobileDashboardStats() {
             if (!mobileState.verified) return;
             try {
-                const url = `/api/v1/mobile/scale-dashboard?latitude=${mobileState.lat}&longitude=${mobileState.lon}&wifi_ssid=${encodeURIComponent(mobileState.wifiSsid)}`;
+                const url = `/api/v1/mobile/scale-dashboard?latitude=${mobileState.lat}&longitude=${mobileState.lon}&wifi_ssid=${encodeURIComponent(mobileState.wifiSsid)}&wifi_bssid=${encodeURIComponent(mobileState.wifiBssid)}`;
                 const r = await fetch(url);
-                if (!r.ok) return;
+                if (!r.ok) {
+                    const errData = await r.json().catch(() => ({}));
+                    showGateLocked(errData.error || 'লোকেশন যাচাই ব্যর্থ হয়েছে!');
+                    return;
+                }
                 const d = await r.json();
                 if (d.daily_summary) {
                     document.getElementById('mob-stat-users').textContent = d.daily_summary.total_employees;
@@ -648,7 +691,7 @@ pub fn render_mobile_app_html() -> String {
             if (!mobileState.verified) return;
             const search = document.getElementById('mob-user-search').value.trim();
             const shard = document.getElementById('mob-shard-select').value;
-            let url = `/api/v1/mobile/users-cursor?latitude=${mobileState.lat}&longitude=${mobileState.lon}&wifi_ssid=${encodeURIComponent(mobileState.wifiSsid)}&limit=25`;
+            let url = `/api/v1/mobile/users-cursor?latitude=${mobileState.lat}&longitude=${mobileState.lon}&wifi_ssid=${encodeURIComponent(mobileState.wifiSsid)}&wifi_bssid=${encodeURIComponent(mobileState.wifiBssid)}&limit=25`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
             if (shard !== "") url += `&shard_bucket=${shard}`;
             if (mobileState.nextCursorUsername) url += `&after_username=${encodeURIComponent(mobileState.nextCursorUsername)}`;
@@ -692,6 +735,9 @@ pub fn render_mobile_app_html() -> String {
                 resBox.textContent = 'অনুগ্রহ করে ইউজারনেম লিখুন!';
                 return;
             }
+            if (window.AndroidNativeBridge) {
+                detectNativeAndroidBridge();
+            }
             resBox.style.color = '#00f2fe';
             resBox.textContent = 'GPS লোকেশন ও উপস্থিতি যাচাই করা হচ্ছে...';
 
@@ -707,6 +753,7 @@ pub fn render_mobile_app_html() -> String {
                     latitude: mobileState.lat,
                     longitude: mobileState.lon,
                     wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
                     gps_accuracy_meters: mobileState.accuracy
                 })
             });
@@ -718,6 +765,9 @@ pub fn render_mobile_app_html() -> String {
             } else {
                 resBox.style.color = '#ff5252';
                 resBox.textContent = `❌ ${d.error || 'পাঞ্চ ব্যর্থ হয়েছে'}`;
+                if (r.status === 403) {
+                    showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
+                }
             }
         }
 
@@ -732,6 +782,9 @@ pub fn render_mobile_app_html() -> String {
         }
 
         async function submitMobileCameraPunch() {
+            if (window.AndroidNativeBridge) {
+                detectNativeAndroidBridge();
+            }
             const video = document.getElementById('mob-video');
             const canvas = document.getElementById('mob-canvas');
             const ctx = canvas.getContext('2d');
@@ -752,6 +805,8 @@ pub fn render_mobile_app_html() -> String {
                     latitude: mobileState.lat,
                     longitude: mobileState.lon,
                     wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
+                    gps_accuracy_meters: mobileState.accuracy,
                     image_b64: b64
                 })
             });
@@ -763,10 +818,16 @@ pub fn render_mobile_app_html() -> String {
             } else {
                 resBox.style.color = '#ff5252';
                 resBox.textContent = `❌ ${d.error || 'ফেস ভেরিফিকেশন ব্যর্থ'}`;
+                if (r.status === 403) {
+                    showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
+                }
             }
         }
 
         async function registerSingleUserFromMobile() {
+            if (window.AndroidNativeBridge) {
+                detectNativeAndroidBridge();
+            }
             const uname = document.getElementById('mob-reg-username').value.trim().toUpperCase();
             const desig = document.getElementById('mob-reg-desig').value.trim();
             const pw = document.getElementById('mob-reg-pw').value.trim();
@@ -776,27 +837,39 @@ pub fn render_mobile_app_html() -> String {
                 st.textContent = 'ইউজারনেম আবশ্যক!';
                 return;
             }
-            const r = await fetch('/api/v1/users/register', {
+            const r = await fetch('/api/v1/mobile/register-user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    latitude: mobileState.lat,
+                    longitude: mobileState.lon,
+                    gps_accuracy_meters: mobileState.accuracy,
+                    wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
                     username: uname,
                     user_designation: desig,
                     password: pw
                 })
             });
             const d = await r.json();
-            if (r.ok) {
+            if (r.ok && d.success) {
                 st.style.color = '#00e676';
-                st.textContent = `✔ ইউজার '${uname}' সফলভাবে রেজিস্টার হয়েছে!`;
+                st.textContent = `✔ ইউজার '${uname}' সফলভাবে Shard #${d.shard_bucket}-এ রেজিস্টার হয়েছে!`;
                 resetAndLoadMobileUsers();
+                loadMobileDashboardStats();
             } else {
                 st.style.color = '#ff5252';
                 st.textContent = `❌ ${d.error || 'ত্রুটি'}`;
+                if (r.status === 403) {
+                    showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
+                }
             }
         }
 
         async function bulkProvisionFromMobile() {
+            if (window.AndroidNativeBridge) {
+                detectNativeAndroidBridge();
+            }
             const prefix = document.getElementById('mob-bulk-prefix').value.trim();
             const count = parseInt(document.getElementById('mob-bulk-count').value, 10) || 50;
             const st = document.getElementById('mob-bulk-status');
@@ -809,7 +882,9 @@ pub fn render_mobile_app_html() -> String {
                 body: JSON.stringify({
                     latitude: mobileState.lat,
                     longitude: mobileState.lon,
+                    gps_accuracy_meters: mobileState.accuracy,
                     wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
                     prefix: prefix,
                     count: count,
                     designation: 'Mobile Provisioned Staff'
@@ -824,6 +899,9 @@ pub fn render_mobile_app_html() -> String {
             } else {
                 st.style.color = '#ff5252';
                 st.textContent = `❌ ${d.error || 'বাল্ক প্রোভিশন ব্যর্থ'}`;
+                if (r.status === 403) {
+                    showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
+                }
             }
         }
 

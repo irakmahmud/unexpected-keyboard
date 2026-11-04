@@ -257,6 +257,67 @@ fn test_mobile_mandatory_location_and_wifi_policy_enforcement() {
         !wifi_only_no_loc.allowed,
         "Even with matching Wi-Fi, missing location MUST be rejected"
     );
+
+    // 4d. Coarse/spoofed GPS accuracy (> max_gps_accuracy_meters 200m) -> Rejected!
+    let coarse_gps = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8103),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(1500.0),
+            wifi_ssid: Some("MyHomeWiFi_5G".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(
+        !coarse_gps.allowed && !coarse_gps.location_verified,
+        "Coarse GPS accuracy exceeding max_gps_accuracy_meters must be rejected"
+    );
+
+    // 4e. Android '<unknown ssid>' when Wi-Fi option is enabled -> Rejected!
+    let unknown_ssid = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8103),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(12.0),
+            wifi_ssid: Some("<unknown ssid>".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(
+        !unknown_ssid.allowed && !unknown_ssid.wifi_verified,
+        "Android '<unknown ssid>' placeholder must not satisfy Wi-Fi verification"
+    );
+
+    // 4f. Wi-Fi option enabled with empty allowed_wifi_ssids and empty allowed_wifi_bssids -> Rejected!
+    db.update_mobile_access_policy(&UpdateMobileAccessPolicyRequest {
+        company_id: Some("HQ_001".to_string()),
+        location_name: Some("My Home Geofence".to_string()),
+        target_latitude: 23.8103,
+        target_longitude: 90.4125,
+        allowed_radius_meters: Some(150.0),
+        wifi_option_enabled: Some(true),
+        allowed_wifi_ssids: Some("".to_string()),
+        allowed_wifi_bssids: Some("".to_string()),
+        max_gps_accuracy_meters: Some(200.0),
+    })
+    .expect("Policy update failed");
+
+    let empty_allowed_list_check = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8103),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(10.0),
+            wifi_ssid: Some("AnyRandomWiFi".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(
+        !empty_allowed_list_check.allowed && !empty_allowed_list_check.wifi_verified,
+        "Empty allowed_wifi_ssids when wifi_option_enabled=true must NOT allow arbitrary Wi-Fi SSIDs"
+    );
 }
 
 #[test]
@@ -306,6 +367,12 @@ fn test_mobile_engine_punch_rejects_without_location_and_accepts_with_location()
 #[test]
 fn test_mobile_sharded_bulk_provision_and_cursor_pagination() {
     let db = TestFixtures::setup_in_memory_db().expect("DB setup failed");
+    let single = db
+        .register_mobile_sharded_user("HQ_001", "MOB_SINGLE_01", "Lead Engineer", "1234")
+        .expect("Single mobile user registration failed");
+    assert_eq!(single["success"], true);
+    assert_eq!(single["username"], "MOB_SINGLE_01");
+
     let prov = db
         .bulk_provision_sharded_users("HQ_001", "MOB_MILLIONS", 120, "Mobile Managed Staff")
         .expect("Bulk provision failed");

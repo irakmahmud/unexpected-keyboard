@@ -12,6 +12,7 @@ use base64::{engine::general_purpose, Engine as _};
 pub fn user_router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_users).post(create_user))
+        .route("/register", post(create_user))
         .route("/check/:username", get(check_username_exists))
         .route("/check-device/:android_id", get(check_device_exists))
         .route("/:username", get(get_user).put(update_user).delete(delete_user))

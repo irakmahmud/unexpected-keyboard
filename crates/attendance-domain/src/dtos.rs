@@ -346,11 +346,28 @@ pub struct MobileLocationWifiCheckResponse {
 pub struct MobileBulkProvisionRequest {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    #[serde(default)]
+    pub gps_accuracy_meters: Option<f64>,
     pub wifi_ssid: Option<String>,
     pub wifi_bssid: Option<String>,
     pub company_id: Option<String>,
     pub prefix: Option<String>,
     pub count: usize,
     pub designation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileUserRegisterRequest {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    #[serde(default)]
+    pub gps_accuracy_meters: Option<f64>,
+    pub wifi_ssid: Option<String>,
+    pub wifi_bssid: Option<String>,
+    pub username: String,
+    #[serde(alias = "designation")]
+    pub user_designation: Option<String>,
+    pub password: Option<String>,
+    pub company_id: Option<String>,
 }
 

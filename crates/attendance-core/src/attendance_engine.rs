@@ -126,27 +126,16 @@ impl AttendanceEngine {
             .unwrap_or(false)
             || method_upper.starts_with("MOBILE");
         if is_mobile_punch {
-            let policy = self.db.get_mobile_access_policy()?;
-            match (req.latitude, req.longitude) {
-                (Some(lat), Some(lon))
-                    if lat.is_finite()
-                        && lon.is_finite()
-                        && !(lat.abs() < 0.0001 && lon.abs() < 0.0001) =>
-                {
-                    AntiTamperService::verify_geofence(
-                        Some(lat),
-                        Some(lon),
-                        policy.target_latitude,
-                        policy.target_longitude,
-                        policy.allowed_radius_meters,
-                    )
-                    .map_err(|e| attendance_common::AppError::Forbidden(e.to_string()))?;
-                }
-                _ => {
-                    return Err(attendance_common::AppError::Forbidden(
-                        "লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না! অনুগ্রহ করে ফোনের GPS Location চালু করুন। (Mandatory GPS Location required for Mobile App)".to_string(),
-                    ));
-                }
+            let eval = self.db.evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+                latitude: req.latitude,
+                longitude: req.longitude,
+                gps_accuracy_meters: None,
+                wifi_ssid: None,
+                wifi_bssid: None,
+                device_id: req.device_id.clone(),
+            })?;
+            if !eval.location_verified {
+                return Err(attendance_common::AppError::Forbidden(eval.reason));
             }
         } else {
             // Standard geofence check if coordinates provided
