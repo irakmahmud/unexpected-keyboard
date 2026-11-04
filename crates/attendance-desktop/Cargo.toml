@@ -1,0 +1,15 @@
+[package]
+name = "attendance-desktop"
+version = "8.0.0"
+edition = "2021"
+description = "Smart Attendance System — Native Cross-Platform Rust Desktop Application (Windows, macOS, Linux)"
+
+[[bin]]
+name = "attendance-desktop"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }

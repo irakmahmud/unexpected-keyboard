@@ -336,6 +336,22 @@ CREATE TABLE IF NOT EXISTS storage_engine_config (
     updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now', 'utc'))
 );
 
+-- 23. Mobile App Mandatory Geofence & Wi-Fi Access Policy
+CREATE TABLE IF NOT EXISTS mobile_geofence_policy (
+    policy_id TEXT PRIMARY KEY DEFAULT 'DEFAULT_POLICY',
+    company_id TEXT NOT NULL DEFAULT 'HQ_001',
+    location_name TEXT NOT NULL DEFAULT 'Home / Office Authorized Geofence',
+    target_latitude REAL NOT NULL DEFAULT 23.8103,
+    target_longitude REAL NOT NULL DEFAULT 90.4125,
+    allowed_radius_meters REAL NOT NULL DEFAULT 150.0,
+    location_mandatory INTEGER NOT NULL DEFAULT 1 CHECK(location_mandatory = 1),
+    wifi_option_enabled INTEGER NOT NULL DEFAULT 0,
+    allowed_wifi_ssids TEXT NOT NULL DEFAULT 'Office_WiFi,Home_WiFi,SmartAttendance_5G',
+    allowed_wifi_bssids TEXT NOT NULL DEFAULT '',
+    max_gps_accuracy_meters REAL NOT NULL DEFAULT 250.0,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now', 'utc'))
+);
+
 -- Indexes for lightning fast queries
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_attendance_records_user_date ON attendance_records(username, date);
@@ -487,6 +503,20 @@ pub fn apply_column_migrations(conn: &Connection) {
          ON CONFLICT(partition_key) DO UPDATE SET
              row_count = excluded.row_count,
              updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'utc')",
+        [],
+    );
+
+    // Seed default mandatory mobile location & Wi-Fi policy
+    let _ = conn.execute(
+        "INSERT OR IGNORE INTO mobile_geofence_policy (
+            policy_id, company_id, location_name, target_latitude, target_longitude,
+            allowed_radius_meters, location_mandatory, wifi_option_enabled,
+            allowed_wifi_ssids, allowed_wifi_bssids, max_gps_accuracy_meters
+        ) VALUES (
+            'DEFAULT_POLICY', 'HQ_001', 'Home / Office Authorized Geofence',
+            23.8103, 90.4125, 150.0, 1, 0,
+            'Office_WiFi,Home_WiFi,SmartAttendance_5G', '', 250.0
+        )",
         [],
     );
 }

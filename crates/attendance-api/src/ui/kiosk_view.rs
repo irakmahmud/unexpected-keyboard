@@ -103,6 +103,16 @@ pub fn render_full_portal_html() -> String {
                         <span>COMPANY INFO.</span>
                     </button>
                 </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.6rem;">
+                    <button class="btn-hr-floating" style="margin-top: 0; background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(79, 172, 254, 0.2)); border-color: rgba(0, 242, 254, 0.55);" onclick="openPlatformDownloadsModal()">
+                        <span>💻</span>
+                        <span>DESKTOP &amp; APK</span>
+                    </button>
+                    <a href="/mobile" style="text-decoration: none;" class="btn-hr-floating" title="Open Mobile Millions-of-Users App (Mandatory GPS Location + Wi-Fi)">
+                        <span>📱</span>
+                        <span>MOBILE APP</span>
+                    </a>
+                </div>
             </section>
 
             <!-- 2. SYSTEM STATUS DASHBOARD (attendance_v8.py line 6092) -->
@@ -735,6 +745,85 @@ pub fn render_full_portal_html() -> String {
                         <button onclick="backToHrMainMenu()" style="background: #4b5563; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; cursor: pointer;">← Back to HR Menu</button>
                     </div>
                     <div id="hr-workspace-body"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 8: RUST DESKTOP (WIN/MAC/LINUX) & ANDROID MOBILE APP + GEOFENCE     -->
+    <!-- ========================================================================= -->
+    <div id="modal-platform-downloads" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 820px; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div class="modal-title"><span>💻</span> <span>Rust Desktop Apps (Windows / macOS / Linux) &amp; Android Mobile App</span></div>
+                <button class="modal-close" onclick="closePlatformDownloadsModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.85rem; margin-bottom: 1.25rem;">
+                    <!-- Windows Installer -->
+                    <div style="background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.35); border-radius: 12px; padding: 14px;">
+                        <div style="font-weight: 800; color: #00f2fe; font-size: 1rem; margin-bottom: 4px;">🪟 Windows PC Desktop App (64-bit)</div>
+                        <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 10px;">Native Rust Desktop Executable (<code>.exe</code>) + One-Click NSIS Setup Installer for Windows 10/11</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a href="/api/v1/downloads/windows-installer" style="background: #00f2fe; color: #041421; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; text-decoration: none;">⬇️ Download Setup (.exe)</a>
+                            <a href="/api/v1/downloads/windows-portable" style="background: rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">📦 Portable (.zip)</a>
+                        </div>
+                    </div>
+                    <!-- macOS Desktop -->
+                    <div style="background: rgba(162, 155, 254, 0.08); border: 1px solid rgba(162, 155, 254, 0.35); border-radius: 12px; padding: 14px;">
+                        <div style="font-weight: 800; color: #a29bfe; font-size: 1rem; margin-bottom: 4px;">🍎 macOS Universal Desktop (.app)</div>
+                        <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 10px;">Universal macOS Application Bundle (<code>SmartAttendanceDesktop.app</code>) for Apple Silicon (M1-M4) &amp; Intel</div>
+                        <a href="/api/v1/downloads/macos-desktop" style="display: inline-block; background: #a29bfe; color: #0b0b1a; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; text-decoration: none;">⬇️ Download macOS (.zip)</a>
+                    </div>
+                    <!-- Linux Desktop -->
+                    <div style="background: rgba(0, 184, 148, 0.08); border: 1px solid rgba(0, 184, 148, 0.35); border-radius: 12px; padding: 14px;">
+                        <div style="font-weight: 800; color: #00e676; font-size: 1rem; margin-bottom: 4px;">🐧 Linux Desktop &amp; Server (x86_64)</div>
+                        <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 10px;">Native ELF 64-bit Rust Desktop Client + Full Server &amp; Desktop Launcher (<code>.tar.gz</code>)</div>
+                        <a href="/api/v1/downloads/linux-desktop" style="display: inline-block; background: #00e676; color: #041421; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; text-decoration: none;">⬇️ Download Linux (.tar.gz)</a>
+                    </div>
+                    <!-- Android APK & Mobile Web -->
+                    <div style="background: rgba(255, 171, 0, 0.08); border: 1px solid rgba(255, 171, 0, 0.4); border-radius: 12px; padding: 14px;">
+                        <div style="font-weight: 800; color: #ffab00; font-size: 1rem; margin-bottom: 4px;">🤖 Android Mobile App (.apk)</div>
+                        <div style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 10px;">Millions-of-Users No-PC Office Control • Mandatory GPS Location Geofence + Configurable Wi-Fi Option</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a href="/api/v1/downloads/android-apk" style="background: #ffab00; color: #041421; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; text-decoration: none;">⬇️ Download Android (.apk)</a>
+                            <a href="/mobile" style="background: rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">📱 Open Mobile App</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Geofence & Wi-Fi Policy Configurator -->
+                <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px; padding: 16px;">
+                    <h4 style="color: #00f2fe; margin-bottom: 8px;">📍 Mobile App Mandatory Location &amp; Wi-Fi Option Policy</h4>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px;">
+                        মোবাইল অ্যাপে <b>GPS Location বাধ্যতামূলক (Mandatory — লোকেশন ছাড়া কাজ করবে না)</b>। নিচে আপনার বাসা/অফিসের GPS স্থানাঙ্ক এবং ঐচ্ছিক Wi-Fi নাম সেট করুন:
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size:0.75rem; color:#cbd5e1;">Latitude *</label>
+                            <input type="number" step="any" id="desk-pol-lat" class="form-input" style="margin-bottom:0; padding:8px;" value="23.8103">
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:#cbd5e1;">Longitude *</label>
+                            <input type="number" step="any" id="desk-pol-lon" class="form-input" style="margin-bottom:0; padding:8px;" value="90.4125">
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:#cbd5e1;">Radius (Meters) *</label>
+                            <input type="number" id="desk-pol-radius" class="form-input" style="margin-bottom:0; padding:8px;" value="150">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 8px; align-items: center; margin-bottom: 10px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; color:#00e676; cursor:pointer;">
+                            <input type="checkbox" id="desk-pol-wifi-on" style="width:18px; height:18px;">
+                            <span>Require Wi-Fi Match</span>
+                        </label>
+                        <input type="text" id="desk-pol-wifi-ssids" class="form-input" style="margin-bottom:0; padding:8px;" placeholder="Allowed Wi-Fi SSIDs (e.g. Office_WiFi,Home_WiFi)" value="Office_WiFi,Home_WiFi,SmartAttendance_5G">
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="saveDesktopModalMobilePolicy()" style="background: #00b894; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer;">💾 Save Mobile Geofence &amp; Wi-Fi Policy</button>
+                        <span id="desk-pol-status" style="font-size: 0.82rem; color: #00e676; align-self: center;"></span>
+                    </div>
                 </div>
             </div>
         </div>

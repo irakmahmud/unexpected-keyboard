@@ -36,9 +36,15 @@ commands:
               ca-certificates \
               curl \
               jq \
-              file
+              file \
+              zip \
+              unzip \
+              gcc-mingw-w64-x86-64 \
+              nsis \
+              default-jdk-headless
             rustup update stable
             rustup default stable
+            rustup target add x86_64-pc-windows-gnu
             rustc --version
             cargo --version
 
@@ -90,23 +96,29 @@ jobs:
             ./scripts/verify_postgres16_partitioning.sh
       - save-cargo-cache
       - run:
-          name: "Package Release Binaries & Checksums"
+          name: "Package Release Binaries, Multi-Platform Desktop Installers & Android APK"
           command: |
-            mkdir -p dist
+            mkdir -p dist dist/downloads
             cp target/release/attendance-api dist/
             cp target/release/attendance-admin dist/attendance-cli
             cp target/release/attendance-device-agent dist/
+            cp target/release/attendance-desktop dist/
+
+            # Build Windows .exe/.zip, macOS .app, Linux .tar.gz, and Signed Android .apk
+            chmod +x scripts/build_all_platform_packages.sh
+            ./scripts/build_all_platform_packages.sh
 
             # Verify Target ELF Architecture
             file dist/attendance-api
+            file dist/attendance-desktop
 
             # Generate SHA256 Checksums
             cd dist
-            sha256sum attendance-api attendance-cli attendance-device-agent > SHA256SUMS.txt
+            sha256sum attendance-api attendance-cli attendance-device-agent attendance-desktop > SHA256SUMS.txt
             cat SHA256SUMS.txt
 
-            # Create distribution archive
-            tar -czvf attendance-system-linux-x86_64.tar.gz attendance-api attendance-cli attendance-device-agent SHA256SUMS.txt
+            # Create distribution archive including downloads/
+            tar -czvf attendance-system-linux-x86_64.tar.gz attendance-api attendance-cli attendance-device-agent attendance-desktop downloads SHA256SUMS.txt
             ls -lh
       - store_artifacts:
           path: dist

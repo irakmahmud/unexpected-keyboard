@@ -138,3 +138,191 @@ fn test_create_user_request_designation_and_android_id_aliases() {
     assert_eq!(parsed.user_designation.as_deref(), Some("QA Engineer"));
     assert_eq!(parsed.user_android_id.as_deref(), Some("ANDR_UI_999"));
 }
+
+#[test]
+fn test_mobile_mandatory_location_and_wifi_policy_enforcement() {
+    let db = TestFixtures::setup_in_memory_db().expect("DB setup failed");
+    let policy = db.get_mobile_access_policy().expect("Must get default policy");
+    assert!(policy.location_mandatory, "Location must always be mandatory for mobile");
+
+    // 1. Missing location must ALWAYS be rejected even if Wi-Fi is provided
+    let no_loc = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: None,
+            longitude: None,
+            gps_accuracy_meters: None,
+            wifi_ssid: Some("Office_WiFi".to_string()),
+            wifi_bssid: None,
+            device_id: Some("MOBILE_TEST".to_string()),
+        })
+        .expect("Eval failed");
+    assert!(!no_loc.allowed, "Mobile access without location must NEVER be allowed");
+    assert!(!no_loc.location_verified);
+    assert!(
+        db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
+            latitude: None,
+            longitude: None,
+            gps_accuracy_meters: None,
+            wifi_ssid: Some("Office_WiFi".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .is_err(),
+        "Strict check without location must return Err(Forbidden)"
+    );
+
+    // 2. Outside geofence location (e.g. 5km away) must be rejected
+    let outside = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8600),
+            longitude: Some(90.4600),
+            gps_accuracy_meters: Some(10.0),
+            wifi_ssid: Some("Office_WiFi".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(!outside.allowed, "Outside geofence must be rejected");
+
+    // 3. Inside geofence location with Wi-Fi option disabled (default) must be accepted
+    let inside_ok = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8103),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(8.0),
+            wifi_ssid: None,
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(inside_ok.allowed, "Inside geofence must be allowed when Wi-Fi option is off");
+
+    // 4. Enable Wi-Fi Option ("এই ওয়াইফাই কানেক্ট হলে কাজ করবে... তবে লোকেশন ছাড়া কাজ করবে না")
+    let updated_policy = db
+        .update_mobile_access_policy(&UpdateMobileAccessPolicyRequest {
+            company_id: Some("HQ_001".to_string()),
+            location_name: Some("My Home Geofence".to_string()),
+            target_latitude: 23.8103,
+            target_longitude: 90.4125,
+            allowed_radius_meters: Some(150.0),
+            wifi_option_enabled: Some(true),
+            allowed_wifi_ssids: Some("MyHomeWiFi_5G,Office_WiFi".to_string()),
+            allowed_wifi_bssids: None,
+            max_gps_accuracy_meters: Some(200.0),
+        })
+        .expect("Policy update failed");
+    assert!(updated_policy.wifi_option_enabled);
+    assert!(updated_policy.location_mandatory);
+
+    // 4a. Inside location + Wrong Wi-Fi -> Rejected
+    let wrong_wifi = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8103),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(10.0),
+            wifi_ssid: Some("Unknown_Cafe_WiFi".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(!wrong_wifi.allowed, "Wrong Wi-Fi must be rejected when Wi-Fi option is enabled");
+    assert!(wrong_wifi.location_verified);
+    assert!(!wrong_wifi.wifi_verified);
+
+    // 4b. Inside location + Correct Wi-Fi -> Accepted
+    let both_ok = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: Some(23.8104),
+            longitude: Some(90.4125),
+            gps_accuracy_meters: Some(10.0),
+            wifi_ssid: Some("MyHomeWiFi_5G".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(both_ok.allowed, "Inside location + matching Wi-Fi must be allowed");
+
+    // 4c. Correct Wi-Fi + Missing Location -> Still Rejected!
+    let wifi_only_no_loc = db
+        .evaluate_mobile_location_and_wifi(&MobileLocationWifiCheckRequest {
+            latitude: None,
+            longitude: None,
+            gps_accuracy_meters: None,
+            wifi_ssid: Some("MyHomeWiFi_5G".to_string()),
+            wifi_bssid: None,
+            device_id: None,
+        })
+        .expect("Eval failed");
+    assert!(
+        !wifi_only_no_loc.allowed,
+        "Even with matching Wi-Fi, missing location MUST be rejected"
+    );
+}
+
+#[test]
+fn test_mobile_engine_punch_rejects_without_location_and_accepts_with_location() {
+    let db = TestFixtures::setup_in_memory_db().expect("DB setup failed");
+    let emp = TestFixtures::create_test_employee(&db, "EMP_MOB_001", "Sajid", "Hasan")
+        .expect("Employee creation failed");
+    let engine = attendance_core::AttendanceEngine::with_cooldown(db.clone(), 60, 60);
+
+    // Mobile punch without location must fail and NOT lock user cooldown
+    let bad_req = PunchRequest {
+        username: emp.employee_code.clone(),
+        method: Some("CAMERA".to_string()),
+        pin: None,
+        android_id: None,
+        video_path: None,
+        face_embedding: None,
+        latitude: None,
+        longitude: None,
+        device_id: Some("MOBILE_ANDROID_01".to_string()),
+        remarks: None,
+    };
+    assert!(
+        engine.process_punch(bad_req).is_err(),
+        "Mobile punch without GPS coordinates must be rejected"
+    );
+
+    // Immediate retry with valid Home/Office GPS coordinates must succeed
+    let good_req = PunchRequest {
+        username: emp.employee_code.clone(),
+        method: Some("CAMERA".to_string()),
+        pin: None,
+        android_id: None,
+        video_path: None,
+        face_embedding: None,
+        latitude: Some(23.8103),
+        longitude: Some(90.4125),
+        device_id: Some("MOBILE_ANDROID_01".to_string()),
+        remarks: None,
+    };
+    let res = engine
+        .process_punch(good_req)
+        .expect("Mobile punch inside geofence must succeed");
+    assert!(res.success);
+}
+
+#[test]
+fn test_mobile_sharded_bulk_provision_and_cursor_pagination() {
+    let db = TestFixtures::setup_in_memory_db().expect("DB setup failed");
+    let prov = db
+        .bulk_provision_sharded_users("HQ_001", "MOB_MILLIONS", 120, "Mobile Managed Staff")
+        .expect("Bulk provision failed");
+    assert_eq!(prov["provisioned_count"], 120);
+    assert!(prov["shards_distributed_across"].as_u64().unwrap_or(0) > 10);
+
+    let page1 = db
+        .get_cursor_paginated_users(None, Some("MOB_MILLIONS"), None, 50)
+        .expect("Cursor page 1 failed");
+    assert_eq!(page1["returned_count"], 50);
+    let next_cursor = page1["next_cursor_username"]
+        .as_str()
+        .expect("Must have next cursor");
+
+    let page2 = db
+        .get_cursor_paginated_users(None, Some("MOB_MILLIONS"), Some(next_cursor), 50)
+        .expect("Cursor page 2 failed");
+    assert_eq!(page2["returned_count"], 50);
+}
+

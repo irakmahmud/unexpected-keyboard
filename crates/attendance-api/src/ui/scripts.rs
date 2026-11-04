@@ -2596,6 +2596,66 @@ function initCyber3DNeuralCanvas() {
     requestAnimationFrame(renderFrame);
 }
 
+async function openPlatformDownloadsModal() {
+    const modal = document.getElementById('modal-platform-downloads');
+    if (modal) modal.style.display = 'flex';
+    try {
+        const r = await fetch('/api/v1/mobile/policy');
+        if (r.ok) {
+            const p = await r.json();
+            const latEl = document.getElementById('desk-pol-lat');
+            const lonEl = document.getElementById('desk-pol-lon');
+            const radEl = document.getElementById('desk-pol-radius');
+            const wifiOnEl = document.getElementById('desk-pol-wifi-on');
+            const wifiSsidsEl = document.getElementById('desk-pol-wifi-ssids');
+            if (latEl) latEl.value = p.target_latitude;
+            if (lonEl) lonEl.value = p.target_longitude;
+            if (radEl) radEl.value = p.allowed_radius_meters;
+            if (wifiOnEl) wifiOnEl.checked = !!p.wifi_option_enabled;
+            if (wifiSsidsEl) wifiSsidsEl.value = p.allowed_wifi_ssids || '';
+        }
+    } catch (_) {}
+}
+
+function closePlatformDownloadsModal() {
+    const modal = document.getElementById('modal-platform-downloads');
+    if (modal) modal.style.display = 'none';
+}
+
+async function saveDesktopModalMobilePolicy() {
+    const st = document.getElementById('desk-pol-status');
+    try {
+        const payload = {
+            target_latitude: parseFloat(document.getElementById('desk-pol-lat').value),
+            target_longitude: parseFloat(document.getElementById('desk-pol-lon').value),
+            allowed_radius_meters: parseFloat(document.getElementById('desk-pol-radius').value) || 150,
+            wifi_option_enabled: document.getElementById('desk-pol-wifi-on').checked,
+            allowed_wifi_ssids: document.getElementById('desk-pol-wifi-ssids').value.trim()
+        };
+        const r = await fetch('/api/v1/mobile/policy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            if (st) {
+                st.style.color = '#00e676';
+                st.textContent = '✔ Saved! Location Mandatory + Wi-Fi Policy Active.';
+            }
+            appendConsoleLog('[MOBILE-POLICY] Mandatory Geofence & Wi-Fi Policy saved.', 'success');
+        } else if (st) {
+            st.style.color = '#ff7675';
+            st.textContent = '❌ ' + (d.error || 'Failed');
+        }
+    } catch (e) {
+        if (st) {
+            st.style.color = '#ff7675';
+            st.textContent = '❌ Error: ' + e.message;
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const savedTheme = localStorage.getItem('attendance_ui_theme_mode');
@@ -2608,3 +2668,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
     "##
 }
+

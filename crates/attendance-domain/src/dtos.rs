@@ -285,3 +285,72 @@ pub struct MonthlyReportQuery {
     pub department: Option<String>,
     pub employee_code: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileAccessPolicy {
+    pub policy_id: String,
+    pub company_id: String,
+    pub location_name: String,
+    pub target_latitude: f64,
+    pub target_longitude: f64,
+    pub allowed_radius_meters: f64,
+    pub location_mandatory: bool,
+    pub wifi_option_enabled: bool,
+    pub allowed_wifi_ssids: String,
+    pub allowed_wifi_bssids: String,
+    pub max_gps_accuracy_meters: f64,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateMobileAccessPolicyRequest {
+    pub company_id: Option<String>,
+    pub location_name: Option<String>,
+    pub target_latitude: f64,
+    pub target_longitude: f64,
+    pub allowed_radius_meters: Option<f64>,
+    pub wifi_option_enabled: Option<bool>,
+    pub allowed_wifi_ssids: Option<String>,
+    pub allowed_wifi_bssids: Option<String>,
+    pub max_gps_accuracy_meters: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileLocationWifiCheckRequest {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub gps_accuracy_meters: Option<f64>,
+    pub wifi_ssid: Option<String>,
+    pub wifi_bssid: Option<String>,
+    pub device_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileLocationWifiCheckResponse {
+    pub allowed: bool,
+    pub location_verified: bool,
+    pub wifi_verified: bool,
+    pub wifi_option_enabled: bool,
+    pub location_mandatory: bool,
+    pub distance_meters: Option<f64>,
+    pub allowed_radius_meters: f64,
+    pub target_location_name: String,
+    pub target_latitude: f64,
+    pub target_longitude: f64,
+    pub allowed_wifi_ssids: String,
+    pub connected_wifi_ssid: Option<String>,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileBulkProvisionRequest {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub wifi_ssid: Option<String>,
+    pub wifi_bssid: Option<String>,
+    pub company_id: Option<String>,
+    pub prefix: Option<String>,
+    pub count: usize,
+    pub designation: Option<String>,
+}
+

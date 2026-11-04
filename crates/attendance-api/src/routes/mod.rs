@@ -8,6 +8,7 @@ pub mod face_routes;
 pub mod holiday_routes;
 pub mod leave_routes;
 pub mod payroll_routes;
+pub mod platform_routes;
 pub mod report_routes;
 pub mod shift_routes;
 pub mod sync_routes;
@@ -34,6 +35,8 @@ pub fn configure_api_routes() -> Router<AppState> {
         .nest("/payroll", payroll_routes::payroll_router())
         .nest("/reports", report_routes::report_router())
         .nest("/system", system_routes::system_router())
+        .nest("/mobile", platform_routes::mobile_router())
+        .nest("/downloads", platform_routes::downloads_router())
         .route("/receive_android_id", axum::routing::post(device_routes::receive_android_id))
         .route("/session/:id", axum::routing::get(device_routes::get_device_session))
         .route("/captures/:filename", axum::routing::get(attendance_routes::serve_capture_image))

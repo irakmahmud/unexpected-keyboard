@@ -36,6 +36,14 @@ pub struct ApiPunchPayload {
     #[serde(flatten)]
     pub punch: PunchRequest,
     pub image_b64: Option<String>,
+    #[serde(default)]
+    pub client_platform: Option<String>,
+    #[serde(default)]
+    pub wifi_ssid: Option<String>,
+    #[serde(default)]
+    pub wifi_bssid: Option<String>,
+    #[serde(default)]
+    pub gps_accuracy_meters: Option<f64>,
 }
 
 pub fn attendance_router() -> Router<AppState> {
@@ -59,6 +67,36 @@ async fn handle_punch(
     Json(api_payload): Json<ApiPunchPayload>,
 ) -> std::result::Result<Json<PunchResponse>, ApiError> {
     let mut payload = api_payload.punch;
+    let is_mobile_client = api_payload
+        .client_platform
+        .as_deref()
+        .map(|p| {
+            let u = p.trim().to_uppercase();
+            u.contains("MOBILE") || u.contains("ANDROID")
+        })
+        .unwrap_or(false)
+        || payload
+            .device_id
+            .as_deref()
+            .map(|d| d.trim().to_uppercase().starts_with("MOBILE"))
+            .unwrap_or(false)
+        || payload
+            .method
+            .as_deref()
+            .map(|m| m.trim().to_uppercase().starts_with("MOBILE"))
+            .unwrap_or(false);
+
+    if is_mobile_client {
+        state.db.verify_mobile_access_strict(&MobileLocationWifiCheckRequest {
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            gps_accuracy_meters: api_payload.gps_accuracy_meters,
+            wifi_ssid: api_payload.wifi_ssid.clone(),
+            wifi_bssid: api_payload.wifi_bssid.clone(),
+            device_id: payload.device_id.clone(),
+        })?;
+    }
+
     let mut decoded_image_bytes: Option<Vec<u8>> = None;
 
     if let Some(ref b64) = api_payload.image_b64 {

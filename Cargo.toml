@@ -13,6 +13,7 @@ members = [
     "crates/attendance-api",
     "crates/attendance-device-agent",
     "crates/attendance-cli",
+    "crates/attendance-desktop",
     "crates/attendance-tests",
 ]
 exclude = ["rust_deepFace"]

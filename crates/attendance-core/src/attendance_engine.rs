@@ -118,15 +118,47 @@ impl AttendanceEngine {
             }
         }
 
-        // 3. Anti-spam cooldown check
+        // 3. Mobile Mandatory Location & Geofence Check (before cooldown so rejected location attempts don't lock cooldown)
+        let is_mobile_punch = req
+            .device_id
+            .as_deref()
+            .map(|d| d.trim().to_uppercase().starts_with("MOBILE"))
+            .unwrap_or(false)
+            || method_upper.starts_with("MOBILE");
+        if is_mobile_punch {
+            let policy = self.db.get_mobile_access_policy()?;
+            match (req.latitude, req.longitude) {
+                (Some(lat), Some(lon))
+                    if lat.is_finite()
+                        && lon.is_finite()
+                        && !(lat.abs() < 0.0001 && lon.abs() < 0.0001) =>
+                {
+                    AntiTamperService::verify_geofence(
+                        Some(lat),
+                        Some(lon),
+                        policy.target_latitude,
+                        policy.target_longitude,
+                        policy.allowed_radius_meters,
+                    )
+                    .map_err(|e| attendance_common::AppError::Forbidden(e.to_string()))?;
+                }
+                _ => {
+                    return Err(attendance_common::AppError::Forbidden(
+                        "লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না! অনুগ্রহ করে ফোনের GPS Location চালু করুন। (Mandatory GPS Location required for Mobile App)".to_string(),
+                    ));
+                }
+            }
+        } else {
+            // Standard geofence check if coordinates provided
+            let _ = AntiTamperService::verify_geofence(req.latitude, req.longitude, 23.8103, 90.4125, 500.0);
+        }
+
+        // 4. Anti-spam cooldown check
         self.cooldown.check_user_cooldown(&upper_username)?;
 
         if let Some(ref dev_id) = req.device_id {
             self.cooldown.check_device_cooldown(dev_id)?;
         }
-
-        // 4. Geofence check if coordinates provided (default office: Dhaka HQ)
-        let _ = AntiTamperService::verify_geofence(req.latitude, req.longitude, 23.8103, 90.4125, 500.0);
 
         // 5. Anti-tamper clock integrity check & persistence (~/.attendance_time_check)
         let time_check = TimeHelper::verify_and_persist_time_integrity();

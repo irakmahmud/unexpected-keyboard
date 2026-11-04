@@ -140,7 +140,7 @@ atomic_deploy() {
     cp "${staged_binary}" "${target_binary}.tmp"
     chmod +x "${target_binary}.tmp"
     mv -f "${target_binary}.tmp" "${target_binary}"
-    for aux_bin in attendance-cli attendance-device-agent; do
+    for aux_bin in attendance-cli attendance-device-agent attendance-desktop; do
         if [ -f "${staged_dir}/${aux_bin}" ]; then
             cp "${staged_dir}/${aux_bin}" "${TARGET_DIR}/${aux_bin}.tmp"
             chmod +x "${TARGET_DIR}/${aux_bin}.tmp"
@@ -148,6 +148,11 @@ atomic_deploy() {
             log "Updated auxiliary binary: ${TARGET_DIR}/${aux_bin}"
         fi
     done
+    if [ -d "${staged_dir}/downloads" ]; then
+        mkdir -p "${WORKSPACE_DIR}/dist/downloads"
+        cp -rf "${staged_dir}/downloads/"* "${WORKSPACE_DIR}/dist/downloads/" 2>/dev/null || true
+        log "Updated multi-platform desktop & mobile installers in ${WORKSPACE_DIR}/dist/downloads"
+    fi
     log "Atomic file swap completed."
 
     # Service Restart

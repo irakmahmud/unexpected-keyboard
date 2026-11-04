@@ -191,6 +191,9 @@ async fn main() -> Result<()> {
     let app = Router::new()
         // Interactive Web Kiosk & Admin Portal
         .route("/", get(render_portal_ui))
+        // Mobile Millions-of-Users App (Mandatory GPS Location + Wi-Fi Option)
+        .route("/mobile", get(render_mobile_ui))
+        .route("/manifest.json", get(render_manifest_json))
         // Root endpoints matching Python AndroidIDReceiver (lines 5829, 5843)
         .route(
             "/receive_android_id",
@@ -203,7 +206,7 @@ async fn main() -> Result<()> {
             post(routes::device_routes::receive_android_id)
                 .get(routes::device_routes::get_receive_android_id_fallback),
         )
-        // Mount all 15 modular REST API route domains
+        // Mount all modular REST API route domains
         .nest("/api/v1", routes::configure_api_routes())
         .fallback(handle_root_fallback)
         .layer(axum::extract::DefaultBodyLimit::max(150 * 1024 * 1024))
@@ -222,6 +225,17 @@ async fn main() -> Result<()> {
 
 async fn render_portal_ui() -> Html<String> {
     Html(ui::render_full_portal_html())
+}
+
+async fn render_mobile_ui() -> Html<String> {
+    Html(ui::render_mobile_app_html())
+}
+
+async fn render_manifest_json() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "application/manifest+json")],
+        ui::render_mobile_manifest_json(),
+    )
 }
 
 async fn handle_root_fallback(
