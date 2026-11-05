@@ -464,19 +464,16 @@ APK_WORK="${BUILD_TMP}/android_apk_src"
 mkdir -p "${APK_WORK}/src/com/smartattendance/enterprise" \
          "${APK_WORK}/res/values" \
          "${APK_WORK}/assets/models" \
-         "${APK_WORK}/assets/weights" \
          "${APK_WORK}/assets/data" \
          "${APK_WORK}/lib/arm64-v8a" \
-         "${APK_WORK}/lib/x86_64" \
          "${APK_WORK}/obj" \
          "${APK_WORK}/bin"
 
-# Bundle Authentic ONNX Biometric Models (FaceNet512 90MB + MTCNN P-Net/R-Net/O-Net + H5 Weights) inside the APK
+# Bundle Authentic ONNX Biometric Models (FaceNet512 90MB + MTCNN P-Net/R-Net/O-Net) inside the APK
 cp "${WORKSPACE_DIR}/models/facenet512.onnx" "${APK_WORK}/assets/models/facenet512.onnx"
 cp "${WORKSPACE_DIR}/models/mtcnn_pnet.onnx" "${APK_WORK}/assets/models/mtcnn_pnet.onnx"
 cp "${WORKSPACE_DIR}/models/mtcnn_rnet.onnx" "${APK_WORK}/assets/models/mtcnn_rnet.onnx"
 cp "${WORKSPACE_DIR}/models/mtcnn_onet.onnx" "${APK_WORK}/assets/models/mtcnn_onet.onnx"
-cp "${WORKSPACE_DIR}/models/facenet512.onnx" "${APK_WORK}/assets/weights/facenet512_weights.h5"
 if [ -f "${WORKSPACE_DIR}/embeddings_vectors_512d.csv" ]; then
     cp "${WORKSPACE_DIR}/embeddings_vectors_512d.csv" "${APK_WORK}/assets/data/embeddings_vectors_512d.csv"
 fi
@@ -491,19 +488,17 @@ cat > "${APK_WORK}/assets/models/OFFLINE_MOBILE_MANIFEST.json" << 'EOF'
     "assets/models/facenet512.onnx",
     "assets/models/mtcnn_pnet.onnx",
     "assets/models/mtcnn_rnet.onnx",
-    "assets/models/mtcnn_onet.onnx",
-    "assets/weights/facenet512_weights.h5"
+    "assets/models/mtcnn_onet.onnx"
   ],
   "bundled_native_engines": [
-    "lib/arm64-v8a/libattendance_api.so",
-    "lib/x86_64/libattendance_api.so"
+    "lib/arm64-v8a/libattendance_api.so"
   ]
 }
 EOF
 
 cp "${WORKSPACE_DIR}/target/release/attendance-api" "${APK_WORK}/lib/arm64-v8a/libattendance_api.so"
-cp "${WORKSPACE_DIR}/target/release/attendance-api" "${APK_WORK}/lib/x86_64/libattendance_api.so"
-chmod 755 "${APK_WORK}/lib/arm64-v8a/libattendance_api.so" "${APK_WORK}/lib/x86_64/libattendance_api.so"
+strip --strip-unneeded "${APK_WORK}/lib/arm64-v8a/libattendance_api.so" || true
+chmod 755 "${APK_WORK}/lib/arm64-v8a/libattendance_api.so"
 
 cat > "${APK_WORK}/AndroidManifest.xml" << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -1180,7 +1175,6 @@ EOF
 
 # 1. Generate R.java (temporarily move large models so aapt only packages small resources first)
 mv "${APK_WORK}/assets/models" "${BUILD_TMP}/apk_models_hold"
-mv "${APK_WORK}/assets/weights" "${BUILD_TMP}/apk_weights_hold"
 mv "${APK_WORK}/assets/data" "${BUILD_TMP}/apk_data_hold"
 
 "${ANDROID_SDK_DIR}/aapt" package -f -m \
@@ -1212,12 +1206,11 @@ CLASS_FILES=$(find "${APK_WORK}/obj" -name "*.class")
     -I "${ANDROID_SDK_DIR}/android.jar" \
     -F "${APK_WORK}/bin/unaligned.apk"
 
-# Restore assets/models, assets/weights & assets/data and bundle them + classes.dex + lib/<abi>/libattendance_api.so with store-mode (-0)
+# Restore assets/models & assets/data and bundle them + classes.dex + lib/<abi>/libattendance_api.so with deflate (-9) so APK is ~93.8 MB (<100 MB)
 mv "${BUILD_TMP}/apk_models_hold" "${APK_WORK}/assets/models"
-mv "${BUILD_TMP}/apk_weights_hold" "${APK_WORK}/assets/weights"
 mv "${BUILD_TMP}/apk_data_hold" "${APK_WORK}/assets/data"
 cp "${APK_WORK}/bin/classes.dex" "${APK_WORK}/classes.dex"
-(cd "${APK_WORK}" && zip -0 -q -r "${APK_WORK}/bin/unaligned.apk" classes.dex assets/models assets/weights assets/data lib)
+(cd "${APK_WORK}" && zip -9 -q -r "${APK_WORK}/bin/unaligned.apk" classes.dex assets/models assets/data lib)
 
 # 5. Zipalign on 4-byte boundaries (required for Android mmap & extractNativeLibs)
 "${ANDROID_SDK_DIR}/zipalign" -f 4 \
