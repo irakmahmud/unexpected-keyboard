@@ -55,6 +55,7 @@ commands:
           name: "Restore Cargo & Target Cache"
           keys:
             - v5-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
+            - v5-cargo-cache-{{ arch }}-
             - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v3-cargo-cache-{{ arch }}-

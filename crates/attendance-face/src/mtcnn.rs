@@ -618,6 +618,6 @@ fn extract_patch(img: &RgbImage, bbox: &BBox, target_w: u32, target_h: u32) -> R
     let crop_w = if x2 > x1 { x2 - x1 } else { 1 };
     let crop_h = if y2 > y1 { y2 - y1 } else { 1 };
 
-    let sub = image::imageops::crop_imm(img, x1, y1, crop_w, crop_h);
+    let sub = image::imageops::crop_imm(img, x1, y1, crop_w, crop_h).to_image();
     image::imageops::resize(&sub, target_w, target_h, FilterType::Triangle)
 }
