@@ -117,9 +117,10 @@ jobs:
             sha256sum attendance-api attendance-cli attendance-device-agent attendance-desktop > SHA256SUMS.txt
             cat SHA256SUMS.txt
 
-            # Create distribution archive including downloads/
-            tar -czvf attendance-system-linux-x86_64.tar.gz attendance-api attendance-cli attendance-device-agent attendance-desktop downloads SHA256SUMS.txt
+            # Create distribution archive for Oracle VM live server auto-deploy
+            tar -czvf attendance-system-linux-x86_64.tar.gz attendance-api attendance-cli attendance-device-agent attendance-desktop SHA256SUMS.txt
             ls -lh
+            ls -lh downloads/
       - store_artifacts:
           path: dist
           destination: release-binaries

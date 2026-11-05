@@ -94,6 +94,17 @@ impl<E: Into<AppError>> From<E> for ApiError {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Ensure standalone desktop executions find bundled models/ and data/ relative to executable directory
+    if !std::path::Path::new("models/facenet512.onnx").exists() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                if exe_dir.join("models/facenet512.onnx").exists() {
+                    let _ = std::env::set_current_dir(exe_dir);
+                }
+            }
+        }
+    }
+
     if let Ok(env_content) = std::fs::read_to_string(".env") {
         for line in env_content.lines() {
             let trimmed = line.trim();
@@ -125,7 +136,15 @@ async fn main() -> Result<()> {
         .unwrap_or(8080);
 
     // CAP-01: SingleInstanceManager lock (55531 for default port 8080, offset for staging ports)
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| {
+            if cfg!(windows) {
+                ".".to_string()
+            } else {
+                "/home/opc".to_string()
+            }
+        });
     let lock_port = if port == 8080 { 55531 } else { 47451u16.saturating_add(port % 10000) };
     let lock_file = if port == 8080 {
         format!("{}/attendance_system.lock", home)

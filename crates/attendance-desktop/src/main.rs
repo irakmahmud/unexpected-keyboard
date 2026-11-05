@@ -277,6 +277,86 @@ pub fn process_local_desktop_punch_with_method(
     Ok(rec)
 }
 
+fn resolve_app_root_dir() -> PathBuf {
+    if let Ok(exe_path) = env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let api_bin = if cfg!(windows) {
+                exe_dir.join("attendance-api.exe")
+            } else {
+                exe_dir.join("attendance-api")
+            };
+            if api_bin.exists() || exe_dir.join("models").exists() {
+                return exe_dir.to_path_buf();
+            }
+        }
+    }
+    env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+pub fn is_local_engine_listening(port: u16) -> bool {
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+    TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(250)).is_ok()
+}
+
+pub fn ensure_local_standalone_engine_running() -> bool {
+    if is_local_engine_listening(8080) {
+        return true;
+    }
+
+    let app_dir = resolve_app_root_dir();
+    let candidates = if cfg!(windows) {
+        vec![
+            app_dir.join("attendance-api.exe"),
+            PathBuf::from("attendance-api.exe"),
+        ]
+    } else {
+        vec![
+            app_dir.join("attendance-api"),
+            PathBuf::from("./attendance-api"),
+            PathBuf::from("target/release/attendance-api"),
+        ]
+    };
+
+    let api_bin = match candidates.into_iter().find(|p| p.exists()) {
+        Some(b) => b,
+        None => return false,
+    };
+
+    let models_dir = app_dir.join("models");
+    let data_dir = app_dir.join("data");
+    let _ = fs::create_dir_all(&data_dir);
+
+    let mut cmd = Command::new(&api_bin);
+    cmd.current_dir(&app_dir)
+        .env("PORT", "8080")
+        .env("MODELS_DIR", models_dir.to_string_lossy().to_string())
+        .env(
+            "ATTENDANCE_DB_PATH",
+            data_dir.join("attendance.db").to_string_lossy().to_string(),
+        )
+        .stdout( std::process::Stdio::null() )
+        .stderr( std::process::Stdio::null() );
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    if cmd.spawn().is_ok() {
+        for _ in 0..40 {
+            if is_local_engine_listening(8080) {
+                return true;
+            }
+            thread::sleep(std::time::Duration::from_millis(200));
+        }
+    }
+
+    is_local_engine_listening(8080)
+}
+
 fn launch_native_desktop_window(url: &str) {
     #[cfg(target_os = "windows")]
     {
@@ -368,6 +448,31 @@ fn handle_http_client(mut stream: TcpStream, store: Arc<Mutex<LocalDesktopStore>
         .trim();
 
     let (status, content_type, resp_body) = match (method, path) {
+        ("GET", "/api/desktop/engine-status") => {
+            let app_dir = resolve_app_root_dir();
+            let running = ensure_local_standalone_engine_running();
+            let has_facenet_onnx = app_dir.join("models").join("facenet512.onnx").exists();
+            let has_facenet_h5 = app_dir.join("weights").join("facenet512_weights.h5").exists();
+            let json = serde_json::json!({
+                "success": true,
+                "standalone_pc_mode": true,
+                "local_engine_running": running,
+                "local_engine_url": "http://127.0.0.1:8080",
+                "app_root_dir": app_dir.to_string_lossy(),
+                "has_facenet512_onnx": has_facenet_onnx,
+                "has_facenet512_h5": has_facenet_h5
+            });
+            ("200 OK", "application/json", json.to_string())
+        }
+        ("POST", "/api/desktop/restart-local-engine") => {
+            let running = ensure_local_standalone_engine_running();
+            let json = serde_json::json!({
+                "success": running,
+                "local_engine_running": running,
+                "local_engine_url": "http://127.0.0.1:8080"
+            });
+            ("200 OK", "application/json", json.to_string())
+        }
         ("GET", "/api/desktop/state") => {
             let guard = store.lock().unwrap();
             let json = serde_json::json!({
@@ -653,19 +758,20 @@ fn render_desktop_shell_html(store: &LocalDesktopStore) -> String {
     <div class="titlebar">
         <div class="brand">
             <span>⚡</span>
-            <span>SMART ATTENDANCE DESKTOP v8.0 (Rust Native • {os}/{arch})</span>
+            <span>SMART ATTENDANCE DESKTOP v8.0 (Standalone PC • {os}/{arch})</span>
             <span id="desk-comp-badge" style="font-size:0.75rem; background:rgba(0,230,118,0.18); color:#00e676; padding:3px 8px; border-radius:6px;">🏢 {company_name}</span>
+            <span id="desk-engine-badge" style="font-size:0.74rem; background:rgba(0,242,254,0.18); color:#00f2fe; padding:3px 8px; border-radius:6px;">🟢 Standalone Local PC (127.0.0.1:8080)</span>
         </div>
         <div class="controls">
-            <input type="text" id="server-url-input" class="url-input" value="{cloud_url}">
-            <button class="btn active" id="btn-cloud" onclick="connectLiveServer()">🌐 Live Cloud Server</button>
-            <button class="btn" id="btn-local8080" onclick="connectLocal8080()">🖥️ Local :8080</button>
-            <button class="btn" id="btn-mobile" onclick="connectMobilePortal()">📱 Mobile View</button>
-            <button class="btn" id="btn-offline" onclick="showOfflineDesktopKiosk()">🛡️ Built-in Standalone PC Engine (v8 Parity)</button>
+            <input type="text" id="server-url-input" class="url-input" value="{local_url}" data-cloud-url="{cloud_url}">
+            <button class="btn active" id="btn-local8080" onclick="connectLocal8080()">🖥️ Standalone Local PC (:8080)</button>
+            <button class="btn" id="btn-mobile" onclick="connectMobilePortal()">📱 Local Mobile View</button>
+            <button class="btn" id="btn-offline" onclick="showOfflineDesktopKiosk()">🛡️ Built-in Offline Kiosk (v8)</button>
+            <button class="btn" id="btn-cloud" onclick="connectLiveServer()">🌐 Cloud Sync Server</button>
         </div>
     </div>
     <div class="workspace">
-        <iframe id="portal-frame" src="{cloud_url}"></iframe>
+        <iframe id="portal-frame" src="{local_url}" allow="camera; microphone; geolocation; fullscreen; clipboard-write"></iframe>
         <div id="offline-panel">
             <div class="grid">
                 <!-- LEFT COLUMN: CAMERA / PIN / QR ACTIONS + COMPANY + HR -->
@@ -756,24 +862,47 @@ fn render_desktop_shell_html(store: &LocalDesktopStore) -> String {
         </div>
     </div>
     <script>
+        let discoveredCloudUrl = '{cloud_url}';
+
         async function autoDiscoverLiveTunnelUrl() {{
             try {{
                 const r = await fetch('https://raw.githubusercontent.com/irakmahmud/unexpected-keyboard/master/data/live_tunnel_url.txt?t=' + Date.now());
                 if (r.ok) {{
                     const url = (await r.text()).trim();
                     if (url.startsWith('https://')) {{
+                        discoveredCloudUrl = url;
                         const inp = document.getElementById('server-url-input');
-                        if (inp && inp.value !== url) {{
-                            inp.value = url;
-                            document.getElementById('portal-frame').src = url;
-                            fetch('/api/desktop/config', {{
-                                method: 'POST',
-                                body: JSON.stringify({{ cloud_server_url: url }})
-                            }});
-                        }}
+                        if (inp) inp.setAttribute('data-cloud-url', url);
+                        fetch('/api/desktop/config', {{
+                            method: 'POST',
+                            body: JSON.stringify({{ cloud_server_url: url }})
+                        }});
                     }}
                 }}
             }} catch (_) {{}}
+        }}
+
+        async function checkStandaloneLocalEngine() {{
+            try {{
+                const r = await fetch('/api/desktop/engine-status');
+                const d = await r.json();
+                const badge = document.getElementById('desk-engine-badge');
+                if (d.local_engine_running) {{
+                    if (badge) {{
+                        badge.style.color = '#00e676';
+                        badge.textContent = '🟢 Standalone Local PC Active (127.0.0.1:8080 • ONNX Loaded)';
+                    }}
+                    connectLocal8080();
+                }} else {{
+                    if (badge) {{
+                        badge.style.color = '#ffab00';
+                        badge.textContent = '🛡️ Built-in Standalone Offline Engine Active';
+                    }}
+                    showOfflineDesktopKiosk();
+                }}
+            }} catch (_) {{
+                showOfflineDesktopKiosk();
+            }}
         }}
 
         function setActiveNavBtn(id) {{
@@ -785,7 +914,12 @@ fn render_desktop_shell_html(store: &LocalDesktopStore) -> String {
 
         function connectLiveServer() {{
             setActiveNavBtn('btn-cloud');
-            const url = document.getElementById('server-url-input').value.trim();
+            const inp = document.getElementById('server-url-input');
+            let url = inp.value.trim();
+            if (!url || url.includes('127.0.0.1') || url.includes('localhost')) {{
+                url = discoveredCloudUrl || inp.getAttribute('data-cloud-url') || '{cloud_url}';
+                inp.value = url;
+            }}
             document.getElementById('offline-panel').style.display = 'none';
             const f = document.getElementById('portal-frame');
             f.style.display = 'block';
@@ -802,7 +936,9 @@ fn render_desktop_shell_html(store: &LocalDesktopStore) -> String {
             document.getElementById('offline-panel').style.display = 'none';
             const f = document.getElementById('portal-frame');
             f.style.display = 'block';
-            f.src = '{local_url}';
+            if (f.src !== '{local_url}' && f.src !== '{local_url}/') {{
+                f.src = '{local_url}';
+            }}
         }}
 
         function connectMobilePortal() {{
@@ -936,6 +1072,7 @@ fn render_desktop_shell_html(store: &LocalDesktopStore) -> String {
         }}
 
         window.addEventListener('DOMContentLoaded', () => {{
+            checkStandaloneLocalEngine();
             autoDiscoverLiveTunnelUrl();
         }});
     </script>
@@ -954,7 +1091,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|a| a == "--version" || a == "-v") {
         println!(
-            "attendance-desktop v8.0.0 ({}/{}) — Pure Rust Cross-Platform Desktop Client",
+            "attendance-desktop v8.0.0 ({}/{}) — Pure Rust Cross-Platform Standalone PC Desktop Client",
             env::consts::OS,
             env::consts::ARCH
         );
@@ -992,11 +1129,15 @@ fn main() {
         }
     };
 
+    // Automatically boot the bundled local attendance-api engine on 127.0.0.1:8080 for 100% Standalone PC execution
+    let local_engine_ok = ensure_local_standalone_engine_running();
+
     let desktop_url = format!("http://127.0.0.1:{}", active_port);
     println!("==========================================================================");
-    println!("⚡ Smart Attendance System — Native Rust Desktop App ({}/{})", env::consts::OS, env::consts::ARCH);
-    println!("Local Desktop Bridge: {}", desktop_url);
-    println!("Cloud Server Target:  {}", store.lock().unwrap().config.cloud_server_url);
+    println!("⚡ Smart Attendance System — Standalone PC Desktop App ({}/{})", env::consts::OS, env::consts::ARCH);
+    println!("Local Desktop Bridge:     {}", desktop_url);
+    println!("Local Standalone Engine:  http://127.0.0.1:8080 (Active: {})", local_engine_ok);
+    println!("Optional Cloud Sync URL:  {}", store.lock().unwrap().config.cloud_server_url);
     println!("==========================================================================");
 
     if !args.iter().any(|a| a == "--headless") {

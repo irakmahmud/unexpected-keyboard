@@ -103,7 +103,15 @@ impl TimeHelper {
             .format("%Y-%m-%d %H:%M:%S")
             .to_string();
 
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/opc".to_string());
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| {
+                if cfg!(windows) {
+                    ".".to_string()
+                } else {
+                    "/home/opc".to_string()
+                }
+            });
         let check_paths = [
             std::path::PathBuf::from(&home).join(".attendance_time_check"),
             std::path::PathBuf::from("data").join(".attendance_time_check"),

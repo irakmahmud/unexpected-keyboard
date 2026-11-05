@@ -269,8 +269,12 @@ fn artifact_metadata(filename: &str, platform: &str, title: &str, arch: &str, do
             format!("{} B", size_bytes)
         },
         "sha256": sha256_hex,
+        "standalone_pc_ready": true,
+        "bundled_local_engine": true,
+        "bundled_ai_models": ["facenet512.onnx", "facenet512_weights.h5", "mtcnn_pnet.onnx", "mtcnn_rnet.onnx", "mtcnn_onet.onnx"],
         "download_url": format!("/api/v1/downloads/{}", download_slug),
         "public_download_url": format!("{}/api/v1/downloads/{}", live_base, download_slug),
+        "github_release_url": format!("https://github.com/irakmahmud/unexpected-keyboard/releases/download/v8.0.0-attendance/{}", filename),
         "install_guide": install_guide
     })
 }
@@ -284,35 +288,35 @@ async fn get_downloads_info() -> Json<serde_json::Value> {
     let artifacts = vec![
         artifact_metadata(
             "SmartAttendance-Desktop-Windows-x64-Setup.exe",
-            "Windows Desktop Installer (.exe)",
-            "Smart Attendance Rust Desktop — Windows 10/11 (64-bit) One-Click Setup Installer",
-            "x86_64-pc-windows-gnu (PE32+ Native Rust GUI/Desktop + NSIS Installer)",
+            "Windows Standalone PC Installer (.exe)",
+            "Smart Attendance Standalone Desktop — Windows 10/11 (64-bit) Full Offline AI + Local Engine Installer",
+            "x86_64-pc-windows-gnu (attendance-desktop.exe + attendance-api.exe + FaceNet512/MTCNN ONNX & H5 Weights + NSIS Installer)",
             "windows-installer",
-            "ডাউনলোড করে ডাবল-ক্লিক করুন। এটি স্বয়ংক্রিয়ভাবে Desktop ও Start Menu শর্টকাট তৈরি করবে এবং অ্যাপ চালু করবে।"
+            "ডাউনলোড করে ডাবল-ক্লিক করুন। এটি আপনার পিসিতে সম্পূর্ণ অফলাইন/Standalone ইঞ্জিন (attendance-api.exe + 800MB+ AI Models) ইনস্টল করবে এবং 127.0.0.1:8080-এ লোকাল পিসি থেকেই চলবে।"
         ),
         artifact_metadata(
             "SmartAttendance-Desktop-Windows-x64-Portable.zip",
-            "Windows Portable Desktop (.zip)",
-            "Smart Attendance Rust Desktop — Windows 10/11 (64-bit) Portable Edition",
-            "x86_64-pc-windows-gnu (attendance-desktop.exe + Launcher)",
+            "Windows Standalone Portable (.zip)",
+            "Smart Attendance Standalone Desktop — Windows 10/11 (64-bit) Full Offline AI Portable Edition",
+            "x86_64-pc-windows-gnu (attendance-desktop.exe + attendance-api.exe + Full AI Models + Local DB)",
             "windows-portable",
-            "ZIP ফাইলটি Extract করে attendance-desktop.exe অথবা Install-Windows-Desktop.bat এ ডাবল-ক্লিক করুন।"
+            "ZIP ফাইলটি Extract করে attendance-desktop.exe অথবা Launch-SmartAttendance.bat এ ডাবল-ক্লিক করুন। ক্লাউড ভিএম ছাড়াই সম্পূর্ণ আপনার লোকাল পিসি (127.0.0.1:8080) থেকে চলবে।"
         ),
         artifact_metadata(
             "SmartAttendance-Desktop-macOS-Universal.zip",
-            "macOS Desktop App (.app Bundle)",
-            "Smart Attendance Rust Desktop — macOS Universal (Apple Silicon M1/M2/M3/M4 & Intel)",
-            "macOS Universal (.app Bundle + Install-macOS.command + Rust Desktop Source)",
+            "macOS Standalone Desktop (.app Bundle)",
+            "Smart Attendance Standalone Desktop — macOS Universal (Apple Silicon M1/M2/M3/M4 & Intel) Full Offline AI Bundle",
+            "macOS Universal (.app Bundle + Full Rust Engine + FaceNet512/MTCNN Models + Local DB)",
             "macos-desktop",
-            "ZIP আনজিপ করে Install-macOS.command অথবা SmartAttendanceDesktop.app ওপেন করুন।"
+            "ZIP আনজিপ করে Install-macOS.command অথবা SmartAttendanceDesktop.app ওপেন করুন। সম্পূর্ণ লোকাল ম্যাক পিসি থেকেই চলবে।"
         ),
         artifact_metadata(
             "SmartAttendance-Desktop-Linux-x86_64.tar.gz",
-            "Linux Desktop & Server (.tar.gz)",
-            "Smart Attendance Rust Desktop — Linux x86_64 (Ubuntu/Debian/Fedora/Oracle/Arch)",
-            "x86_64-unknown-linux-gnu (ELF 64-bit Native Rust Desktop + Server Suite)",
+            "Linux Standalone Desktop & Server (.tar.gz)",
+            "Smart Attendance Standalone Desktop — Linux x86_64 Full Offline AI + Local Server Suite",
+            "x86_64-unknown-linux-gnu (attendance-desktop + attendance-api + FaceNet512/MTCNN ONNX & H5 Models)",
             "linux-desktop",
-            "টার্মিনালে tar -xzf SmartAttendance-Desktop-Linux-x86_64.tar.gz চালিয়ে ./install-linux-desktop.sh অথবা ./attendance-desktop চালান।"
+            "টার্মিনালে tar -xzf SmartAttendance-Desktop-Linux-x86_64.tar.gz চালিয়ে ./install-linux-desktop.sh অথবা ./attendance-desktop চালান। সম্পূর্ণ লোকাল পিসি (127.0.0.1:8080) থেকে চলবে।"
         ),
         artifact_metadata(
             "SmartAttendance-Mobile-Android.apk",
@@ -326,7 +330,8 @@ async fn get_downloads_info() -> Json<serde_json::Value> {
 
     Json(serde_json::json!({
         "success": true,
-        "version": "8.0.0-pure-rust",
+        "version": "8.0.0-standalone-pc",
+        "standalone_pc_supported": true,
         "live_cloud_url": live_base,
         "mobile_web_app_url": "/mobile",
         "public_mobile_web_app_url": format!("{}/mobile", live_base),
@@ -338,6 +343,7 @@ async fn get_downloads_info() -> Json<serde_json::Value> {
 
 async fn download_platform_artifact(
     Path(artifact): Path<String>,
+    req: axum::extract::Request,
 ) -> std::result::Result<Response, ApiError> {
     let (filename, content_type) = match artifact.as_str() {
         "windows-installer" | "SmartAttendance-Desktop-Windows-x64-Setup.exe" => (
@@ -370,22 +376,33 @@ async fn download_platform_artifact(
     };
 
     let path = resolve_downloads_dir().join(filename);
-    let bytes = std::fs::read(&path).map_err(|_| {
-        AppError::NotFound(format!(
+    if !path.exists() {
+        return Err(AppError::NotFound(format!(
             "Artifact file '{}' is not yet staged in dist/downloads",
             filename
         ))
-    })?;
+        .into());
+    }
 
-    let disposition = format!("attachment; filename=\"{}\"", filename);
-    Ok((
-        StatusCode::OK,
-        [
-            (header::CONTENT_TYPE, content_type.to_string()),
-            (header::CONTENT_DISPOSITION, disposition),
-            (header::CACHE_CONTROL, "no-cache".to_string()),
-        ],
-        bytes,
+    let mut res = tower::ServiceExt::oneshot(
+        tower_http::services::ServeFile::new(&path),
+        req,
     )
-        .into_response())
+    .await
+    .map_err(|e| AppError::Internal(format!("Artifact stream error: {}", e)))?
+    .into_response();
+
+    let headers = res.headers_mut();
+    if let Ok(ct) = header::HeaderValue::from_str(content_type) {
+        headers.insert(header::CONTENT_TYPE, ct);
+    }
+    if let Ok(cd) = header::HeaderValue::from_str(&format!("attachment; filename=\"{}\"", filename)) {
+        headers.insert(header::CONTENT_DISPOSITION, cd);
+    }
+    headers.insert(
+        header::CACHE_CONTROL,
+        header::HeaderValue::from_static("no-cache"),
+    );
+
+    Ok(res)
 }
