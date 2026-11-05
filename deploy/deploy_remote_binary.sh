@@ -182,7 +182,7 @@ restart_service() {
 
     # Health Probe
     log "Conducting post-deployment health check against http://127.0.0.1:8080/api/v1/health..."
-    local attempts=10
+    local attempts=45
     local healthy=false
 
     for i in $(seq 1 ${attempts}); do
@@ -207,14 +207,16 @@ perform_rollback() {
     local backup_file="${1:-}"
     if [ -n "${backup_file}" ] && [ -f "${backup_file}" ]; then
         log "🚨 Rolling back to previous working binary: ${backup_file}..."
-        cp "${backup_file}" "${TARGET_DIR}/attendance-api"
-        chmod +x "${TARGET_DIR}/attendance-api"
-
         local current_pid
-        current_pid=$(ss -tulpn 2>/dev/null | grep ":8080" | grep -o "pid=[0-9]*" | cut -d'=' -f2 | head -n1 || true)
+        current_pid=$(pgrep -f "target/release/attendance-api" | head -n1 || /usr/sbin/ss -tulpn 2>/dev/null | grep ":8080" | grep -o "pid=[0-9]*" | cut -d'=' -f2 | head -n1 || true)
         if [ -n "${current_pid}" ]; then
             kill -9 "${current_pid}" 2>/dev/null || true
+            sleep 1
         fi
+
+        cp "${backup_file}" "${TARGET_DIR}/attendance-api.tmp"
+        chmod +x "${TARGET_DIR}/attendance-api.tmp"
+        mv -f "${TARGET_DIR}/attendance-api.tmp" "${TARGET_DIR}/attendance-api"
 
         nohup "${TARGET_DIR}/attendance-api" > "${WORKSPACE_DIR}/server.log" 2>&1 &
         sleep 2

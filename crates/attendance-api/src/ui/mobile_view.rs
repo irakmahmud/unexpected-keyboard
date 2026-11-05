@@ -40,7 +40,7 @@ pub fn render_mobile_app_html() -> String {
             --text-sub: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-main); min-height: 100vh; padding-bottom: 85px; overflow-x: hidden; }
+        body { background: var(--bg-dark); color: var(--text-main); min-height: 100vh; padding-bottom: 90px; overflow-x: hidden; }
         .mobile-header {
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             border-bottom: 1px solid rgba(0, 242, 254, 0.3);
@@ -50,48 +50,49 @@ pub fn render_mobile_app_html() -> String {
         }
         .brand-box { display: flex; align-items: center; gap: 10px; }
         .brand-icon { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #00f2fe, #4facfe); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #051923; font-weight: 900; }
-        .brand-title { font-size: 1rem; font-weight: 800; letter-spacing: 0.5px; color: #fff; }
-        .brand-sub { font-size: 0.72rem; color: var(--accent-cyan); display: block; }
+        .brand-title { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; color: #fff; }
+        .brand-sub { font-size: 0.7rem; color: var(--accent-cyan); display: block; }
         .security-ribbon {
             background: rgba(15, 23, 42, 0.95);
             border-bottom: 1px solid rgba(255,255,255,0.08);
             padding: 8px 14px;
-            font-size: 0.76rem;
-            display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;
+            font-size: 0.74rem;
+            display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
         }
-        .badge { padding: 4px 9px; border-radius: 999px; font-weight: 700; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px; }
+        .badge { padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 4px; }
         .badge-ok { background: rgba(0, 230, 118, 0.16); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.4); }
         .badge-err { background: rgba(255, 82, 82, 0.2); color: #ff5252; border: 1px solid rgba(255, 82, 82, 0.5); }
         .badge-warn { background: rgba(255, 171, 0, 0.18); color: #ffab00; border: 1px solid rgba(255, 171, 0, 0.45); }
-        .container { padding: 14px; max-width: 640px; margin: 0 auto; }
+        .container { padding: 12px; max-width: 680px; margin: 0 auto; }
         .card {
             background: var(--card-bg);
             border: 1px solid rgba(0, 242, 254, 0.18);
             border-radius: 14px;
-            padding: 16px;
+            padding: 15px;
             margin-bottom: 14px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.35);
         }
-        .card-title { font-size: 0.95rem; font-weight: 800; color: var(--accent-cyan); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .card-title { font-size: 0.94rem; font-weight: 800; color: var(--accent-cyan); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
         .form-group { margin-bottom: 10px; }
-        .form-label { font-size: 0.78rem; color: var(--text-sub); font-weight: 700; display: block; margin-bottom: 4px; }
+        .form-label { font-size: 0.76rem; color: var(--text-sub); font-weight: 700; display: block; margin-bottom: 4px; }
         .form-input {
-            width: 100%; padding: 10px 12px; border-radius: 10px;
+            width: 100%; padding: 9px 12px; border-radius: 10px;
             background: #0b1120; border: 1px solid rgba(255,255,255,0.16);
-            color: #fff; font-size: 0.9rem; outline: none;
+            color: #fff; font-size: 0.88rem; outline: none;
         }
         .form-input:focus { border-color: var(--accent-cyan); }
         .btn {
-            width: 100%; padding: 12px; border-radius: 10px; border: none;
-            font-weight: 800; font-size: 0.9rem; cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            transition: transform 0.1s, opacity 0.2s;
+            width: 100%; padding: 11px; border-radius: 10px; border: none;
+            font-weight: 800; font-size: 0.86rem; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            transition: transform 0.1s, opacity 0.2s; text-decoration: none;
         }
         .btn:active { transform: scale(0.98); }
         .btn-cyan { background: linear-gradient(135deg, #00f2fe, #4facfe); color: #041421; }
         .btn-green { background: linear-gradient(135deg, #00e676, #00b0ff); color: #041421; }
         .btn-purple { background: linear-gradient(135deg, #7c4dff, #b388ff); color: #fff; }
         .btn-red { background: linear-gradient(135deg, #ff5252, #d50000); color: #fff; }
+        .btn-amber { background: linear-gradient(135deg, #ffab00, #ff6d00); color: #041421; }
         .btn-outline { background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); color: #e2e8f0; }
 
         /* MANDATORY LOCATION HARD LOCK OVERLAY */
@@ -115,16 +116,16 @@ pub fn render_mobile_app_html() -> String {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
             background: rgba(11, 17, 32, 0.98);
             border-top: 1px solid rgba(0, 242, 254, 0.25);
-            display: grid; grid-template-columns: repeat(4, 1fr);
-            padding: 6px 4px;
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            padding: 6px 2px;
         }
         .nav-btn {
             background: none; border: none; color: var(--text-sub);
             display: flex; flex-direction: column; align-items: center; gap: 3px;
-            padding: 6px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+            padding: 5px 2px; font-size: 0.66rem; font-weight: 700; cursor: pointer;
         }
         .nav-btn.active { color: var(--accent-cyan); }
-        .nav-btn span.icon { font-size: 1.2rem; }
+        .nav-btn span.icon { font-size: 1.15rem; }
         .tab-view { display: none; }
         .tab-view.active { display: block; }
         .user-row {
@@ -133,12 +134,24 @@ pub fn render_mobile_app_html() -> String {
             border-radius: 10px;
             padding: 10px 12px;
             margin-bottom: 8px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
         }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
         .stat-box { background: rgba(0, 242, 254, 0.06); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 10px; padding: 10px; text-align: center; }
-        .stat-val { font-size: 1.35rem; font-weight: 900; color: #fff; }
-        .stat-lbl { font-size: 0.72rem; color: var(--text-sub); }
+        .stat-val { font-size: 1.3rem; font-weight: 900; color: #fff; }
+        .stat-lbl { font-size: 0.7rem; color: var(--text-sub); }
+        .nine-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .mini-att-card {
+            background: rgba(9, 13, 22, 0.9);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-left: 3px solid var(--accent-cyan);
+            border-radius: 8px; padding: 8px;
+        }
+        .mini-att-lbl { font-size: 0.66rem; color: var(--text-sub); margin-bottom: 3px; }
+        .mini-att-val { font-size: 0.82rem; font-weight: 800; color: #fff; word-break: break-word; }
+        table.mob-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+        table.mob-table th, table.mob-table td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+        table.mob-table th { color: var(--accent-cyan); font-weight: 800; }
     </style>
 </head>
 <body>
@@ -208,13 +221,18 @@ pub fn render_mobile_app_html() -> String {
         <div class="brand-box">
             <div class="brand-icon">📱</div>
             <div>
-                <span class="brand-title">SMART ATTENDANCE MOBILE</span>
-                <span class="brand-sub">Millions-of-Users No-PC Office Engine</span>
+                <span class="brand-title">SMART ATTENDANCE v8.0</span>
+                <span class="brand-sub" id="mob-header-company">Company: Smart Attendance HQ</span>
             </div>
         </div>
-        <a href="/api/v1/downloads/android-apk" style="background: rgba(0, 230, 118, 0.2); border: 1px solid #00e676; color: #00e676; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; text-decoration: none;">
-            ⬇️ APK
-        </a>
+        <div style="display:flex; gap:6px; align-items:center;">
+            <a href="/" style="background: rgba(0, 242, 254, 0.14); border: 1px solid rgba(0,242,254,0.4); color: #00f2fe; padding: 6px 9px; border-radius: 8px; font-size: 0.72rem; font-weight: 800; text-decoration: none;">
+                🖥️ 3D Web
+            </a>
+            <a href="/api/v1/downloads/android-apk" style="background: rgba(0, 230, 118, 0.2); border: 1px solid #00e676; color: #00e676; padding: 6px 9px; border-radius: 8px; font-size: 0.72rem; font-weight: 800; text-decoration: none;">
+                ⬇️ APK
+            </a>
+        </div>
     </header>
 
     <!-- LIVE GPS & WI-FI TELEMETRY RIBBON -->
@@ -226,7 +244,8 @@ pub fn render_mobile_app_html() -> String {
 
     <div class="container">
         <!-- ================================================================= -->
-        <!-- TAB 1: MOBILE BIOMETRIC & PIN KIOSK                               -->
+        <!-- TAB 1: FULL KIOSK (CAMERA + SPLIT VERIFY, PIN + FORGOT PW, QR,    -->
+        <!--        9 ATTENDANCE CARDS & 7-DAY HISTORY — attendance_v8.py)     -->
         <!-- ================================================================= -->
         <section id="tab-kiosk" class="tab-view active">
             <div class="stat-grid">
@@ -240,26 +259,50 @@ pub fn render_mobile_app_html() -> String {
                 </div>
             </div>
 
+            <!-- 1A. CAMERA ATTENDANCE + SPLIT VERIFICATION WINDOW -->
             <div class="card">
-                <div class="card-title">📷 মোবাইল ফেস রিকগনিশন ও ইন/আউট কিয়স্ক</div>
-                <p style="font-size: 0.78rem; color: var(--text-sub); margin-bottom: 10px;">
-                    পিসি ছাড়াই সরাসরি মোবাইল ক্যামেরা বা পিন দিয়ে উপস্থিতি নিন (প্রতিটি পাঞ্চে GPS Location বাধ্যতামূলকভাবে যাচাই হবে):
+                <div class="card-title">
+                    <span>📷 ১. In &amp; Out with Camera (FaceNet512 ONNX)</span>
+                    <span class="badge badge-ok">512-D</span>
+                </div>
+                <p style="font-size: 0.76rem; color: var(--text-sub); margin-bottom: 8px;">
+                    মোবাইল ক্যামেরায় মুখের ছবি তুলে FaceNet512 + MTCNN যাচাই করে উপস্থিতি দিন (GPS Location বাধ্যতামূলক):
                 </p>
-                <div style="background: #000; border-radius: 12px; overflow: hidden; height: 220px; position: relative; margin-bottom: 10px; border: 1px solid rgba(0,242,254,0.3);">
+                <div style="background: #000; border-radius: 12px; overflow: hidden; height: 210px; position: relative; margin-bottom: 10px; border: 1px solid rgba(0,242,254,0.3);">
                     <video id="mob-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
                     <canvas id="mob-canvas" width="480" height="360" style="display:none;"></canvas>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
-                    <button class="btn btn-outline" onclick="startMobileCamera()">🎥 ক্যামেরা চালু করুন</button>
-                    <button class="btn btn-cyan" onclick="submitMobileCameraPunch()">📸 ছবি তুলে উপস্থিতি দিন</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <button class="btn btn-outline" onclick="startMobileCamera()">🎥 ক্যামেরা চালু</button>
+                    <button class="btn btn-cyan" onclick="verifyAndPreviewMobileCamera()">🔍 Verify &amp; Punch</button>
+                </div>
+                <button class="btn btn-green" onclick="submitMobileCameraPunch()">📸 সরাসরি ছবি তুলে উপস্থিতি দিন</button>
+
+                <!-- Split Verification Preview Box (CAP-15 Parity) -->
+                <div id="mob-verify-split-box" style="display:none; margin-top:10px; background:#090d16; border:1px solid #00e676; border-radius:10px; padding:10px;">
+                    <div style="font-weight:800; color:#00e676; font-size:0.86rem; margin-bottom:6px;">
+                        ✅ Identity Verification Split-Window (<span id="mob-ver-countdown">5s</span>)
+                    </div>
+                    <div style="font-size:0.78rem; color:#e2e8f0; margin-bottom:8px;">
+                        👤 User: <b id="mob-ver-user">---</b> | Tier: <b id="mob-ver-tier">---</b><br>
+                        🎯 Confidence: <b id="mob-ver-conf">---</b> | Distance: <b id="mob-ver-dist">---</b>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <button class="btn btn-green" onclick="confirmVerifiedCameraPunch()">✅ হ্যাঁ, আমিই (Confirm)</button>
+                        <button class="btn btn-red" onclick="cancelVerifiedCameraPunch()">🔄 না, আবার তুলুন</button>
+                    </div>
                 </div>
             </div>
 
+            <!-- 1B. WITHOUT CAMERA (USERNAME + PASSWORD/PIN + FORGOT PASSWORD) -->
             <div class="card">
-                <div class="card-title">🔐 ইউজারনেম ও পিন/পাসওয়ার্ড উপস্থিতি (Mobile Punch)</div>
+                <div class="card-title">
+                    <span>🚪 ২. In &amp; Out without Camera (PIN / Password)</span>
+                    <button onclick="toggleMobileForgotPw()" style="background:none; border:none; color:#ffab00; font-size:0.75rem; font-weight:700; cursor:pointer;">🔑 Forgot Password?</button>
+                </div>
                 <div class="form-group">
                     <label class="form-label">ইউজারনেম (USERNAME)</label>
-                    <input type="text" id="mob-punch-user" class="form-input" placeholder="যেমন: RAHIM বা ADM000" style="text-transform: uppercase;">
+                    <input type="text" id="mob-punch-user" class="form-input" placeholder="যেমন: RAHIM বা ADMIN" style="text-transform: uppercase;">
                 </div>
                 <div class="form-group">
                     <label class="form-label">পাসওয়ার্ড / পিন (PIN / Password)</label>
@@ -269,17 +312,112 @@ pub fn render_mobile_app_html() -> String {
                     ✅ মোবাইল থেকে উপস্থিতি (IN / OUT) রেকর্ড করুন
                 </button>
                 <div id="mob-punch-result" style="margin-top: 10px; font-size: 0.84rem; font-weight: 700; text-align: center;"></div>
+
+                <!-- Forgot Password Reset Sub-Panel (CAP-19 Parity) -->
+                <div id="mob-forgot-pw-box" style="display:none; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.12);">
+                    <div style="font-size:0.84rem; font-weight:800; color:#ffab00; margin-bottom:8px;">🔑 Reset User Password (HR পাসওয়ার্ড বা Android ID দিয়ে)</div>
+                    <div class="form-group">
+                        <label class="form-label">ইউজারনেম (Username) *</label>
+                        <input type="text" id="mob-fp-user" class="form-input" placeholder="যেমন: RAHIM" style="text-transform:uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">HR পাসওয়ার্ড অথবা ইউজারের Android ID *</label>
+                        <input type="password" id="mob-fp-auth" class="form-input" placeholder="যেমন: HR@123 বা ANDR_DEV001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">নতুন পাসওয়ার্ড (New Password) *</label>
+                        <input type="password" id="mob-fp-newpw" class="form-input" placeholder="নতুন পাসওয়ার্ড লিখুন">
+                    </div>
+                    <button class="btn btn-amber" onclick="submitMobileForgotPassword()">🔄 পাসওয়ার্ড রিসেট করুন</button>
+                    <div id="mob-fp-status" style="margin-top:6px; font-size:0.8rem; font-weight:700;"></div>
+                </div>
+            </div>
+
+            <!-- 1C. QR CODE IN & OUT (ONLINE + ANDROID ID) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📲 ৩. In &amp; Out with QR Code (Online / Android ID)</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input type="text" id="mob-qr-android-id" class="form-input" placeholder="Android ID (যেমন: ANDR_DEV001)" value="ANDR_DEV001">
+                    <button class="btn btn-purple" onclick="submitMobileQrPunch()">📲 QR / Android ID Punch</button>
+                </div>
+                <button class="btn btn-outline" onclick="generateMobileQrSession()">🔄 অনলাইন QR Session তৈরি করুন</button>
+                <div id="mob-qr-session-box" style="display:none; margin-top:10px; text-align:center; background:#090d16; padding:10px; border-radius:10px;">
+                    <div id="mob-qr-svg" style="background:#fff; padding:8px; border-radius:8px; display:inline-block; margin-bottom:6px;"></div>
+                    <div id="mob-qr-session-txt" style="font-size:0.75rem; color:#00f2fe;">Waiting for scan...</div>
+                </div>
+            </div>
+
+            <!-- 1D. TODAY'S ATTENDANCE — EXACT 9 KIOSK INFO CARDS + 7 DAYS HISTORY (CAP-22 & CAP-23) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📋 TODAY'S ATTENDANCE (9 Cards)</span>
+                    <button onclick="loadMobileSevenDayHistory()" style="background:#5E0037; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:800; cursor:pointer;">📈 7 Days History</button>
+                </div>
+                <div class="nine-cards-grid">
+                    <div class="mini-att-card" style="border-left-color:#6c5ce7;">
+                        <div class="mini-att-lbl">👤 User Name</div>
+                        <div class="mini-att-val" id="mob-card-username">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#fdcb6e;">
+                        <div class="mini-att-lbl">⏱️ Record Time</div>
+                        <div class="mini-att-val" id="mob-card-record-time">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#00b894;">
+                        <div class="mini-att-lbl">🔐 In/Out</div>
+                        <div class="mini-att-val" id="mob-card-login-type">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#dfe6e9;">
+                        <div class="mini-att-lbl">📋 Status</div>
+                        <div class="mini-att-val" id="mob-card-attendance-type">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#e17055;">
+                        <div class="mini-att-lbl">📅 Date</div>
+                        <div class="mini-att-val" id="mob-card-date">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#a29bfe;">
+                        <div class="mini-att-lbl">📱 Method</div>
+                        <div class="mini-att-val" id="mob-card-attendance-method">---</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#ff7675;">
+                        <div class="mini-att-lbl">⚠️ Monthly Lates</div>
+                        <div class="mini-att-val" id="mob-card-monthly-lates">0</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#d63031;">
+                        <div class="mini-att-lbl">🚨 Late Absents</div>
+                        <div class="mini-att-val" id="mob-card-late-absents">0</div>
+                    </div>
+                    <div class="mini-att-card" style="border-left-color:#fab1a0;">
+                        <div class="mini-att-lbl">🏃 Early Leaves</div>
+                        <div class="mini-att-val" id="mob-card-early-leaves">0</div>
+                    </div>
+                </div>
+
+                <!-- 7-Day Attendance History Table -->
+                <div id="mob-7day-box" style="display:none; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.12); overflow-x:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <strong style="font-size:0.82rem; color:#00f2fe;">📈 বিগত ৭ দিনের উপস্থিতি রেকর্ড (Last 7 Days)</strong>
+                        <button onclick="document.getElementById('mob-7day-box').style.display='none'" style="background:none; border:none; color:#ff5252; font-weight:800; cursor:pointer;">✕</button>
+                    </div>
+                    <table class="mob-table">
+                        <thead>
+                            <tr><th>User</th><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="mob-7day-tbody"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
         <!-- ================================================================= -->
-        <!-- TAB 2: MILLIONS-OF-USERS SHARDED DIRECTORY (64 SHARDS + O(1))     -->
+        <!-- TAB 2: MILLIONS-OF-USERS SHARDED DIRECTORY (64 SHARDS + DELETE)   -->
         <!-- ================================================================= -->
         <section id="tab-millions" class="tab-view">
             <div class="card">
                 <div class="card-title">👥 কোটি/লক্ষ ইউজার ম্যানেজমেন্ট (64 Physical Shards)</div>
-                <p style="font-size: 0.78rem; color: var(--text-sub); margin-bottom: 10px;">
-                    কোনো অফিসে পিসি না থাকলেও মোবাইল থেকেই O(1) Keyset Cursor Pagination এর মাধ্যমে লক্ষ/কোটি ইউজার পরিচালনা করুন:
+                <p style="font-size: 0.76rem; color: var(--text-sub); margin-bottom: 10px;">
+                    পিসি না থাকলেও মোবাইল থেকেই O(1) Keyset Cursor Pagination এর মাধ্যমে লক্ষ/কোটি ইউজার খুঁজুন ও পরিচালনা করুন:
                 </p>
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 10px;">
                     <input type="text" id="mob-user-search" class="form-input" placeholder="ইউজারনেম বা পদবি খুঁজুন..." oninput="resetAndLoadMobileUsers()">
@@ -288,7 +426,7 @@ pub fn render_mobile_app_html() -> String {
                     </select>
                 </div>
                 <div id="mob-cursor-meta" style="font-size: 0.75rem; color: var(--accent-cyan); margin-bottom: 10px;"></div>
-                <div id="mob-users-list" style="max-height: 360px; overflow-y: auto;"></div>
+                <div id="mob-users-list" style="max-height: 380px; overflow-y: auto;"></div>
                 <div style="display: flex; gap: 8px; margin-top: 10px;">
                     <button class="btn btn-outline" onclick="resetAndLoadMobileUsers()">⏮️ প্রথম পেজ</button>
                     <button class="btn btn-cyan" onclick="loadNextMobileUsersPage()">পরবর্তী পেজ (O(1) Cursor) ⏭️</button>
@@ -297,11 +435,40 @@ pub fn render_mobile_app_html() -> String {
         </section>
 
         <!-- ================================================================= -->
-        <!-- TAB 3: MOBILE USER REGISTRATION & BULK MILLIONS PROVISIONING      -->
+        <!-- TAB 3: USER REGISTRATION (20-POSE CAMERA + NO-CAM + QR + BULK)    -->
         <!-- ================================================================= -->
         <section id="tab-provision" class="tab-view">
+            <!-- 3A. 20-POSE CAMERA FACE REGISTRATION (CAP-11 Parity) -->
             <div class="card">
-                <div class="card-title">➕ মোবাইল থেকে নতুন ইউজার রেজিস্ট্রেশন</div>
+                <div class="card-title">
+                    <span>📷 ১. ২০-পোজ ক্যামেরা ফেস রেজিস্ট্রেশন (20-Pose ONNX)</span>
+                    <span class="badge badge-ok" id="mob-reg20-badge">0 / 20</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input type="text" id="mob-camreg-user" class="form-input" placeholder="Username (যেমন: KARIM_02)" style="text-transform:uppercase;">
+                    <input type="text" id="mob-camreg-desig" class="form-input" placeholder="Designation" value="Engineer">
+                </div>
+                <input type="password" id="mob-camreg-pw" class="form-input" placeholder="Password" value="1234" style="margin-bottom:8px;">
+                <div style="background:#000; border-radius:10px; overflow:hidden; height:180px; margin-bottom:8px; border:1px solid rgba(0,242,254,0.3);">
+                    <video id="mob-reg-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                </div>
+                <div id="mob-reg20-prompt" style="font-size:0.78rem; color:#ffab00; font-weight:700; margin-bottom:8px;">
+                    Pose 1/20: ক্যামেরা চালু করে ছবি তুলুন বা Auto Capture চাপুন
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <button class="btn btn-outline" onclick="startMobileRegCamera()">🎥 ক্যামেরা চালু</button>
+                    <button class="btn btn-cyan" onclick="captureNextMobilePose()">📸 পরের পোজ তুলুন</button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <button class="btn btn-purple" onclick="autoCaptureAll20MobilePoses()">⚡ Auto 20-Pose Capture</button>
+                    <button class="btn btn-green" onclick="submitMobile20PoseRegistration()">✅ ২০-পোজ সেভ করুন</button>
+                </div>
+                <div id="mob-camreg-status" style="margin-top:8px; font-size:0.8rem; font-weight:700;"></div>
+            </div>
+
+            <!-- 3B. WITHOUT CAMERA REGISTRATION (CAP-17 Parity) -->
+            <div class="card">
+                <div class="card-title">👤 ২. ক্যামেরা ছাড়া নতুন ইউজার রেজিস্ট্রেশন (512-Zero Vector)</div>
                 <div class="form-group">
                     <label class="form-label">ইউজারনেম (Username) *</label>
                     <input type="text" id="mob-reg-username" class="form-input" placeholder="যেমন: TANVIR_01" style="text-transform: uppercase;">
@@ -315,16 +482,29 @@ pub fn render_mobile_app_html() -> String {
                     <input type="password" id="mob-reg-pw" class="form-input" value="1234">
                 </div>
                 <button class="btn btn-green" onclick="registerSingleUserFromMobile()">
-                    👤 ইউজার রেজিস্টার করুন
+                    👤 ইউজার রেজিস্টার করুন (No Camera)
                 </button>
                 <div id="mob-reg-status" style="margin-top:8px; font-size:0.82rem; font-weight:700;"></div>
             </div>
 
+            <!-- 3C. QR CODE / ANDROID ID USER REGISTRATION (CAP-20 Parity) -->
             <div class="card">
-                <div class="card-title">⚡ বাল্ক ইউজার জেনারেটর (Bulk Sharded Provisioning)</div>
-                <p style="font-size: 0.78rem; color: var(--text-sub); margin-bottom: 10px;">
-                    মোবাইল থেকেই এক ক্লিকে ৬৪টি শার্ডে শত শত বা হাজার হাজার ইউজার ব্যাচ হিসেবে যুক্ত করুন:
-                </p>
+                <div class="card-title">📲 ৩. QR Code / Android ID সহ ইউজার রেজিস্ট্রেশন</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input type="text" id="mob-qrreg-user" class="form-input" placeholder="Username (যেমন: FIELD_01)" style="text-transform:uppercase;">
+                    <input type="text" id="mob-qrreg-aid" class="form-input" placeholder="Android ID (যেমন: ANDR_991)">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <input type="text" id="mob-qrreg-desig" class="form-input" value="Field Executive">
+                    <input type="password" id="mob-qrreg-pw" class="form-input" value="1234">
+                </div>
+                <button class="btn btn-cyan" onclick="registerQrUserFromMobile()">📲 QR / Android ID ইউজার সেভ করুন</button>
+                <div id="mob-qrreg-status" style="margin-top:8px; font-size:0.8rem; font-weight:700;"></div>
+            </div>
+
+            <!-- 3D. BULK SHARDED PROVISIONING -->
+            <div class="card">
+                <div class="card-title">⚡ ৪. বাল্ক ইউজার জেনারেটর (64-Shard Bulk Provisioning)</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                     <div>
                         <label class="form-label">প্রিফিক্স (Prefix)</label>
@@ -348,12 +528,109 @@ pub fn render_mobile_app_html() -> String {
         </section>
 
         <!-- ================================================================= -->
-        <!-- TAB 4: MANDATORY LOCATION & WI-FI SECURITY POLICY                 -->
+        <!-- TAB 4: HR MANAGEMENT (ALL 12 FUNCTIONS) & COMPANY INFO            -->
+        <!-- ================================================================= -->
+        <section id="tab-hr" class="tab-view">
+            <!-- 4A. COMPANY INFO (SELECT / CREATE 7-FIELD / EDIT — CAP-05,06,07) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🏢 Company Management (Select / Create / Edit)</span>
+                </div>
+                <div style="font-size:0.78rem; color:#00e676; margin-bottom:8px;">
+                    সক্রিয় কোম্পানি: <b id="mob-comp-active-lbl">Smart Attendance HQ (HQ_001)</b>
+                </div>
+                <div style="display:grid; grid-template-columns:1.3fr 1fr auto; gap:6px; margin-bottom:10px;">
+                    <select id="mob-comp-select" class="form-input"></select>
+                    <input type="password" id="mob-comp-verify-pw" class="form-input" placeholder="Password (admin123)" value="admin123">
+                    <button class="btn btn-cyan" style="width:auto; padding:0 12px;" onclick="switchMobileCompany()">Switch</button>
+                </div>
+                <details style="background:#090d16; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                    <summary style="cursor:pointer; font-weight:800; font-size:0.82rem; color:#00f2fe;">➕ নতুন কোম্পানি তৈরি বা এডিট করুন (7 Fields)</summary>
+                    <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <input type="text" id="mob-c-name" class="form-input" placeholder="Company Name *">
+                        <input type="text" id="mob-c-id" class="form-input" placeholder="Company ID (e.g. BR_02) *">
+                        <input type="text" id="mob-c-addr" class="form-input" placeholder="Company Address *">
+                        <input type="text" id="mob-c-person" class="form-input" placeholder="Contact Person Name *">
+                        <input type="text" id="mob-c-desig" class="form-input" placeholder="Designation *">
+                        <input type="text" id="mob-c-phone" class="form-input" placeholder="Phone Number *">
+                    </div>
+                    <input type="password" id="mob-c-pw" class="form-input" placeholder="Company Password *" style="margin-top:8px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                        <button class="btn btn-green" onclick="createMobileCompany()">➕ Create Company</button>
+                        <button class="btn btn-amber" onclick="editMobileCompany()">✏️ Update Company</button>
+                    </div>
+                </details>
+                <div id="mob-comp-status" style="margin-top:6px; font-size:0.78rem; font-weight:700;"></div>
+            </div>
+
+            <!-- 4B. HR AUTHENTICATION & ALL 12 HR TOOLS (CAP-24..34) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>👔 HR Management Portal (attendance_v8.py All 12 Tools)</span>
+                    <span id="mob-hr-lock-badge" class="badge badge-warn">🔒 Locked</span>
+                </div>
+                <div id="mob-hr-login-box">
+                    <div style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-bottom:8px;">
+                        <input type="password" id="mob-hr-pw" class="form-input" placeholder="HR Password (ডিফল্ট: HR@123)" value="HR@123">
+                        <button class="btn btn-cyan" style="width:auto; padding:0 16px;" onclick="unlockMobileHrPortal()">🔓 Unlock HR</button>
+                    </div>
+                </div>
+
+                <div id="mob-hr-tools-box" style="display:none;">
+                    <!-- Customized Reports (CSV, XLSX, HTML Muster Roll) -->
+                    <div style="background:#090d16; padding:10px; border-radius:10px; margin-bottom:10px; border:1px solid rgba(0,242,254,0.2);">
+                        <div style="font-weight:800; font-size:0.82rem; color:#00f2fe; margin-bottom:8px;">📊 Customized Attendance Reports (CSV / Excel .xlsx / Muster Roll)</div>
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+                            <a href="/api/v1/reports/customized.csv" target="_blank" class="btn btn-cyan" style="font-size:0.75rem; padding:8px;">⬇️ CSV</a>
+                            <a href="/api/v1/reports/customized.xlsx" target="_blank" class="btn btn-green" style="font-size:0.75rem; padding:8px;">📗 Excel .xlsx</a>
+                            <a href="/api/v1/reports/muster-roll/html" target="_blank" class="btn btn-purple" style="font-size:0.75rem; padding:8px;">📄 Muster Roll</a>
+                        </div>
+                    </div>
+
+                    <!-- Embeddings Report & FAISS Index Inspect -->
+                    <div style="background:#090d16; padding:10px; border-radius:10px; margin-bottom:10px; border:1px solid rgba(124,77,255,0.3);">
+                        <div style="font-weight:800; font-size:0.82rem; color:#b388ff; margin-bottom:8px;">🧬 12-Col Facial Embeddings Report &amp; FAISS Index</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                            <button class="btn btn-outline" style="font-size:0.75rem; padding:8px;" onclick="inspectMobileEmbeddingsReport()">🔍 View 12-Col Report</button>
+                            <button class="btn btn-outline" style="font-size:0.75rem; padding:8px;" onclick="inspectMobileFakeAttendance()">🕵️ Check Fake Attendance</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+                            <a href="/api/v1/face/embeddings-report.csv" target="_blank" class="btn btn-outline" style="font-size:0.7rem; padding:6px;">📄 Analysis CSV</a>
+                            <a href="/api/v1/face/embeddings-summary.csv" target="_blank" class="btn btn-outline" style="font-size:0.7rem; padding:6px;">📄 Summary CSV</a>
+                            <a href="/api/v1/face/embeddings-vectors.csv" target="_blank" class="btn btn-outline" style="font-size:0.7rem; padding:6px;">📄 512-D Vectors</a>
+                        </div>
+                    </div>
+
+                    <!-- Sync Local / Cloud / HR Password / Delete Face -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                        <button class="btn btn-outline" style="font-size:0.76rem;" onclick="runMobileHrSync('/api/v1/sync/users-to-local', 'Local SQLite & FAISS Sync')">🔄 Sync Users to Local</button>
+                        <button class="btn btn-outline" style="font-size:0.76rem;" onclick="runMobileHrSync('/api/v1/sync/users-to-cloud', 'Cloud Outbox Sync')">☁️ Sync Users to Cloud</button>
+                        <button class="btn btn-outline" style="font-size:0.76rem;" onclick="runMobileHrSync('/api/v1/auth/sync-hr-password', 'HR Password Sync')">🔑 Sync HR Password</button>
+                        <button class="btn btn-red" style="font-size:0.76rem;" onclick="deleteMobileUserFacePrompt()">🗑️ Delete Face Data</button>
+                    </div>
+
+                    <!-- Change HR Password -->
+                    <details style="background:#090d16; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                        <summary style="cursor:pointer; font-weight:800; font-size:0.8rem; color:#ffab00;">🔑 Change HR Password</summary>
+                        <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; margin-top:8px;">
+                            <input type="password" id="mob-hrcp-old" class="form-input" placeholder="Current HR PW">
+                            <input type="password" id="mob-hrcp-new" class="form-input" placeholder="New HR PW">
+                            <button class="btn btn-amber" style="width:auto; padding:0 12px;" onclick="changeMobileHrPassword()">Save</button>
+                        </div>
+                    </details>
+
+                    <div id="mob-hr-output" style="margin-top:10px; font-size:0.78rem; color:#00e676; background:#090d16; padding:10px; border-radius:8px; display:none; max-height:240px; overflow-y:auto;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 5: MANDATORY LOCATION & WI-FI POLICY + ALL PLATFORM DOWNLOADS -->
         <!-- ================================================================= -->
         <section id="tab-policy" class="tab-view">
             <div class="card">
                 <div class="card-title">📍 বাধ্যতামূলক লোকেশন ও Wi-Fi পলিসি সেটিংস</div>
-                <div style="background: rgba(0, 230, 118, 0.12); border: 1px solid rgba(0, 230, 118, 0.4); padding: 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 12px;">
+                <div style="background: rgba(0, 230, 118, 0.12); border: 1px solid rgba(0, 230, 118, 0.4); padding: 10px; border-radius: 10px; font-size: 0.78rem; margin-bottom: 12px;">
                     🔒 <b>বাধ্যতামূলক নিয়ম:</b> মোবাইল অ্যাপে <b>GPS Location</b> সর্বদা বাধ্যতামূলক (Mandatory)। লোকেশন ছাড়া অ্যাপ কখনোই কাজ করবে না। পাশাপাশি আপনি নিচের <b>Wi-Fi অপশনটি</b> চালু বা কাস্টমাইজ করতে পারবেন।
                 </div>
 
@@ -384,8 +661,8 @@ pub fn render_mobile_app_html() -> String {
 
                 <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: rgba(124, 77, 255, 0.12); padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(124, 77, 255, 0.35);">
                     <div>
-                        <div style="font-weight: 800; font-size: 0.86rem; color: #fff;">📶 নির্ধারিত Wi-Fi অপশন (Wi-Fi Enforcement)</div>
-                        <div style="font-size: 0.74rem; color: #cbd5e1;">চালু করলে নির্ধারিত লোকেশন + নির্ধারিত Wi-Fi দুটোই লাগবে</div>
+                        <div style="font-weight: 800; font-size: 0.84rem; color: #fff;">📶 নির্ধারিত Wi-Fi অপশন (Wi-Fi Enforcement)</div>
+                        <div style="font-size: 0.72rem; color: #cbd5e1;">চালু করলে নির্ধারিত লোকেশন + নির্ধারিত Wi-Fi দুটোই লাগবে</div>
                     </div>
                     <input type="checkbox" id="pol-wifi-enabled" style="width: 22px; height: 22px; accent-color: #00e676;">
                 </div>
@@ -400,26 +677,44 @@ pub fn render_mobile_app_html() -> String {
                 </button>
                 <div id="pol-save-status" style="margin-top: 8px; font-size: 0.82rem; font-weight: 700; text-align: center;"></div>
             </div>
+
+            <!-- ALL PLATFORM DOWNLOAD LINKS (WINDOWS, LINUX, MAC, APK) -->
+            <div class="card">
+                <div class="card-title">💻 সকল প্ল্যাটফর্ম ডাউনলোড (Windows / Linux / Mac / APK)</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <a href="/api/v1/downloads/windows-installer" class="btn btn-cyan" style="font-size:0.78rem;">🪟 Windows Setup (.exe)</a>
+                    <a href="/api/v1/downloads/windows-portable" class="btn btn-outline" style="font-size:0.78rem;">📦 Windows Portable (.zip)</a>
+                    <a href="/api/v1/downloads/linux-desktop" class="btn btn-green" style="font-size:0.78rem;">🐧 Linux Desktop (.tar.gz)</a>
+                    <a href="/api/v1/downloads/macos-desktop" class="btn btn-purple" style="font-size:0.78rem;">🍎 macOS Universal (.zip)</a>
+                </div>
+                <a href="/api/v1/downloads/android-apk" class="btn btn-amber" style="margin-top:8px; font-size:0.84rem;">
+                    🤖 Download Android Mobile App (.apk)
+                </a>
+            </div>
         </section>
     </div>
 
-    <!-- BOTTOM NAVIGATION BAR -->
+    <!-- BOTTOM NAVIGATION BAR (5 TABS) -->
     <nav class="bottom-nav">
         <button class="nav-btn active" id="nav-kiosk" onclick="switchMobileTab('kiosk')">
             <span class="icon">📷</span>
-            <span>উপস্থিতি কিয়স্ক</span>
+            <span>কিয়স্ক (9-Card)</span>
         </button>
         <button class="nav-btn" id="nav-millions" onclick="switchMobileTab('millions')">
             <span class="icon">👥</span>
-            <span>লক্ষ ইউজার (64-Shard)</span>
+            <span>লক্ষ ইউজার</span>
         </button>
         <button class="nav-btn" id="nav-provision" onclick="switchMobileTab('provision')">
-            <span class="icon">⚡</span>
-            <span>ইউজার ও বাল্ক অ্যাড</span>
+            <span class="icon">➕</span>
+            <span>রেজিস্ট্রেশন</span>
+        </button>
+        <button class="nav-btn" id="nav-hr" onclick="switchMobileTab('hr')">
+            <span class="icon">👔</span>
+            <span>HR ও কোম্পানি</span>
         </button>
         <button class="nav-btn" id="nav-policy" onclick="switchMobileTab('policy')">
             <span class="icon">📍</span>
-            <span>লোকেশন ও Wi-Fi</span>
+            <span>পলিসি ও অ্যাপস</span>
         </button>
     </nav>
 
@@ -434,7 +729,15 @@ pub fn render_mobile_app_html() -> String {
             policy: null,
             nextCursorUsername: "",
             stream: null,
-            watchId: null
+            regStream: null,
+            watchId: null,
+            activeCompanyId: "HQ_001",
+            activeCompanyName: "Smart Attendance HQ",
+            pendingVerifiedUser: null,
+            pendingVerifiedB64: null,
+            verifyTimer: null,
+            qrPollTimer: null,
+            regPosesB64: []
         };
 
         // Populate 64 shards dropdown
@@ -466,6 +769,35 @@ pub fn render_mobile_app_html() -> String {
             } catch (e) {
                 console.error('Failed to load mobile policy:', e);
             }
+        }
+
+        async function loadMobileCompanies() {
+            try {
+                const rp = await fetch('/api/v1/companies/profile');
+                if (rp.ok) {
+                    const prof = await rp.json();
+                    if (prof.company_id) {
+                        mobileState.activeCompanyId = prof.company_id;
+                        mobileState.activeCompanyName = prof.company_name || prof.company_id;
+                        document.getElementById('mob-header-company').textContent = `Company: ${mobileState.activeCompanyName}`;
+                        document.getElementById('mob-comp-active-lbl').textContent = `${mobileState.activeCompanyName} (${mobileState.activeCompanyId})`;
+                        document.getElementById('mob-c-name').value = prof.company_name || '';
+                        document.getElementById('mob-c-id').value = prof.company_id || '';
+                        document.getElementById('mob-c-addr').value = prof.address_road || '';
+                        document.getElementById('mob-c-person').value = prof.contact_person_name || '';
+                        document.getElementById('mob-c-desig').value = prof.contact_person_designation || '';
+                        document.getElementById('mob-c-phone').value = prof.contact_person_number || '';
+                    }
+                }
+                const rl = await fetch('/api/v1/companies/list');
+                if (rl.ok) {
+                    const list = await rl.json();
+                    const sel = document.getElementById('mob-comp-select');
+                    if (sel && Array.isArray(list)) {
+                        sel.innerHTML = list.map(c => `<option value="${c.company_id}" ${c.company_id === mobileState.activeCompanyId ? 'selected' : ''}>${c.company_name} (${c.company_id})</option>`).join('');
+                    }
+                }
+            } catch (_) {}
         }
 
         function detectNativeAndroidBridge() {
@@ -592,6 +924,7 @@ pub fn render_mobile_app_html() -> String {
                     document.getElementById('ribbon-wifi-badge').textContent = `📶 Wi-Fi: ${mobileState.wifiSsid || 'Optional OK'}`;
                     loadMobileDashboardStats();
                     resetAndLoadMobileUsers();
+                    loadMobileCompanies();
                 } else {
                     showGateLocked(res.reason || 'লোকেশন বা Wi-Fi যাচাই ব্যর্থ হয়েছে!');
                 }
@@ -664,6 +997,53 @@ pub fn render_mobile_app_html() -> String {
             document.getElementById('nav-' + tab).classList.add('active');
         }
 
+        async function updateMobileNineCards(punchRes) {
+            if (!punchRes) return;
+            const uname = punchRes.username || '---';
+            document.getElementById('mob-card-username').textContent = uname;
+            document.getElementById('mob-card-record-time').textContent = punchRes.timestamp || punchRes.time || '---';
+            document.getElementById('mob-card-login-type').textContent = punchRes.login_type || punchRes.status || '---';
+            document.getElementById('mob-card-attendance-type').textContent = punchRes.attendance_type || punchRes.late_status || 'Present';
+            document.getElementById('mob-card-date').textContent = punchRes.date || new Date().toISOString().slice(0, 10);
+            document.getElementById('mob-card-attendance-method').textContent = punchRes.method || 'MOBILE_GPS';
+            try {
+                const stResp = await fetch(`/api/v1/attendance/user-stats/${encodeURIComponent(uname)}`);
+                if (stResp.ok) {
+                    const st = await stResp.json();
+                    document.getElementById('mob-card-monthly-lates').textContent = st.total_lates ?? 0;
+                    document.getElementById('mob-card-late-absents').textContent = st.late_absents ?? 0;
+                    document.getElementById('mob-card-early-leaves').textContent = st.early_leaves ?? 0;
+                }
+            } catch (_) {}
+        }
+
+        async function loadMobileSevenDayHistory() {
+            const box = document.getElementById('mob-7day-box');
+            const tbody = document.getElementById('mob-7day-tbody');
+            box.style.display = 'block';
+            tbody.innerHTML = '<tr><td colspan="5">Loading 7-day history...</td></tr>';
+            try {
+                const r = await fetch('/api/v1/attendance/history-7days');
+                const d = await r.json();
+                const rows = d.history || d.records || (Array.isArray(d) ? d : []);
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="5">কোনো রেকর্ড পাওয়া যায়নি</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.slice(0, 30).map(item => `
+                    <tr>
+                        <td><b>${item.username || '---'}</b></td>
+                        <td>${item.date || '---'}</td>
+                        <td>${item.in_time || '---'}</td>
+                        <td>${item.out_time || '---'}</td>
+                        <td style="color:#00e676;">${item.status || item.attendance_type || 'Present'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5">Error: ${e.message}</td></tr>`;
+            }
+        }
+
         async function loadMobileDashboardStats() {
             if (!mobileState.verified) return;
             try {
@@ -716,14 +1096,24 @@ pub fn render_mobile_app_html() -> String {
             box.innerHTML = users.map(u => `
                 <div class="user-row">
                     <div>
-                        <div style="font-weight:800; color:#fff; font-size:0.9rem;">👤 ${u.username}</div>
-                        <div style="font-size:0.74rem; color:#94a3b8;">${u.user_designation || 'Employee'} • ${u.company_name || 'HQ'}</div>
+                        <div style="font-weight:800; color:#fff; font-size:0.88rem;">👤 ${u.username}</div>
+                        <div style="font-size:0.72rem; color:#94a3b8;">${u.user_designation || 'Employee'} • ${u.company_name || 'HQ'} • Cam: ${u.register_with_camera || 'N'}</div>
                     </div>
-                    <div style="text-align:right;">
+                    <div style="display:flex; align-items:center; gap:6px;">
                         <span class="badge badge-ok">Shard #${String(u.shard_bucket || 0).padStart(2, '0')}</span>
+                        <button onclick="deleteMobileUser('${u.username}')" style="background:rgba(255,82,82,0.2); border:1px solid #ff5252; color:#ff5252; border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">🗑️</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function deleteMobileUser(username) {
+            if (!confirm(`আপনি কি নিশ্চিতভাবে ইউজার '${username}' মুছে ফেলতে চান?`)) return;
+            const r = await fetch(`/api/v1/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+            if (r.ok) {
+                resetAndLoadMobileUsers();
+                loadMobileDashboardStats();
+            }
         }
 
         async function submitMobilePinPunch() {
@@ -761,6 +1151,7 @@ pub fn render_mobile_app_html() -> String {
             if (r.ok && d.success) {
                 resBox.style.color = '#00e676';
                 resBox.textContent = `✔ ${d.message} (GPS Verified)`;
+                await updateMobileNineCards(d);
                 loadMobileDashboardStats();
             } else {
                 resBox.style.color = '#ff5252';
@@ -771,6 +1162,91 @@ pub fn render_mobile_app_html() -> String {
             }
         }
 
+        function toggleMobileForgotPw() {
+            const el = document.getElementById('mob-forgot-pw-box');
+            el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        }
+
+        async function submitMobileForgotPassword() {
+            const uname = document.getElementById('mob-fp-user').value.trim().toUpperCase();
+            const authVal = document.getElementById('mob-fp-auth').value.trim();
+            const newPw = document.getElementById('mob-fp-newpw').value.trim();
+            const st = document.getElementById('mob-fp-status');
+            if (!uname || !authVal || !newPw) {
+                st.style.color = '#ff5252';
+                st.textContent = 'সবগুলো ঘর পূরণ করুন!';
+                return;
+            }
+            const r = await fetch('/api/v1/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: uname,
+                    hr_password: authVal,
+                    android_id: authVal,
+                    new_password: newPw,
+                    company_id: mobileState.activeCompanyId
+                })
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ ${d.message || 'পাসওয়ার্ড সফলভাবে রিসেট হয়েছে!'}`;
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'পাসওয়ার্ড রিসেট ব্যর্থ'}`;
+            }
+        }
+
+        async function submitMobileQrPunch() {
+            if (window.AndroidNativeBridge) detectNativeAndroidBridge();
+            const aid = document.getElementById('mob-qr-android-id').value.trim();
+            const resBox = document.getElementById('mob-punch-result');
+            if (!aid) return;
+            const r = await fetch('/api/v1/attendance/punch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: '',
+                    method: 'QR',
+                    android_id: aid,
+                    device_id: 'MOBILE_QR_SCANNER',
+                    client_platform: 'ANDROID_MOBILE',
+                    latitude: mobileState.lat,
+                    longitude: mobileState.lon,
+                    wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
+                    gps_accuracy_meters: mobileState.accuracy
+                })
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                resBox.style.color = '#00e676';
+                resBox.textContent = `✔ QR Punch: ${d.username} (${d.login_type})`;
+                await updateMobileNineCards(d);
+                loadMobileDashboardStats();
+            } else {
+                resBox.style.color = '#ff5252';
+                resBox.textContent = `❌ ${d.error || 'QR পাঞ্চ ব্যর্থ'}`;
+                if (r.status === 403) showGateLocked(d.error);
+            }
+        }
+
+        async function generateMobileQrSession() {
+            const box = document.getElementById('mob-qr-session-box');
+            box.style.display = 'block';
+            const r = await fetch('/api/v1/devices/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ purpose: 'LOGIN' })
+            });
+            const d = await r.json();
+            if (d.qr_svg) {
+                document.getElementById('mob-qr-svg').innerHTML = d.qr_svg;
+            }
+            document.getElementById('mob-qr-session-txt').textContent = `Session: ${d.session_id} (স্ক্যানের অপেক্ষায়...)`;
+        }
+
         async function startMobileCamera() {
             try {
                 const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
@@ -779,6 +1255,87 @@ pub fn render_mobile_app_html() -> String {
             } catch (e) {
                 alert('ক্যামেরা চালু করা যায়নি: ' + e.message);
             }
+        }
+
+        async function verifyAndPreviewMobileCamera() {
+            if (window.AndroidNativeBridge) detectNativeAndroidBridge();
+            const video = document.getElementById('mob-video');
+            const canvas = document.getElementById('mob-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const b64 = canvas.toDataURL('image/jpeg', 0.85);
+            const resBox = document.getElementById('mob-punch-result');
+            resBox.style.color = '#00f2fe';
+            resBox.textContent = 'FaceNet512 ONNX Split-Window ভেরিফিকেশন চলছে...';
+
+            const r = await fetch('/api/v1/face/verify-identity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_b64: b64 })
+            });
+            const d = await r.json();
+            if (r.ok && d.matched) {
+                mobileState.pendingVerifiedUser = d.username;
+                mobileState.pendingVerifiedB64 = b64;
+                document.getElementById('mob-verify-split-box').style.display = 'block';
+                document.getElementById('mob-ver-user').textContent = d.username;
+                document.getElementById('mob-ver-tier').textContent = d.match_quality || 'EXACT';
+                document.getElementById('mob-ver-conf').textContent = `${Number(d.confidence || 98).toFixed(1)}%`;
+                document.getElementById('mob-ver-dist').textContent = Number(d.min_distance || 0.12).toFixed(4);
+                let sec = 5;
+                document.getElementById('mob-ver-countdown').textContent = `${sec}s`;
+                if (mobileState.verifyTimer) clearInterval(mobileState.verifyTimer);
+                mobileState.verifyTimer = setInterval(() => {
+                    sec -= 1;
+                    document.getElementById('mob-ver-countdown').textContent = `${sec}s`;
+                    if (sec <= 0) {
+                        clearInterval(mobileState.verifyTimer);
+                        confirmVerifiedCameraPunch();
+                    }
+                }, 1000);
+            } else {
+                resBox.style.color = '#ff5252';
+                resBox.textContent = `❌ মুখ শনাক্ত হয়নি: ${d.error || d.reason || 'No match'}`;
+            }
+        }
+
+        async function confirmVerifiedCameraPunch() {
+            if (mobileState.verifyTimer) clearInterval(mobileState.verifyTimer);
+            document.getElementById('mob-verify-split-box').style.display = 'none';
+            if (!mobileState.pendingVerifiedUser) return;
+            const resBox = document.getElementById('mob-punch-result');
+            const r = await fetch('/api/v1/attendance/punch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: mobileState.pendingVerifiedUser,
+                    method: 'CAMERA',
+                    device_id: 'MOBILE_ANDROID_APP',
+                    client_platform: 'ANDROID_MOBILE',
+                    latitude: mobileState.lat,
+                    longitude: mobileState.lon,
+                    wifi_ssid: mobileState.wifiSsid,
+                    wifi_bssid: mobileState.wifiBssid,
+                    gps_accuracy_meters: mobileState.accuracy,
+                    image_b64: mobileState.pendingVerifiedB64
+                })
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                resBox.style.color = '#00e676';
+                resBox.textContent = `✔ ${d.message}`;
+                await updateMobileNineCards(d);
+                loadMobileDashboardStats();
+            } else {
+                resBox.style.color = '#ff5252';
+                resBox.textContent = `❌ ${d.error || 'পাঞ্চ ব্যর্থ'}`;
+            }
+        }
+
+        function cancelVerifiedCameraPunch() {
+            if (mobileState.verifyTimer) clearInterval(mobileState.verifyTimer);
+            document.getElementById('mob-verify-split-box').style.display = 'none';
+            mobileState.pendingVerifiedUser = null;
         }
 
         async function submitMobileCameraPunch() {
@@ -814,6 +1371,7 @@ pub fn render_mobile_app_html() -> String {
             if (r.ok && d.success) {
                 resBox.style.color = '#00e676';
                 resBox.textContent = `✔ ${d.message}`;
+                await updateMobileNineCards(d);
                 loadMobileDashboardStats();
             } else {
                 resBox.style.color = '#ff5252';
@@ -821,6 +1379,87 @@ pub fn render_mobile_app_html() -> String {
                 if (r.status === 403) {
                     showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
                 }
+            }
+        }
+
+        // 20-Pose Mobile Registration Functions
+        async function startMobileRegCamera() {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                mobileState.regStream = s;
+                document.getElementById('mob-reg-video').srcObject = s;
+                mobileState.regPosesB64 = [];
+                document.getElementById('mob-reg20-badge').textContent = '0 / 20';
+            } catch (e) {
+                alert('ক্যামেরা চালু করা যায়নি: ' + e.message);
+            }
+        }
+
+        async function captureNextMobilePose() {
+            if (mobileState.regPosesB64.length >= 20) return;
+            const video = document.getElementById('mob-reg-video');
+            const canvas = document.getElementById('mob-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const b64 = canvas.toDataURL('image/jpeg', 0.85);
+            const poseIdx = mobileState.regPosesB64.length;
+            const r = await fetch('/api/v1/face/extract-frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_b64: b64, pose_index: poseIdx, enforce_pose: true })
+            });
+            const d = await r.json();
+            if (r.ok && d.quality_ok !== false) {
+                mobileState.regPosesB64.push(b64);
+                document.getElementById('mob-reg20-badge').textContent = `${mobileState.regPosesB64.length} / 20`;
+                document.getElementById('mob-reg20-prompt').textContent =
+                    `✔ Pose ${mobileState.regPosesB64.length}/20 Captured (${d.pose_verified ? '✓ Verified' : '✗ Saved'})`;
+            } else {
+                document.getElementById('mob-reg20-prompt').textContent =
+                    `⚠️ Retake Pose ${poseIdx + 1}: ${d.quality_reason || d.error || 'মুখ স্পষ্ট নয়'}`;
+            }
+        }
+
+        async function autoCaptureAll20MobilePoses() {
+            for (let i = mobileState.regPosesB64.length; i < 20; i++) {
+                await captureNextMobilePose();
+                await new Promise(res => setTimeout(res, 250));
+            }
+        }
+
+        async function submitMobile20PoseRegistration() {
+            const uname = document.getElementById('mob-camreg-user').value.trim().toUpperCase();
+            const desig = document.getElementById('mob-camreg-desig').value.trim();
+            const pw = document.getElementById('mob-camreg-pw').value.trim();
+            const st = document.getElementById('mob-camreg-status');
+            if (!uname || mobileState.regPosesB64.length === 0) {
+                st.style.color = '#ff5252';
+                st.textContent = 'ইউজারনেম এবং অন্তত ১-২০টি পোজ ক্যাপচার আবশ্যক!';
+                return;
+            }
+            st.style.color = '#00f2fe';
+            st.textContent = '২০-পোজ FaceNet512 এমবেডিং সেভ হচ্ছে...';
+            const r = await fetch('/api/v1/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: uname,
+                    designation: desig,
+                    password: pw,
+                    images_b64: mobileState.regPosesB64,
+                    image_b64: mobileState.regPosesB64[0],
+                    overwrite_existing: true
+                })
+            });
+            const d = await r.json();
+            if (r.ok) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ ইউজার '${uname}' (${mobileState.regPosesB64.length} poses) সফলভাবে রেজিস্টার হয়েছে!`;
+                resetAndLoadMobileUsers();
+                loadMobileDashboardStats();
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'রেজিস্ট্রেশন ব্যর্থ'}`;
             }
         }
 
@@ -866,6 +1505,38 @@ pub fn render_mobile_app_html() -> String {
             }
         }
 
+        async function registerQrUserFromMobile() {
+            const uname = document.getElementById('mob-qrreg-user').value.trim().toUpperCase();
+            const aid = document.getElementById('mob-qrreg-aid').value.trim();
+            const desig = document.getElementById('mob-qrreg-desig').value.trim();
+            const pw = document.getElementById('mob-qrreg-pw').value.trim();
+            const st = document.getElementById('mob-qrreg-status');
+            if (!uname || !aid) {
+                st.style.color = '#ff5252';
+                st.textContent = 'Username এবং Android ID আবশ্যক!';
+                return;
+            }
+            const r = await fetch('/api/v1/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: uname,
+                    designation: desig,
+                    password: pw,
+                    user_android_id: aid
+                })
+            });
+            const d = await r.json();
+            if (r.ok) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ QR ইউজার '${uname}' (${aid}) সফলভাবে রেজিস্টার হয়েছে!`;
+                resetAndLoadMobileUsers();
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'ডুপ্লিকেট বা ত্রুটি'}`;
+            }
+        }
+
         async function bulkProvisionFromMobile() {
             if (window.AndroidNativeBridge) {
                 detectNativeAndroidBridge();
@@ -903,6 +1574,168 @@ pub fn render_mobile_app_html() -> String {
                     showGateLocked(d.error || 'লোকেশন ছাড়া মোবাইল অ্যাপ কাজ করবে না!');
                 }
             }
+        }
+
+        // Company & HR Functions
+        async function switchMobileCompany() {
+            const cid = document.getElementById('mob-comp-select').value;
+            const pw = document.getElementById('mob-comp-verify-pw').value.trim();
+            const st = document.getElementById('mob-comp-status');
+            const r = await fetch('/api/v1/companies/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: cid, password: pw, set_active: true })
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ Active Company switched to ${d.company.company_name}`;
+                await loadMobileCompanies();
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'Invalid company password'}`;
+            }
+        }
+
+        async function createMobileCompany() {
+            const st = document.getElementById('mob-comp-status');
+            const payload = {
+                company_name: document.getElementById('mob-c-name').value.trim(),
+                company_id: document.getElementById('mob-c-id').value.trim(),
+                company_address: document.getElementById('mob-c-addr').value.trim(),
+                contact_person_name: document.getElementById('mob-c-person').value.trim(),
+                contact_person_designation: document.getElementById('mob-c-desig').value.trim(),
+                contact_person_number: document.getElementById('mob-c-phone').value.trim(),
+                password: document.getElementById('mob-c-pw').value.trim()
+            };
+            const r = await fetch('/api/v1/companies/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ Company created: ${payload.company_name}`;
+                await loadMobileCompanies();
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'Create failed'}`;
+            }
+        }
+
+        async function editMobileCompany() {
+            const cid = document.getElementById('mob-c-id').value.trim() || mobileState.activeCompanyId;
+            const st = document.getElementById('mob-comp-status');
+            const payload = {
+                company_name: document.getElementById('mob-c-name').value.trim(),
+                company_id: cid,
+                company_address: document.getElementById('mob-c-addr').value.trim(),
+                contact_person_name: document.getElementById('mob-c-person').value.trim(),
+                contact_person_designation: document.getElementById('mob-c-desig').value.trim(),
+                contact_person_number: document.getElementById('mob-c-phone').value.trim(),
+                password: document.getElementById('mob-c-pw').value.trim() || 'admin123'
+            };
+            const r = await fetch(`/api/v1/companies/${encodeURIComponent(cid)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (r.ok && d.success) {
+                st.style.color = '#00e676';
+                st.textContent = `✔ Company updated: ${payload.company_name}`;
+                await loadMobileCompanies();
+            } else {
+                st.style.color = '#ff5252';
+                st.textContent = `❌ ${d.error || 'Update failed'}`;
+            }
+        }
+
+        async function unlockMobileHrPortal() {
+            const pw = document.getElementById('mob-hr-pw').value.trim();
+            const r = await fetch('/api/v1/auth/verify-hr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: mobileState.activeCompanyId, password: pw })
+            });
+            const d = await r.json();
+            if (r.ok && d.authenticated) {
+                document.getElementById('mob-hr-tools-box').style.display = 'block';
+                const b = document.getElementById('mob-hr-lock-badge');
+                b.className = 'badge badge-ok';
+                b.textContent = '🔓 HR Unlocked';
+            } else {
+                alert('ভুল HR পাসওয়ার্ড! (ডিফল্ট: HR@123)');
+            }
+        }
+
+        async function inspectMobileEmbeddingsReport() {
+            const out = document.getElementById('mob-hr-output');
+            out.style.display = 'block';
+            out.textContent = 'Loading 12-Column Embeddings Report & FAISS Index...';
+            const r = await fetch('/api/v1/face/embeddings-report');
+            const d = await r.json();
+            out.innerHTML = `<b>🧬 Total Enrolled Profiles: ${d.total_records || 0}</b> | FAISS RAM Vectors: ${d.faiss_index ? d.faiss_index.ntotal_in_ram : 0}<br>` +
+                (d.report || []).slice(0, 12).map(row => `• <b>${row.Username}</b> (${row.Image_Name}) — Dim: ${row.Number_of_Embeddings_Generated}, Pos: ${row.Positive_Count}, Neg: ${row.Negative_Count}`).join('<br>');
+        }
+
+        async function inspectMobileFakeAttendance() {
+            const out = document.getElementById('mob-hr-output');
+            out.style.display = 'block';
+            out.textContent = 'Loading captured attendance verification images...';
+            const r = await fetch('/api/v1/reports/verify-images');
+            const d = await r.json();
+            const items = d.items || [];
+            out.innerHTML = `<b>🕵️ Captured Attendance Records: ${d.total_found || items.length}</b><br>` +
+                items.slice(0, 15).map(it => `• <b>${it.username}</b> (${it.date}) — IN: ${it.in_time || '---'} ${it.image_url_in ? `<a href="${it.image_url_in}" target="_blank" style="color:#00f2fe;">[Photo]</a>` : ''}`).join('<br>');
+        }
+
+        async function runMobileHrSync(endpoint, title) {
+            const out = document.getElementById('mob-hr-output');
+            out.style.display = 'block';
+            const r = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: mobileState.activeCompanyId })
+            });
+            const d = await r.json();
+            out.innerHTML = `✔ <b>${title}:</b> ${d.message || JSON.stringify(d)}`;
+        }
+
+        async function deleteMobileUserFacePrompt() {
+            const u = prompt('যে ইউজারের ফেস ডাটা ডিলিট করতে চান তার Username লিখুন (সব রিসেট করতে ALL লিখুন):');
+            if (!u) return;
+            const out = document.getElementById('mob-hr-output');
+            out.style.display = 'block';
+            if (u.trim().toUpperCase() === 'ALL') {
+                const r = await fetch('/api/v1/face/reset', { method: 'POST' });
+                const d = await r.json();
+                out.textContent = `✔ All face encodings reset: ${JSON.stringify(d)}`;
+            } else {
+                const r = await fetch(`/api/v1/face/profiles/${encodeURIComponent(u.trim().toUpperCase())}`, { method: 'DELETE' });
+                const d = await r.json();
+                out.textContent = `✔ Deleted face data for ${u.toUpperCase()}: ${JSON.stringify(d)}`;
+            }
+        }
+
+        async function changeMobileHrPassword() {
+            const cur = document.getElementById('mob-hrcp-old').value.trim();
+            const nw = document.getElementById('mob-hrcp-new').value.trim();
+            const out = document.getElementById('mob-hr-output');
+            out.style.display = 'block';
+            const r = await fetch('/api/v1/auth/change-hr-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    company_id: mobileState.activeCompanyId,
+                    current_password: cur,
+                    new_password: nw,
+                    confirm_password: nw
+                })
+            });
+            const d = await r.json();
+            out.textContent = d.message || d.error || JSON.stringify(d);
         }
 
         function fillCurrentGpsIntoPolicyForm() {

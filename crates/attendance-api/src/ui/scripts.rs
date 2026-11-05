@@ -2643,7 +2643,9 @@ async function saveDesktopModalMobilePolicy() {
                 st.style.color = '#00e676';
                 st.textContent = '✔ Saved! Location Mandatory + Wi-Fi Policy Active.';
             }
-            appendConsoleLog('[MOBILE-POLICY] Mandatory Geofence & Wi-Fi Policy saved.', 'success');
+            if (typeof addTerminalLog === 'function') {
+                addTerminalLog('[MOBILE-POLICY] Mandatory Geofence & Wi-Fi Policy saved.', 'SUCCESS');
+            }
         } else if (st) {
             st.style.color = '#ff7675';
             st.textContent = '❌ ' + (d.error || 'Failed');

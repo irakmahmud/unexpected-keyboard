@@ -221,7 +221,11 @@ cat > "${APP_BUNDLE}/MacOS/SmartAttendanceDesktop" << 'EOF'
 DIR="$(cd "$(dirname "$0")" && pwd)"
 RES_DIR="$(cd "$DIR/../Resources" && pwd)"
 NATIVE_BIN="$HOME/.smart_attendance_desktop/attendance-desktop-macos"
-CLOUD_URL="https://confident-officials-relatively-julie.trycloudflare.com"
+CLOUD_URL="https://privileges-lying-rainbow-arrow.trycloudflare.com"
+DISCOVERED_URL="$(curl -fsSL --max-time 4 "https://raw.githubusercontent.com/irakmahmud/unexpected-keyboard/master/data/live_tunnel_url.txt" 2>/dev/null | tr -d '\r\n' || true)"
+if [[ "$DISCOVERED_URL" == https://* ]]; then
+    CLOUD_URL="$DISCOVERED_URL"
+fi
 
 mkdir -p "$HOME/.smart_attendance_desktop"
 
@@ -236,9 +240,9 @@ fi
 
 # Universal macOS Desktop Launcher (Apple Silicon & Intel Ready without Xcode)
 if [ -d "/Applications/Google Chrome.app" ]; then
-    open -na "Google Chrome" --args --app="$CLOUD_URL" --window-size=1320,860
+    open -na "Google Chrome" --args --app="$CLOUD_URL" --window-size=1360,880
 elif [ -d "/Applications/Microsoft Edge.app" ]; then
-    open -na "Microsoft Edge" --args --app="$CLOUD_URL" --window-size=1320,860
+    open -na "Microsoft Edge" --args --app="$CLOUD_URL" --window-size=1360,880
 else
     open "$CLOUD_URL"
 fi
@@ -530,7 +534,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String getServerUrl() {
             SharedPreferences prefs = getSharedPreferences("smart_att_prefs", Context.MODE_PRIVATE);
-            return prefs.getString("server_url", "https://confident-officials-relatively-julie.trycloudflare.com");
+            String saved = prefs.getString("server_url", "https://privileges-lying-rainbow-arrow.trycloudflare.com");
+            if (saved.contains("confident-officials-relatively-julie")) {
+                saved = "https://privileges-lying-rainbow-arrow.trycloudflare.com";
+            }
+            return saved;
         }
 
         @JavascriptInterface
@@ -577,7 +585,7 @@ cat > "${APK_WORK}/assets/index.html" << 'EOF'
                 <div>📍 GPS Status: <b id="lbl-gps" style="color:#ffab00;">Checking...</b></div>
                 <div>📶 Wi-Fi Status: <b id="lbl-wifi" style="color:#00f2fe;">Checking...</b></div>
                 <div style="margin-top:6px;">🌐 Server URL:</div>
-                <input type="text" id="srv-url" class="input" value="https://confident-officials-relatively-julie.trycloudflare.com">
+                <input type="text" id="srv-url" class="input" value="https://privileges-lying-rainbow-arrow.trycloudflare.com">
             </div>
             <button class="btn btn-cyan" onclick="verifyAndLaunchMobilePortal()">
                 📍 GPS লোকেশন যাচাই করে অ্যাপে প্রবেশ করুন
@@ -586,6 +594,21 @@ cat > "${APK_WORK}/assets/index.html" << 'EOF'
     </div>
 
     <script>
+        async function discoverLatestServerUrl() {
+            try {
+                const r = await fetch('https://raw.githubusercontent.com/irakmahmud/unexpected-keyboard/master/data/live_tunnel_url.txt?t=' + Date.now());
+                if (r.ok) {
+                    const url = (await r.text()).trim();
+                    if (url.startsWith('https://')) {
+                        document.getElementById('srv-url').value = url;
+                        if (window.AndroidNativeBridge) {
+                            window.AndroidNativeBridge.setServerUrl(url);
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         function verifyAndLaunchMobilePortal() {
             const srvInput = document.getElementById('srv-url').value.trim().replace(/\/+$/, '');
             if (window.AndroidNativeBridge) {
@@ -620,11 +643,12 @@ cat > "${APK_WORK}/assets/index.html" << 'EOF'
                 );
             }
         }
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             if (window.AndroidNativeBridge) {
                 document.getElementById('srv-url').value = window.AndroidNativeBridge.getServerUrl();
             }
-            setTimeout(verifyAndLaunchMobilePortal, 600);
+            await discoverLatestServerUrl();
+            setTimeout(verifyAndLaunchMobilePortal, 400);
         });
     </script>
 </body>

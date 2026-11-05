@@ -248,6 +248,12 @@ fn artifact_metadata(filename: &str, platform: &str, title: &str, arch: &str, do
         (false, 0, String::new())
     };
 
+    let live_base = std::fs::read_to_string("data/live_tunnel_url.txt")
+        .unwrap_or_else(|_| "https://privileges-lying-rainbow-arrow.trycloudflare.com".to_string())
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+
     serde_json::json!({
         "platform": platform,
         "title": title,
@@ -264,11 +270,17 @@ fn artifact_metadata(filename: &str, platform: &str, title: &str, arch: &str, do
         },
         "sha256": sha256_hex,
         "download_url": format!("/api/v1/downloads/{}", download_slug),
+        "public_download_url": format!("{}/api/v1/downloads/{}", live_base, download_slug),
         "install_guide": install_guide
     })
 }
 
 async fn get_downloads_info() -> Json<serde_json::Value> {
+    let live_base = std::fs::read_to_string("data/live_tunnel_url.txt")
+        .unwrap_or_else(|_| "https://privileges-lying-rainbow-arrow.trycloudflare.com".to_string())
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
     let artifacts = vec![
         artifact_metadata(
             "SmartAttendance-Desktop-Windows-x64-Setup.exe",
@@ -315,7 +327,9 @@ async fn get_downloads_info() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "success": true,
         "version": "8.0.0-pure-rust",
+        "live_cloud_url": live_base,
         "mobile_web_app_url": "/mobile",
+        "public_mobile_web_app_url": format!("{}/mobile", live_base),
         "mandatory_mobile_location": true,
         "wifi_option_supported": true,
         "artifacts": artifacts
