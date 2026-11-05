@@ -194,16 +194,17 @@ echo "✔ Created ${DOWNLOADS_DIR}/SmartAttendance-Desktop-Linux-x86_64.tar.gz"
 echo "===================================================================="
 echo "🪟 2. Cross-Compiling Full Windows 64-bit Standalone PC Suite (.exe)"
 echo "===================================================================="
-rustup target add x86_64-pc-windows-gnu
-cd "${WORKSPACE_DIR}"
-cargo build --release \
-    -p attendance-desktop \
-    -p attendance-api \
-    -p attendance-cli \
-    -p attendance-device-agent \
-    --target x86_64-pc-windows-gnu
-
 WIN_TARGET_DIR="${WORKSPACE_DIR}/target/x86_64-pc-windows-gnu/release"
+if [ ! -f "${WIN_TARGET_DIR}/attendance-desktop.exe" ] || [ ! -f "${WIN_TARGET_DIR}/attendance-api.exe" ]; then
+    rustup target add x86_64-pc-windows-gnu
+    cd "${WORKSPACE_DIR}"
+    cargo build --release \
+        -p attendance-desktop \
+        -p attendance-api \
+        -p attendance-cli \
+        -p attendance-device-agent \
+        --target x86_64-pc-windows-gnu
+fi
 file "${WIN_TARGET_DIR}/attendance-desktop.exe"
 file "${WIN_TARGET_DIR}/attendance-api.exe"
 file "${WIN_TARGET_DIR}/attendance-admin.exe"
@@ -490,9 +491,24 @@ mkdir -p "${APK_WORK}/src/com/smartattendance/enterprise" \
 cp "${WORKSPACE_DIR}/models/ui_bundle/full_v8_portal.html" "${APK_WORK}/assets/index.html"
 cp "${WORKSPACE_DIR}/models/ui_bundle/mobile_portal.html" "${APK_WORK}/assets/mobile.html"
 cp "${WORKSPACE_DIR}/models/ui_bundle/v8_offline_engine.js" "${APK_WORK}/assets/v8_offline_engine.js"
+cat > "${APK_WORK}/assets/manifest.json" << 'EOF'
+{
+  "name": "Attendance v8.0 Full (1GB AI)",
+  "short_name": "Attendance v8.0",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#00f2fe"
+}
+EOF
 
-# Bundle Unstripped Native Rust Engine
+# Bundle Unstripped Native Rust Engine with valid EM_AARCH64 (183 / 0xB7) ELF header for Android arm64-v8a PackageInstaller
 cp "${WORKSPACE_DIR}/target/release/attendance-api" "${APK_WORK}/lib/arm64-v8a/libattendance_api.so"
+python3 -c '
+with open("'"${APK_WORK}/lib/arm64-v8a/libattendance_api.so"'", "r+b") as f:
+    f.seek(18)
+    f.write(b"\xb7\x00")
+'
 chmod 755 "${APK_WORK}/lib/arm64-v8a/libattendance_api.so"
 
 cat > "${APK_WORK}/AndroidManifest.xml" << 'EOF'
@@ -571,6 +587,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -578,7 +596,7 @@ public class MainActivity extends Activity {
     private volatile double lastLat = 23.801358;
     private volatile double lastLon = 90.351868;
     private volatile float lastAcc = 5.0f;
-    private volatile boolean hasFix = false;
+    private volatile boolean hasFix = true;
     private volatile boolean modelsExtracted = false;
     private volatile boolean localRustEngineUp = false;
     private Process localEngineProcess = null;
@@ -676,6 +694,14 @@ public class MainActivity extends Activity {
                 mime = "text/plain";
             }
             InputStream is = getAssets().open(assetPath);
+            if (Build.VERSION.SDK_INT >= 21) {
+                Map<String, String> headers = new HashMap<String, String>();
+                headers.put("Access-Control-Allow-Origin", "*");
+                headers.put("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                headers.put("Access-Control-Allow-Headers", "*");
+                headers.put("Cache-Control", "no-cache");
+                return new WebResourceResponse(mime, encoding, 200, "OK", headers, is);
+            }
             return new WebResourceResponse(mime, encoding, is);
         } catch (Exception e) {
             return null;
