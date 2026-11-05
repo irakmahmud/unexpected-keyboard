@@ -3,7 +3,7 @@ use attendance_common::{AppError, TimeHelper};
 use attendance_domain::*;
 use axum::{
     extract::{Path, Query, State},
-    http::{header, StatusCode},
+    http::header,
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
@@ -384,13 +384,11 @@ async fn download_platform_artifact(
         .into());
     }
 
-    let mut res = tower::ServiceExt::oneshot(
-        tower_http::services::ServeFile::new(&path),
-        req,
-    )
-    .await
-    .map_err(|e| AppError::Internal(format!("Artifact stream error: {}", e)))?
-    .into_response();
+    let mut service = tower_http::services::ServeFile::new(&path);
+    let mut res = tower::Service::call(&mut service, req)
+        .await
+        .map_err(|e| AppError::Internal(format!("Artifact stream error: {}", e)))?
+        .into_response();
 
     let headers = res.headers_mut();
     if let Ok(ct) = header::HeaderValue::from_str(content_type) {
