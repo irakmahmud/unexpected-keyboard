@@ -49,23 +49,68 @@ struct BBox {
 // detect_faces — returns all finalized MTCNN face detections after Min-NMS
 // ============================================================================
 pub fn detect_faces(state: &AppState, img: &DynamicImage) -> Result<Vec<FaceDetection>, AppError> {
-    use tracing::info;
-
     let rgb = img.to_rgb8();
     let (width, height) = img.dimensions();
+    let max_dim = width.max(height);
+
+    // Fast pyramid path: for high-resolution frames (>300px), run MTCNN detection on a 280px working
+    // copy and project bbox + 5 landmarks back to full resolution for high-precision 160x160 alignment.
+    if max_dim > 300 {
+        let scale = 280.0 / (max_dim as f32);
+        let det_w = ((width as f32 * scale).round() as u32).max(24);
+        let det_h = ((height as f32 * scale).round() as u32).max(24);
+        let small_rgb = image::imageops::resize(&rgb, det_w, det_h, FilterType::Triangle);
+        if let Ok(dets) = detect_faces_on_rgb(state, &small_rgb, det_w, det_h) {
+            if !dets.is_empty() {
+                let inv_sx = (width as f32) / (det_w as f32);
+                let inv_sy = (height as f32) / (det_h as f32);
+                let scaled_dets = dets
+                    .into_iter()
+                    .map(|d| FaceDetection {
+                        bbox: (
+                            (d.bbox.0 * inv_sx).clamp(0.0, width as f32),
+                            (d.bbox.1 * inv_sy).clamp(0.0, height as f32),
+                            (d.bbox.2 * inv_sx).clamp(0.0, width as f32),
+                            (d.bbox.3 * inv_sy).clamp(0.0, height as f32),
+                        ),
+                        landmarks: [
+                            (d.landmarks[0].0 * inv_sx, d.landmarks[0].1 * inv_sy),
+                            (d.landmarks[1].0 * inv_sx, d.landmarks[1].1 * inv_sy),
+                            (d.landmarks[2].0 * inv_sx, d.landmarks[2].1 * inv_sy),
+                            (d.landmarks[3].0 * inv_sx, d.landmarks[3].1 * inv_sy),
+                            (d.landmarks[4].0 * inv_sx, d.landmarks[4].1 * inv_sy),
+                        ],
+                        confidence: d.confidence,
+                    })
+                    .collect();
+                return Ok(scaled_dets);
+            }
+        }
+    }
+
+    detect_faces_on_rgb(state, &rgb, width, height)
+}
+
+fn detect_faces_on_rgb(
+    state: &AppState,
+    rgb: &RgbImage,
+    width: u32,
+    height: u32,
+) -> Result<Vec<FaceDetection>, AppError> {
+    use tracing::debug;
 
     // Stage 1: P-Net (Proposal Network) - multi-scale detection
-    info!("MTCNN Stage 1: P-Net starting...");
-    let mut boxes = run_pnet(state, &rgb, width, height)?;
-    info!("P-Net found {} candidate boxes", boxes.len());
+    debug!("MTCNN Stage 1: P-Net starting...");
+    let boxes = run_pnet(state, rgb, width, height)?;
+    debug!("P-Net found {} candidate boxes", boxes.len());
     if boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
 
     // Stage 2: R-Net (Refine Network) - refine proposals
-    info!("MTCNN Stage 2: R-Net starting with {} boxes...", boxes.len());
-    let (primary_rnet_boxes, fallback_rnet_boxes) = run_rnet(state, &rgb, boxes)?;
-    info!(
+    debug!("MTCNN Stage 2: R-Net starting with {} boxes...", boxes.len());
+    let (primary_rnet_boxes, fallback_rnet_boxes) = run_rnet(state, rgb, boxes)?;
+    debug!(
         "R-Net refined to {} primary boxes ({} fallback boxes)",
         primary_rnet_boxes.len(),
         fallback_rnet_boxes.len()
@@ -76,21 +121,21 @@ pub fn detect_faces(state: &AppState, img: &DynamicImage) -> Result<Vec<FaceDete
 
     // Stage 3: O-Net (Output Network) - final detection + landmarks
     let (mut final_boxes, mut landmarks) = if !primary_rnet_boxes.is_empty() {
-        info!("MTCNN Stage 3: O-Net starting with {} primary boxes...", primary_rnet_boxes.len());
-        run_onet(state, &rgb, primary_rnet_boxes)?
+        debug!("MTCNN Stage 3: O-Net starting with {} primary boxes...", primary_rnet_boxes.len());
+        run_onet(state, rgb, primary_rnet_boxes)?
     } else {
         (Vec::new(), Vec::new())
     };
     if final_boxes.is_empty() && !fallback_rnet_boxes.is_empty() {
-        info!(
+        debug!(
             "MTCNN Stage 3: O-Net retrying with {} fallback R-Net boxes...",
             fallback_rnet_boxes.len()
         );
-        let (fb_boxes, fb_lms) = run_onet(state, &rgb, fallback_rnet_boxes)?;
+        let (fb_boxes, fb_lms) = run_onet(state, rgb, fallback_rnet_boxes)?;
         final_boxes = fb_boxes;
         landmarks = fb_lms;
     }
-    info!("O-Net finalized to {} boxes", final_boxes.len());
+    debug!("O-Net finalized to {} boxes", final_boxes.len());
     if final_boxes.is_empty() {
         return Err(AppError::NoFaceDetected);
     }
@@ -152,7 +197,7 @@ fn run_pnet(
     width: u32,
     height: u32,
 ) -> Result<Vec<BBox>, AppError> {
-    use tracing::info;
+    use tracing::debug;
     
     let mut all_boxes = Vec::new();
     let mut fallback_boxes = Vec::new();
@@ -167,7 +212,7 @@ fn run_pnet(
         scale *= SCALE_FACTOR;
     }
     
-    info!("P-Net will process {} scales", scales.len());
+    debug!("P-Net will process {} scales", scales.len());
     
     // Process each scale
     for (idx, &current_scale) in scales.iter().enumerate() {
@@ -205,7 +250,7 @@ fn run_pnet(
             let fb = generate_pnet_boxes(&prob, &reg, current_scale, 0.45);
             fallback_boxes.extend(fb);
         }
-        info!("  Scale {}/{} ({}x{}): found {} boxes", idx+1, scales.len(), scaled_w, scaled_h, boxes.len());
+        debug!("  Scale {}/{} ({}x{}): found {} boxes", idx+1, scales.len(), scaled_w, scaled_h, boxes.len());
         all_boxes.extend(boxes);
     }
     
@@ -217,7 +262,10 @@ fn run_pnet(
     }
     
     // Apply NMS to merge overlapping detections
-    let boxes = nms(&all_boxes, NMS_THRESHOLD);
+    let mut boxes = nms(&all_boxes, NMS_THRESHOLD);
+    if boxes.len() > 64 {
+        boxes.truncate(64);
+    }
     
     // Apply bbox regression
     let boxes = apply_regression(&boxes);
@@ -422,18 +470,23 @@ fn run_onet(
 fn preprocess_mtcnn(img: &RgbImage, w: u32, h: u32) -> Tensor {
     // MTCNN uses (pixel - 127.5) / 128.0 normalization
     // Input shape: [1, 3, H, W] (NCHW format)
-    let mut tensor = Array4::<f32>::zeros((1, 3, h as usize, w as usize));
-    
-    for y in 0..h {
-        for x in 0..w {
-            let pixel = img.get_pixel(x, y);
-            tensor[[0, 0, y as usize, x as usize]] = (pixel[0] as f32 - 127.5) / 128.0;
-            tensor[[0, 1, y as usize, x as usize]] = (pixel[1] as f32 - 127.5) / 128.0;
-            tensor[[0, 2, y as usize, x as usize]] = (pixel[2] as f32 - 127.5) / 128.0;
-        }
+    let (hu, wu) = (h as usize, w as usize);
+    let plane_len = hu * wu;
+    let raw = img.as_raw();
+    let mut data = vec![0.0_f32; 3 * plane_len];
+    let inv_128 = 1.0_f32 / 128.0_f32;
+
+    for i in 0..plane_len {
+        let base = i * 3;
+        data[i] = (raw[base] as f32 - 127.5) * inv_128;
+        data[plane_len + i] = (raw[base + 1] as f32 - 127.5) * inv_128;
+        data[2 * plane_len + i] = (raw[base + 2] as f32 - 127.5) * inv_128;
     }
-    
-    tensor.into_dyn().into()
+
+    Array4::from_shape_vec((1, 3, hu, wu), data)
+        .unwrap()
+        .into_dyn()
+        .into()
 }
 
 fn generate_pnet_boxes(
@@ -556,21 +609,15 @@ fn make_square(boxes: &[BBox]) -> Vec<BBox> {
 
 fn extract_patch(img: &RgbImage, bbox: &BBox, target_w: u32, target_h: u32) -> RgbImage {
     let (img_w, img_h) = img.dimensions();
-    
-    let x1 = bbox.x1.max(0.0) as u32;
-    let y1 = bbox.y1.max(0.0) as u32;
+
+    let x1 = (bbox.x1.max(0.0) as u32).min(img_w.saturating_sub(1));
+    let y1 = (bbox.y1.max(0.0) as u32).min(img_h.saturating_sub(1));
     let x2 = (bbox.x2 as u32).min(img_w);
     let y2 = (bbox.y2 as u32).min(img_h);
-    
+
     let crop_w = if x2 > x1 { x2 - x1 } else { 1 };
     let crop_h = if y2 > y1 { y2 - y1 } else { 1 };
-    
-    let mut cropped = RgbImage::new(crop_w, crop_h);
-    for y in 0..crop_h {
-        for x in 0..crop_w {
-            cropped.put_pixel(x, y, *img.get_pixel(x1 + x, y1 + y));
-        }
-    }
-    
-    image::imageops::resize(&cropped, target_w, target_h, FilterType::Triangle)
+
+    let sub = image::imageops::crop_imm(img, x1, y1, crop_w, crop_h);
+    image::imageops::resize(&sub, target_w, target_h, FilterType::Triangle)
 }

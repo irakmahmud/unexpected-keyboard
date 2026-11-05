@@ -20,7 +20,7 @@
 // ============================================================================
 
 use crate::mtcnn::FaceDetection;
-use image::{DynamicImage, RgbImage, Rgb, GenericImageView};
+use image::{DynamicImage, RgbImage, GenericImageView};
 
 // ============================================================================
 // align_face — rotate the image so eyes become horizontal
@@ -87,66 +87,61 @@ pub fn align_face(img: &DynamicImage, det: &FaceDetection) -> DynamicImage {
     let out_h = img_h;
 
     let mut out = RgbImage::new(out_w, out_h);
+    let src_raw = rgb.as_raw();
+    let dst_raw = out.as_mut();
 
-    for oy in 0..out_h {
-        for ox in 0..out_w {
-            // Map output → source via inverse affine
-            let sx = inv_cos * (ox as f32 - tx) + inv_sin * (oy as f32 - ty);
-            let sy = -inv_sin * (ox as f32 - tx) + inv_cos * (oy as f32 - ty);
+    // Only rotate pixels within the face bounding box region (+2px margin) that crop_and_resize uses
+    let bx1 = (det.bbox.0.floor().max(0.0) as u32).saturating_sub(2);
+    let by1 = (det.bbox.1.floor().max(0.0) as u32).saturating_sub(2);
+    let bx2 = ((det.bbox.2.ceil().max(0.0) as u32) + 2).min(out_w);
+    let by2 = ((det.bbox.3.ceil().max(0.0) as u32) + 2).min(out_h);
 
-            // Bilinear interpolation — avoids blocky artifacts on rotation
-            let pixel = bilinear_sample(&rgb, sx, sy, img_w, img_h);
-            out.put_pixel(ox, oy, pixel);
+    for oy in by1..by2 {
+        let dy_t = oy as f32 - ty;
+        let row_offset = (oy * out_w) as usize * 3;
+        for ox in bx1..bx2 {
+            let dx_t = ox as f32 - tx;
+            let sx = inv_cos * dx_t + inv_sin * dy_t;
+            let sy = -inv_sin * dx_t + inv_cos * dy_t;
+
+            let pixel = bilinear_sample_raw(src_raw, sx, sy, img_w, img_h);
+            let idx = row_offset + (ox as usize) * 3;
+            dst_raw[idx] = pixel[0];
+            dst_raw[idx + 1] = pixel[1];
+            dst_raw[idx + 2] = pixel[2];
         }
     }
 
     DynamicImage::ImageRgb8(out)
 }
 
-// ============================================================================
-// bilinear_sample — smooth pixel lookup at non-integer coordinates
-//
-// Replaces: cv2.warpAffine's default INTER_LINEAR interpolation.
-//
-// How it works:
-//   Given fractional coordinate (x, y), find the four surrounding integer
-//   pixels and blend them proportionally to their distance.
-//
-//   TL (x0,y0) ─── TR (x1,y0)
-//       |                |
-//   BL (x0,y1) ─── BR (x1,y1)
-//
-//   weight_x = x - x0   (fractional part)
-//   weight_y = y - y0
-//   result = TL*(1-wx)*(1-wy) + TR*wx*(1-wy) + BL*(1-wx)*wy + BR*wx*wy
-// ============================================================================
-fn bilinear_sample(img: &RgbImage, x: f32, y: f32, w: u32, h: u32) -> Rgb<u8> {
-    // Out-of-bounds → black pixel (matches cv2.warpAffine BORDER_CONSTANT=0)
+#[inline]
+fn bilinear_sample_raw(raw: &[u8], x: f32, y: f32, w: u32, h: u32) -> [u8; 3] {
     if x < 0.0 || y < 0.0 || x >= (w - 1) as f32 || y >= (h - 1) as f32 {
-        return Rgb([0u8, 0u8, 0u8]);
+        return [0u8, 0u8, 0u8];
     }
 
-    let x0 = x.floor() as u32;
-    let y0 = y.floor() as u32;
-    let x1 = (x0 + 1).min(w - 1);
-    let y1 = (y0 + 1).min(h - 1);
+    let x0 = x as usize;
+    let y0 = y as usize;
+    let wu = w as usize;
+    let x1 = (x0 + 1).min(wu - 1);
+    let y1 = (y0 + 1).min((h as usize) - 1);
 
-    let wx = x - x0 as f32; // horizontal weight
-    let wy = y - y0 as f32; // vertical weight
+    let wx = x - (x0 as f32);
+    let wy = y - (y0 as f32);
+    let w00 = (1.0 - wx) * (1.0 - wy);
+    let w10 = wx * (1.0 - wy);
+    let w01 = (1.0 - wx) * wy;
+    let w11 = wx * wy;
 
-    let tl = img.get_pixel(x0, y0);
-    let tr = img.get_pixel(x1, y0);
-    let bl = img.get_pixel(x0, y1);
-    let br = img.get_pixel(x1, y1);
+    let i_tl = (y0 * wu + x0) * 3;
+    let i_tr = (y0 * wu + x1) * 3;
+    let i_bl = (y1 * wu + x0) * 3;
+    let i_br = (y1 * wu + x1) * 3;
 
-    let mut result = [0u8; 3];
-    for c in 0..3 {
-        let v = tl[c] as f32 * (1.0 - wx) * (1.0 - wy)
-              + tr[c] as f32 * wx           * (1.0 - wy)
-              + bl[c] as f32 * (1.0 - wx)   * wy
-              + br[c] as f32 * wx           * wy;
-        result[c] = v.clamp(0.0, 255.0) as u8;
-    }
-
-    Rgb(result)
+    [
+        (raw[i_tl] as f32 * w00 + raw[i_tr] as f32 * w10 + raw[i_bl] as f32 * w01 + raw[i_br] as f32 * w11).clamp(0.0, 255.0) as u8,
+        (raw[i_tl + 1] as f32 * w00 + raw[i_tr + 1] as f32 * w10 + raw[i_bl + 1] as f32 * w01 + raw[i_br + 1] as f32 * w11).clamp(0.0, 255.0) as u8,
+        (raw[i_tl + 2] as f32 * w00 + raw[i_tr + 2] as f32 * w10 + raw[i_bl + 2] as f32 * w01 + raw[i_br + 2] as f32 * w11).clamp(0.0, 255.0) as u8,
+    ]
 }

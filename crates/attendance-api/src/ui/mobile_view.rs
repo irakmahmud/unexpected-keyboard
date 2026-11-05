@@ -270,7 +270,7 @@ pub fn render_mobile_app_html() -> String {
                 </p>
                 <div style="background: #000; border-radius: 12px; overflow: hidden; height: 210px; position: relative; margin-bottom: 10px; border: 1px solid rgba(0,242,254,0.3);">
                     <video id="mob-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
-                    <canvas id="mob-canvas" width="480" height="360" style="display:none;"></canvas>
+                    <canvas id="mob-canvas" width="360" height="270" style="display:none;"></canvas>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                     <button class="btn btn-outline" onclick="startMobileCamera()">🎥 ক্যামেরা চালু</button>
@@ -1249,24 +1249,38 @@ pub fn render_mobile_app_html() -> String {
 
         async function startMobileCamera() {
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                mobileState.stream = s;
-                document.getElementById('mob-video').srcObject = s;
+                const video = document.getElementById('mob-video');
+                if (!mobileState.stream || !mobileState.stream.active) {
+                    const s = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+                        audio: false
+                    });
+                    mobileState.stream = s;
+                }
+                if (video && video.srcObject !== mobileState.stream) {
+                    video.srcObject = mobileState.stream;
+                }
+                return true;
             } catch (e) {
                 alert('ক্যামেরা চালু করা যায়নি: ' + e.message);
+                return false;
             }
         }
 
         async function verifyAndPreviewMobileCamera() {
             if (window.AndroidNativeBridge) detectNativeAndroidBridge();
             const video = document.getElementById('mob-video');
+            if (!mobileState.stream || !mobileState.stream.active || !video.srcObject) {
+                const ok = await startMobileCamera();
+                if (ok) await new Promise(r => setTimeout(r, 180));
+            }
             const canvas = document.getElementById('mob-canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const b64 = canvas.toDataURL('image/jpeg', 0.85);
             const resBox = document.getElementById('mob-punch-result');
             resBox.style.color = '#00f2fe';
-            resBox.textContent = 'FaceNet512 ONNX Split-Window ভেরিফিকেশন চলছে...';
+            resBox.textContent = '⚡ FaceNet512 ONNX ভেরিফিকেশন চলছে...';
 
             const r = await fetch('/api/v1/face/verify-identity', {
                 method: 'POST',
@@ -1277,12 +1291,13 @@ pub fn render_mobile_app_html() -> String {
             if (r.ok && d.matched) {
                 mobileState.pendingVerifiedUser = d.username;
                 mobileState.pendingVerifiedB64 = b64;
+                mobileState.pendingVerifiedEmbedding = d.embedding || null;
                 document.getElementById('mob-verify-split-box').style.display = 'block';
                 document.getElementById('mob-ver-user').textContent = d.username;
                 document.getElementById('mob-ver-tier').textContent = d.match_quality || 'EXACT';
                 document.getElementById('mob-ver-conf').textContent = `${Number(d.confidence || 98).toFixed(1)}%`;
                 document.getElementById('mob-ver-dist').textContent = Number(d.min_distance || 0.12).toFixed(4);
-                let sec = 5;
+                let sec = 2;
                 document.getElementById('mob-ver-countdown').textContent = `${sec}s`;
                 if (mobileState.verifyTimer) clearInterval(mobileState.verifyTimer);
                 mobileState.verifyTimer = setInterval(() => {
@@ -1292,7 +1307,7 @@ pub fn render_mobile_app_html() -> String {
                         clearInterval(mobileState.verifyTimer);
                         confirmVerifiedCameraPunch();
                     }
-                }, 1000);
+                }, 700);
             } else {
                 resBox.style.color = '#ff5252';
                 resBox.textContent = `❌ মুখ শনাক্ত হয়নি: ${d.error || d.reason || 'No match'}`;
@@ -1317,6 +1332,7 @@ pub fn render_mobile_app_html() -> String {
                     wifi_ssid: mobileState.wifiSsid,
                     wifi_bssid: mobileState.wifiBssid,
                     gps_accuracy_meters: mobileState.accuracy,
+                    face_embedding: mobileState.pendingVerifiedEmbedding || null,
                     image_b64: mobileState.pendingVerifiedB64
                 })
             });
@@ -1343,8 +1359,12 @@ pub fn render_mobile_app_html() -> String {
                 detectNativeAndroidBridge();
             }
             const video = document.getElementById('mob-video');
+            if (!mobileState.stream || !mobileState.stream.active || !video.srcObject) {
+                const ok = await startMobileCamera();
+                if (ok) await new Promise(r => setTimeout(r, 180));
+            }
             const canvas = document.getElementById('mob-canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const b64 = canvas.toDataURL('image/jpeg', 0.85);
             const resBox = document.getElementById('mob-punch-result');

@@ -454,9 +454,9 @@ function captureFrameFromVideoElement(videoEl) {
         return window.__TEST_FACE_B64;
     }
     const canvas = document.getElementById('camera-canvas') || document.createElement('canvas');
-    let vw = (videoEl && videoEl.videoWidth) ? videoEl.videoWidth : 640;
-    let vh = (videoEl && videoEl.videoHeight) ? videoEl.videoHeight : 480;
-    const maxDim = 640;
+    let vw = (videoEl && videoEl.videoWidth) ? videoEl.videoWidth : 360;
+    let vh = (videoEl && videoEl.videoHeight) ? videoEl.videoHeight : 270;
+    const maxDim = 360;
     if (vw > maxDim || vh > maxDim) {
         if (vw >= vh) {
             vh = Math.max(1, Math.round((vh * maxDim) / vw));
@@ -468,34 +468,54 @@ function captureFrameFromVideoElement(videoEl) {
     }
     canvas.width = vw;
     canvas.height = vh;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
 
     if (videoEl && videoEl.srcObject && videoEl.readyState >= 2) {
         ctx.drawImage(videoEl, 0, 0, vw, vh);
     }
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 // ============================================================================
 // 1. IN & OUT WITH CAMERA + IDENTITY VERIFICATION SPLIT WINDOW
 // ============================================================================
+let cameraAutoCaptureTimer = null;
+
 async function openCameraLogin() {
     document.getElementById('modal-camera').style.display = 'flex';
     const video = document.getElementById('camera-stream');
     const status = document.getElementById('camera-status');
     const captureBtn = document.getElementById('btn-capture');
-    status.innerText = 'Initializing camera...';
-    status.style.color = '#fdcb6e';
+    if (cameraAutoCaptureTimer) {
+        clearTimeout(cameraAutoCaptureTimer);
+        cameraAutoCaptureTimer = null;
+    }
 
     try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-        });
-        video.srcObject = cameraStream;
-        status.innerText = 'Camera Ready - Click Capture when ready';
+        if (!cameraStream || !cameraStream.active) {
+            status.innerText = 'Starting high-speed camera...';
+            status.style.color = '#fdcb6e';
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+                audio: false
+            });
+        }
+        if (video.srcObject !== cameraStream) {
+            video.srcObject = cameraStream;
+        }
+        status.innerText = '⚡ Camera Ready — Auto-scanning face (or click Capture)...';
         status.style.color = '#00b894';
         captureBtn.disabled = false;
-        addTerminalLog('Webcam stream started for ONNX FaceNet512 verification', 'CAMERA');
+        addTerminalLog('Webcam stream ready for instant pure-Rust ONNX FaceNet512 verification', 'CAMERA');
+
+        if (!window.__TEST_FACE_B64) {
+            cameraAutoCaptureTimer = setTimeout(() => {
+                const modal = document.getElementById('modal-camera');
+                if (modal && modal.style.display === 'flex' && video && video.readyState >= 2) {
+                    executeCaptureImage();
+                }
+            }, 260);
+        }
     } catch (e) {
         status.innerText = 'No physical webcam detected — Ready for capture / test frame';
         status.style.color = '#fdcb6e';
@@ -504,20 +524,29 @@ async function openCameraLogin() {
     }
 }
 
-function closeCameraLogin() {
+function closeCameraLogin(stopHardware = false) {
+    if (cameraAutoCaptureTimer) {
+        clearTimeout(cameraAutoCaptureTimer);
+        cameraAutoCaptureTimer = null;
+    }
     document.getElementById('modal-camera').style.display = 'none';
-    if (cameraStream) {
+    if (stopHardware && cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
     }
 }
 
 async function executeCaptureImage() {
+    if (cameraAutoCaptureTimer) {
+        clearTimeout(cameraAutoCaptureTimer);
+        cameraAutoCaptureTimer = null;
+    }
     const status = document.getElementById('camera-status');
     const video = document.getElementById('camera-stream');
-    status.innerText = 'Image Captured! Running ONNX FaceNet512 (512-D) Inference...';
+    status.innerText = '⚡ Running pure-Rust ONNX FaceNet512 (512-D) Inference...';
     status.style.color = '#e67e22';
 
+    const t0 = performance.now();
     lastCapturedImageB64 = captureFrameFromVideoElement(video);
     addTerminalLog('Captured frame -> Running MTCNN + FaceNet512 ONNX 512-D embedding extraction...', 'AI_CORE');
 
@@ -528,8 +557,10 @@ async function executeCaptureImage() {
             body: JSON.stringify({ image_b64: lastCapturedImageB64 })
         });
         const verifyData = await res.json();
+        const elapsedMs = Math.round(performance.now() - t0);
+        verifyData._latency_ms = elapsedMs;
         lastVerifyResult = verifyData;
-        closeCameraLogin();
+        closeCameraLogin(false);
         openIdentityVerificationModal(verifyData, lastCapturedImageB64);
     } catch (e) {
         status.innerText = 'Network error during ONNX face verification: ' + e.message;
@@ -595,9 +626,9 @@ function openIdentityVerificationModal(verifyData, imgB64) {
             yesBtn.disabled = false;
         }
 
-        addTerminalLog(`Face matched: ${uname} (Distance: ${dist}, Confidence: ${conf}%)`, 'AI_CORE');
+        addTerminalLog(`Face matched: ${uname} (Distance: ${dist}, Confidence: ${conf}%, Latency: ${verifyData._latency_ms || 0}ms)`, 'AI_CORE');
 
-        verifySecondsLeft = 5;
+        verifySecondsLeft = 2;
         if (countdownLabel) countdownLabel.innerText = `Auto-verification in: ${verifySecondsLeft} seconds`;
 
         verifyCountdownTimer = setInterval(() => {
@@ -608,7 +639,7 @@ function openIdentityVerificationModal(verifyData, imgB64) {
                 verifyCountdownTimer = null;
                 confirmIdentityAndPunch();
             }
-        }, 1000);
+        }, 700);
     } else {
         const errMsg = (verifyData && (verifyData.error || verifyData.message)) || 'No confident match found';
         if (qualEl) {
@@ -1586,7 +1617,8 @@ async function openHrAction(action) {
         `;
         try {
             hrRegCameraStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+                audio: false
             });
             const v = document.getElementById('hr-reg-video');
             if (v) v.srcObject = hrRegCameraStream;
@@ -2132,29 +2164,26 @@ async function runAuto20PoseCapture(fromRecapturePrompt = false) {
             continue;
         }
 
-        // Smooth continuous capture: brief 2s ready countdown on the first shot, then continuous shots
+        // Smooth continuous capture: brief ready check on the first shot, then rapid continuous shots
         if (isFirstShotInLoop && regTotalPoseRetries === 0) {
             isFirstShotInLoop = false;
-            for (let sec = 2; sec >= 1; sec--) {
-                if (!regAutoCaptureRunning) break;
-                if (cdBadge) cdBadge.innerText = `⏳ Starting Pose ${poseNum}/20 in ${sec}s...`;
-                if (msgEl) {
-                    msgEl.style.color = '#74b9ff';
-                    msgEl.innerText = `⏳ Get Ready: ${currInstr.en} (${currInstr.bn}) — Starting continuous capture in ${sec}s...`;
-                }
-                await new Promise(r => setTimeout(r, 500));
+            if (cdBadge) cdBadge.innerText = `⚡ Starting Pose ${poseNum}/20...`;
+            if (msgEl) {
+                msgEl.style.color = '#74b9ff';
+                msgEl.innerText = `⚡ Capturing: ${currInstr.en} (${currInstr.bn})...`;
             }
+            await new Promise(r => setTimeout(r, 200));
         } else if (regTotalPoseRetries > 0) {
             if (cdBadge) cdBadge.innerText = `🔄 Retaking Pose ${poseNum}/20 (Quality Check)...`;
-            await new Promise(r => setTimeout(r, 400));
+            await new Promise(r => setTimeout(r, 200));
         }
 
         if (!regAutoCaptureRunning) break;
 
         const ok = await captureSingleRegPose(false);
         if (ok) {
-            // Continuous shot pacing: short pause so user sees the next instruction & tick/cross badge without getting stuck
-            await new Promise(r => setTimeout(r, 550));
+            // Fast continuous shot pacing so 20 poses finish rapidly
+            await new Promise(r => setTimeout(r, 180));
         } else if (regTotalPoseRetries >= 25) {
             regAutoCaptureRunning = false;
             if (msgEl) {
@@ -2164,7 +2193,7 @@ async function runAuto20PoseCapture(fromRecapturePrompt = false) {
             break;
         } else {
             // Quality gate failed (blurry, dark, or unclear face) — must retake same pose!
-            await new Promise(r => setTimeout(r, 700));
+            await new Promise(r => setTimeout(r, 300));
         }
     }
 

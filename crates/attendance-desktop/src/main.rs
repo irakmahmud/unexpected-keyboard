@@ -350,7 +350,7 @@ pub fn ensure_local_standalone_engine_running() -> bool {
             if is_local_engine_listening(8080) {
                 return true;
             }
-            thread::sleep(std::time::Duration::from_millis(200));
+            thread::sleep(std::time::Duration::from_millis(50));
         }
     }
 

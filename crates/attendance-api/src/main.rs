@@ -35,16 +35,38 @@ pub struct AppState {
     pub reporting: ReportingService,
     pub bq_client: Arc<BigQueryClient>,
     pub outbox_worker: Arc<OutboxWorker>,
-    pub deepface_state: Option<Arc<attendance_face::DeepFaceAppState>>,
+    pub models_dir: String,
+    pub deepface_once: Arc<std::sync::OnceLock<Option<Arc<attendance_face::DeepFaceAppState>>>>,
     pub deepface_reloadable: Arc<parking_lot::RwLock<Option<Arc<attendance_face::DeepFaceAppState>>>>,
 }
 
 impl AppState {
     pub fn get_deepface(&self) -> Option<Arc<attendance_face::DeepFaceAppState>> {
-        self.deepface_reloadable
-            .read()
+        if let Some(reloaded) = self.deepface_reloadable.read().clone() {
+            return Some(reloaded);
+        }
+        let models_dir = self.models_dir.clone();
+        self.deepface_once
+            .get_or_init(|| {
+                match attendance_face::DeepFaceAppState::load_from_dir(&models_dir) {
+                    Ok(s) => {
+                        tracing::info!(
+                            "FaceNet512 & MTCNN ONNX models loaded & pre-warmed from {}",
+                            models_dir
+                        );
+                        Some(Arc::new(s))
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "DeepFace ONNX models not loaded from '{}': {}. (Copy models/*.onnx to enable live FaceNet512 ONNX inference)",
+                            models_dir,
+                            e
+                        );
+                        None
+                    }
+                }
+            })
             .clone()
-            .or_else(|| self.deepface_state.clone())
     }
 
     pub fn reload_deepface_from_dir(&self, models_dir: &str) -> std::result::Result<(), String> {
@@ -183,17 +205,8 @@ async fn main() -> Result<()> {
     let models_dir = std::env::var("MODELS_DIR")
         .or_else(|_| std::env::var("ATTENDANCE_MODELS_DIR"))
         .unwrap_or_else(|_| "models".to_string());
-    let deepface_state = match attendance_face::DeepFaceAppState::load_from_dir(&models_dir) {
-        Ok(s) => {
-            tracing::info!("FaceNet512 & MTCNN ONNX models loaded successfully from {}", models_dir);
-            Some(Arc::new(s))
-        }
-        Err(e) => {
-            tracing::warn!("DeepFace ONNX models not loaded from '{}': {}. (Copy models/*.onnx to enable live FaceNet512 ONNX inference)", models_dir, e);
-            None
-        }
-    };
-    let deepface_reloadable = Arc::new(parking_lot::RwLock::new(deepface_state.clone()));
+    let deepface_once = Arc::new(std::sync::OnceLock::new());
+    let deepface_reloadable = Arc::new(parking_lot::RwLock::new(None));
 
     let state = AppState {
         db,
@@ -203,9 +216,16 @@ async fn main() -> Result<()> {
         reporting,
         bq_client,
         outbox_worker,
-        deepface_state,
+        models_dir,
+        deepface_once,
         deepface_reloadable,
     };
+
+    // Asynchronously load & pre-warm ONNX models in background so HTTP server binds port 8080 in <30ms
+    let warmup_state = state.clone();
+    std::thread::spawn(move || {
+        let _ = warmup_state.get_deepface();
+    });
 
     let app = Router::new()
         // Interactive Web Kiosk & Admin Portal

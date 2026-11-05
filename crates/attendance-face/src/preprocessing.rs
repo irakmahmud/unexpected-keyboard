@@ -84,53 +84,36 @@ pub fn crop_and_resize(img: &DynamicImage, det: &FaceDetection, out_w: u32, out_
 pub fn normalize_facenet(img: &DynamicImage) -> Array4<f32> {
     let rgb = img.to_rgb8();
     let (w, h) = (FACENET_W as usize, FACENET_H as usize);
-    let total_pixels = (w * h * 3) as f32; // R + G + B = 3 channels per pixel
+    let total_elems = w * h * 3;
+    let total_pixels = total_elems as f32;
+    let raw_bytes = rgb.as_raw();
 
-    // ── Step 1: Collect all pixel values as f32 ───────────────────────────
-    let mut raw: Vec<f32> = Vec::with_capacity(w * h * 3);
-    for y in 0..h {
-        for x in 0..w {
-            let p = rgb.get_pixel(x as u32, y as u32);
-            raw.push(p[0] as f32); // R
-            raw.push(p[1] as f32); // G
-            raw.push(p[2] as f32); // B
-        }
+    // Step 1 & 2: Convert u8 RGB -> f32 and compute mean
+    let mut sum = 0.0_f64;
+    let mut data: Vec<f32> = Vec::with_capacity(total_elems);
+    for &b in raw_bytes.iter().take(total_elems) {
+        let v = b as f32;
+        sum += v as f64;
+        data.push(v);
     }
+    let mean = (sum / (total_elems as f64)) as f32;
 
-    // ── Step 2: Per-image mean ────────────────────────────────────────────
-    let mean: f32 = raw.iter().sum::<f32>() / total_pixels;
-
-    // ── Step 3: Per-image std ─────────────────────────────────────────────
-    let variance: f32 = raw.iter()
-        .map(|&v| (v - mean) * (v - mean))
-        .sum::<f32>() / total_pixels;
-    let std_raw = variance.sqrt();
-
-    // Adjusted std: prevents division-by-zero for uniform images.
-    // Matches DeepFace's: std_adj = np.maximum(std, 1.0 / np.sqrt(img.size))
+    // Step 3: Per-image std
+    let mut var_sum = 0.0_f64;
+    for &v in &data {
+        let d = (v - mean) as f64;
+        var_sum += d * d;
+    }
+    let std_raw = ((var_sum / (total_elems as f64)) as f32).sqrt();
     let std_adj = std_raw.max(1.0 / total_pixels.sqrt());
+    let inv_std = 1.0_f32 / std_adj;
 
-    // ── Step 4: Normalize ─────────────────────────────────────────────────
-    let normalized: Vec<f32> = raw.iter()
-        .map(|&v| (v - mean) / std_adj)
-        .collect();
-
-    // ── Step 5: Reshape to [1, H, W, 3] NHWC ─────────────────────────────
-    // NHWC layout: index = n*H*W*C + y*W*C + x*C + c
-    // This matches how Keras stores tensors and how FaceNet512 ONNX expects input
-    let mut tensor = Array4::<f32>::zeros((1, h, w, 3));
-
-    let mut idx = 0;
-    for y in 0..h {
-        for x in 0..w {
-            tensor[[0, y, x, 0]] = normalized[idx];     // R
-            tensor[[0, y, x, 1]] = normalized[idx + 1]; // G
-            tensor[[0, y, x, 2]] = normalized[idx + 2]; // B
-            idx += 3;
-        }
+    // Step 4 & 5: Normalize in-place in NHWC [1, H, W, 3] layout
+    for v in &mut data {
+        *v = (*v - mean) * inv_std;
     }
 
-    tensor
+    Array4::from_shape_vec((1, h, w, 3), data).unwrap()
 }
 
 // ============================================================================

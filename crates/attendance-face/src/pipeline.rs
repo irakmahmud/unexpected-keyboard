@@ -35,6 +35,7 @@ impl AppState {
 
         let facenet_model = tract_onnx::onnx()
             .model_for_path(&facenet_path)?
+            .with_input_fact(0, f32::fact([1, 160, 160, 3]).into())?
             .into_optimized()?
             .into_runnable()?;
 
@@ -45,13 +46,27 @@ impl AppState {
 
         let rnet_model = tract_onnx::onnx()
             .model_for_path(&rnet_path)?
+            .with_input_fact(0, f32::fact([1, 3, 24, 24]).into())?
             .into_optimized()?
             .into_runnable()?;
 
         let onet_model = tract_onnx::onnx()
             .model_for_path(&onet_path)?
+            .with_input_fact(0, f32::fact([1, 3, 48, 48]).into())?
             .into_optimized()?
             .into_runnable()?;
+
+        // Pre-warm tract execution plans across common pyramid & model shapes so the first live camera frame is instant
+        for &(h, w) in &[(48usize, 64usize), (96, 128), (168, 224), (210, 280)] {
+            let warm_p: Tensor = ndarray::Array4::<f32>::zeros((1, 3, h, w)).into_dyn().into();
+            let _ = pnet_model.run(tvec![warm_p.into()]);
+        }
+        let warm_r: Tensor = ndarray::Array4::<f32>::zeros((1, 3, 24, 24)).into_dyn().into();
+        let _ = rnet_model.run(tvec![warm_r.into()]);
+        let warm_o: Tensor = ndarray::Array4::<f32>::zeros((1, 3, 48, 48)).into_dyn().into();
+        let _ = onet_model.run(tvec![warm_o.into()]);
+        let warm_fn: Tensor = ndarray::Array4::<f32>::zeros((1, 160, 160, 3)).into_dyn().into();
+        let _ = facenet_model.run(tvec![warm_fn.into()]);
 
         Ok(Self {
             facenet_model: Arc::new(facenet_model),

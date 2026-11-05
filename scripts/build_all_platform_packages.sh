@@ -397,10 +397,9 @@ if [ -x "$NATIVE_DESKTOP" ]; then
     exec "$NATIVE_DESKTOP"
 fi
 
-# Fallback: launch bundled attendance_v8.py or local server on 127.0.0.1:8080
-if command -v python3 >/dev/null 2>&1 && [ -f "$RES_DIR/attendance_v8.py" ]; then
-    cd "$RES_DIR"
-    nohup python3 "$RES_DIR/attendance_v8.py" >/dev/null 2>&1 &
+if [ -x "$NATIVE_API" ]; then
+    cd "$APP_HOME"
+    nohup "$NATIVE_API" >/dev/null 2>&1 &
 fi
 
 LOCAL_URL="http://127.0.0.1:8080"

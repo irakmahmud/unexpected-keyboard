@@ -1392,7 +1392,11 @@ async fn handle_verify_identity(
     })?;
     let bytes = decode_data_uri(&payload.image_b64)?;
     let (emb, det, _dims) = attendance_face::extract_face_embedding_with_detection(&df_state, &bytes)?;
-    let quality = attendance_face::FaceQualityAssessor::assess_image_bytes(&bytes);
+    let quality = attendance_face::FaceQualityAssessor::assess_image_and_face(
+        &bytes,
+        Some(det.bbox),
+        Some(det.confidence),
+    );
 
     let tiered_opt = state.face_index.search_tiered(emb.clone())?;
     if let Some(tiered) = tiered_opt {

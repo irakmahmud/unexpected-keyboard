@@ -203,7 +203,6 @@ impl FaceQualityAssessor {
         let gray = img.to_luma8();
         let (w, h) = (gray.width() as usize, gray.height() as usize);
         let full_raw = gray.as_raw();
-        let full_lap = Self::laplacian_variance(full_raw, w, h);
         let (full_bright, _full_contrast) = Self::brightness_and_contrast(full_raw);
 
         if let Some((bx1, by1, bx2, by2)) = bbox {
@@ -225,9 +224,10 @@ impl FaceQualityAssessor {
                 let (crop_bright, crop_contrast) = Self::brightness_and_contrast(&crop_pixels);
 
                 // Do NOT let a sharp background mask a blurry face crop (crop_lap < 25.0 is always blurry)
-                let effective_sharpness = if crop_lap < 25.0 {
+                let effective_sharpness = if crop_lap < 25.0 || crop_lap >= 100.0 {
                     crop_lap
                 } else {
+                    let full_lap = Self::laplacian_variance(full_raw, w, h);
                     crop_lap.max(full_lap * 0.5)
                 };
                 let effective_brightness = crop_bright.min(full_bright.max(crop_bright * 0.85));
