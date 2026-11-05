@@ -320,11 +320,11 @@ async fn get_downloads_info() -> Json<serde_json::Value> {
         ),
         artifact_metadata(
             "SmartAttendance-Mobile-Android.apk",
-            "Android Mobile App (.apk)",
-            "Smart Attendance Android App — Millions-of-Users Mobile Admin & Kiosk (Mandatory GPS Location + Wi-Fi Option)",
-            "Android Universal APK (V1+V2 Signed DEX + Native LocationManager & WifiManager Bridge)",
+            "Android Offline + Online Mobile App (.apk)",
+            "Smart Attendance Android App — 100% Offline Bundled AI (FaceNet512 + MTCNN ONNX + Native Rust Engine) + Mandatory GPS Location & Wi-Fi",
+            "Android Universal APK (arm64-v8a & x86_64 Native Rust libattendance_api.so + facenet512.onnx + mtcnn_pnet/rnet/onet.onnx + V1+V2 Signed DEX)",
             "android-apk",
-            "অ্যান্ড্রয়েড ফোনে APK ডাউনলোড করে Install করুন। ফোনের GPS Location অবশ্যই চালু থাকতে হবে (লোকেশন ছাড়া কাজ করবে না)।"
+            "অ্যান্ড্রয়েড ফোনে APK ডাউনলোড করে Install করুন। এতে facenet512.onnx, mtcnn ও Native Rust Engine ভেতরেই বান্ডেল করা আছে—তাই ইন্টারনেট ছাড়াই ১০০% অফলাইনে এবং অনলাইনে উভয় মোডেই চলবে (GPS Location চালু থাকা বাধ্যতামূলক)।"
         ),
     ];
 
