@@ -54,6 +54,7 @@ commands:
       - restore_cache:
           name: "Restore Cargo & Target Cache"
           keys:
+            - v5-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v3-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
             - v3-cargo-cache-{{ arch }}-
@@ -64,7 +65,7 @@ commands:
       - save_cache:
           name: "Save Cargo & Target Cache"
           when: always
-          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
+          key: v5-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}-{{ checksum "Cargo.toml" }}
           paths:
             - ~/.cargo/registry/index
             - ~/.cargo/registry/cache
@@ -87,6 +88,7 @@ jobs:
             echo "Oracle VM remains completely free of local build load."
             echo "=========================================================="
             cargo build --release --workspace
+            cargo build --release -p attendance-desktop -p attendance-api -p attendance-cli -p attendance-device-agent --target x86_64-pc-windows-gnu
       - run:
           name: "Execute Unit, 64-Shard Scale & PostgreSQL 16 Partition Migration Tests"
           command: |

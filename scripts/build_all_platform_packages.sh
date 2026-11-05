@@ -285,6 +285,7 @@ Name "Smart Attendance Standalone Desktop (v8.0)"
 OutFile "${DOWNLOADS_DIR}/SmartAttendance-Desktop-Windows-x64-Setup.exe"
 InstallDir "\$LOCALAPPDATA\SmartAttendanceDesktop"
 RequestExecutionLevel user
+SetDatablockOptimize off
 SetCompress off
 
 !insertmacro MUI_PAGE_WELCOME
